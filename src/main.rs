@@ -7,6 +7,8 @@ use tokio::{
 };
 use tokio_stream::StreamExt;
 use tokio_util::codec::{BytesCodec, Decoder};
+mod packet;
+use crate::packet::packet::Packet;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -33,7 +35,7 @@ async fn handle_connection(mut stream: TcpStream, addr: SocketAddr) -> Result<()
     let iv_send: [u8; 4] = [82, 48, 120, rand::random::<u8>()];
 
     let packet = login_handshake(iv_receive, iv_send);
-    stream.write_all(&packet.data).await?;
+    stream.write_all(&packet.bytes()).await?;
     stream.flush().await?;
 
     let mut framed = BytesCodec::new().framed(stream);
@@ -48,47 +50,6 @@ async fn handle_connection(mut stream: TcpStream, addr: SocketAddr) -> Result<()
     println!("Socket received FIN packet and closed connection");
 
     Ok(())
-}
-
-#[derive(Debug)]
-struct Packet {
-    data: Vec<u8>,
-}
-
-impl Packet {
-    fn new(bytes: usize) -> Self {
-        Packet {
-            data: Vec::with_capacity(bytes),
-        }
-    }
-
-    fn write_byte(&mut self, byte: u8) {
-        self.data.push(byte);
-    }
-
-    fn write_bytes(&mut self, bytes: &[u8]) {
-        self.data.extend_from_slice(bytes);
-    }
-
-    // TODO write boolean
-
-    // writes a short (signed 16 bit integer) to the packet
-    fn write_short(&mut self, num: i16) {
-        let bytes = num.to_le_bytes();
-        self.data.extend_from_slice(&bytes);
-    }
-
-    // TODO write int
-    // TODO write long
-    // TODO write string
-
-    fn write_maple_string(&mut self, str: &str) {
-        // write the string length as an i16/short
-        self.write_short(str.len() as i16);
-
-        let bytes = str.as_bytes();
-        self.data.extend_from_slice(&bytes);
-    }
 }
 
 fn login_handshake(iv_receive: [u8; 4], iv_send: [u8; 4]) -> Packet {
