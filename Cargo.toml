@@ -3,9 +3,12 @@ name = "oxide"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+tokio = { version = "1.16.1", features = ["full"] }
+tokio-util = { version = "0.6.9", features = ["full"] }
+tokio-stream = { version = "0.1.0" }
 log = "0.4.14"
 simple_logger = "2.1.0"
 rand = "0.8.4"
+aes = "0.7.5"
+block-modes = "0.8.1"
