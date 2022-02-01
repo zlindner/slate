@@ -255,7 +255,6 @@ version = "0.1.0"
 dependencies = [
  "aes",
  "block-modes",
- "bytes",
  "log",
  "rand",
  "simple_logger",
