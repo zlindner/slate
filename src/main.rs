@@ -1,3 +1,12 @@
+mod maple_aes;
+use crate::maple_aes::maple_aes::MapleAES;
+
+mod packet;
+use crate::packet::packet::Packet;
+
+mod shanda;
+use crate::shanda::shanda::decrypt;
+
 use simple_logger::SimpleLogger;
 use std::error::Error;
 use std::net::SocketAddr;
@@ -7,8 +16,6 @@ use tokio::{
 };
 use tokio_stream::StreamExt;
 use tokio_util::codec::{BytesCodec, Decoder};
-mod packet;
-use crate::packet::packet::Packet;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -31,9 +38,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 async fn handle_connection(mut stream: TcpStream, addr: SocketAddr) -> Result<(), Box<dyn Error>> {
     log::info!("Client connected to login server: {}", addr);
 
-    let iv_receive: [u8; 4] = [70, 114, 122, rand::random::<u8>()];
-    let iv_send: [u8; 4] = [82, 48, 120, rand::random::<u8>()];
+    let iv_receive: [u8; 4] = [0x46, 0x72, rand::random::<u8>(), 0x52];
+    log::debug!("iv_receive: {:#04X?}", iv_receive);
+    let mut cypher_receive = MapleAES::new(iv_receive, 0xffff - 83);
 
+    let iv_send: [u8; 4] = [0x52, 0x30, 0x78, 0x61];
+    log::debug!("iv_send: {:#04X?}", iv_send);
+    //let cypher_send = MapleAES::new(iv_receive, 83);
+
+    // write the initial unencrypted "hello" packet
     let packet = login_handshake(iv_receive, iv_send);
     stream.write_all(&packet.bytes()).await?;
     stream.flush().await?;
@@ -42,7 +55,23 @@ async fn handle_connection(mut stream: TcpStream, addr: SocketAddr) -> Result<()
 
     while let Some(message) = framed.next().await {
         match message {
-            Ok(bytes) => println!("bytes: {:?}", bytes),
+            Ok(bytes) => {
+                let bytes = bytes.to_vec();
+                log::debug!("receieved: {:#04X?}", bytes);
+
+                // TODO validate the packet header
+                log::debug!("packet header: {:#04X?}", &bytes[0..3]);
+                log::debug!("packet data: {:#04X?}", &bytes[4..]);
+
+                let transformed = cypher_receive.transform((&bytes[4..]).to_vec());
+                log::debug!("transformed: {:#04X?}", transformed);
+
+                let decrypted = decrypt(transformed);
+                log::debug!("decrypted: {:#04X?}", decrypted);
+
+                let op_code = u16::from_le_bytes([decrypted[0], decrypted[1]]);
+                log::debug!("op_code: {}", op_code);
+            }
             Err(err) => println!("Socket closed with error: {:?}", err),
         }
     }
