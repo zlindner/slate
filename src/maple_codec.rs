@@ -18,11 +18,6 @@ impl MapleCodec {
             send_cipher,
         }
     }
-
-    fn decode_packet_length(&self, header: [u8; 4]) -> i32 {
-        (((i32::from(header[1]) ^ i32::from(header[3])) & 0xff) << 8)
-            | ((i32::from(header[0]) ^ i32::from(header[2])) & 0xff)
-    }
 }
 
 impl Decoder for MapleCodec {
@@ -48,15 +43,13 @@ impl Decoder for MapleCodec {
             return Ok(None);
         }
 
-        //let packet_length = self.decode_packet_length(header);
-        //log::debug!("packet_length: {}", packet_length);
-
         let decrypted = Shanda::decrypt(self.recv_cipher.transform(body));
 
         Ok(Some(Packet::from_bytes(decrypted)))
     }
 }
 
+// TODO
 impl Encoder<Bytes> for MapleCodec {
     type Error = io::Error;
 
