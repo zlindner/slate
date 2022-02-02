@@ -1,7 +1,10 @@
-pub mod shanda {
+use bytes::BytesMut;
 
+pub struct Shanda;
+
+impl Shanda {
     // FIXME there is way too much (possibly unsafe) casting going on here...
-    pub fn decrypt(mut data: Vec<u8>) -> Vec<u8> {
+    pub fn decrypt(mut data: BytesMut) -> BytesMut {
         let length = data.len();
 
         for _ in 0..3 {
@@ -10,13 +13,13 @@ pub mod shanda {
 
             for j in (1..=length).rev() {
                 let mut c = i32::from(data[j - 1]);
-                c = roll_left(c, 3);
+                c = Shanda::roll_left(c, 3);
                 c ^= 0x13;
                 a = c;
                 c ^= b;
                 c -= j as i32;
                 c &= 0xff;
-                c = roll_right(c, 4);
+                c = Shanda::roll_right(c, 4);
                 b = a;
                 data[j - 1] = c as u8;
             }
@@ -28,12 +31,12 @@ pub mod shanda {
                 c -= 0x48;
                 c &= 0xff;
                 c ^= 0xff;
-                c = roll_left(c, j as i32);
+                c = Shanda::roll_left(c, j as i32);
                 a = c;
                 c ^= b;
                 c -= j as i32;
                 c &= 0xff;
-                c = roll_right(c, 3);
+                c = Shanda::roll_right(c, 3);
                 b = a;
                 data[length - j] = c as u8;
             }
