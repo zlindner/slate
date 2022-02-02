@@ -57,11 +57,12 @@ async fn handle_connection(mut stream: TcpStream, addr: SocketAddr) -> Result<()
 
     while let Some(message) = framed.next().await {
         match message {
-            Ok(packet) => {
-                println!("decoded packet: {:X}", packet.get_data());
+            Ok(mut packet) => {
+                log::debug!("received packet: {}", packet);
 
-                let op_code = u16::from_le_bytes([packet.get_data()[0], packet.get_data()[1]]);
+                let op_code = packet.read_short();
                 log::debug!("op_code: {}", op_code);
+                // TODO get the packet handler for the op_code
             }
             Err(err) => println!("Socket closed with error: {:?}", err),
         }

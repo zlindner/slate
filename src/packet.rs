@@ -1,4 +1,5 @@
-use bytes::{BufMut, BytesMut};
+use bytes::{Buf, BufMut, BytesMut};
+use std::fmt::{Display, Formatter, Result};
 
 pub struct Packet {
     data: BytesMut,
@@ -41,5 +42,29 @@ impl Packet {
         // write the string length as an i16/short
         self.write_short(str.len() as i16);
         self.write_bytes(&str.as_bytes());
+    }
+
+    pub fn read_short(&mut self) -> i16 {
+        self.data.get_i16_le()
+    }
+}
+
+// BytesMut refuses to format properly without this...
+impl Display for Packet {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        write!(f, "[")?;
+
+        let len = self.data.len();
+
+        for i in 0..len {
+            write!(f, "{:02X}", self.data[i])?;
+
+            if i != len - 1 {
+                write!(f, ", ")?;
+            }
+        }
+
+        write!(f, "]")?;
+        Ok(())
     }
 }
