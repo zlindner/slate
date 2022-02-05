@@ -61,7 +61,18 @@ async fn handle_connection(mut stream: TcpStream, addr: SocketAddr) -> Result<()
                 log::debug!("received packet: {}", packet);
 
                 let op_code = packet.read_short();
-                log::debug!("op_code: {}", op_code);
+                log::debug!("op_code: {} (0x{:X?})", op_code, op_code);
+
+                if op_code >= 0x200 {
+                    log::warn!(
+                        "Potential malicious packet sent to login server from {}: 0x{:X?}",
+                        addr,
+                        op_code
+                    );
+
+                    break;
+                }
+
                 // TODO get the packet handler for the op_code
             }
             Err(err) => println!("Socket closed with error: {:?}", err),

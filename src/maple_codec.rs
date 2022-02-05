@@ -43,6 +43,7 @@ impl Decoder for MapleCodec {
             return Ok(None);
         }
 
+        // transform and decrypt the incoming packet's body
         let decrypted = Shanda::decrypt(self.recv_cipher.transform(body));
 
         Ok(Some(Packet::from_bytes(decrypted)))

@@ -17,7 +17,7 @@ const KEY: [u8; 32] = [
     0x1B, 0x00, 0x00, 0x00, 0x0F, 0x00, 0x00, 0x00, 0x33, 0x00, 0x00, 0x00, 0x52, 0x00, 0x00, 0x00,
 ];
 
-const SHIFT_KEY: [i32; 256] = [
+const SHIFT_KEY: [u8; 256] = [
     0xEC, 0x3F, 0x77, 0xA4, 0x45, 0xD0, 0x71, 0xBF, 0xB7, 0x98, 0x20, 0xFC, 0x4B, 0xE9, 0xB3, 0xE1,
     0x5C, 0x22, 0xF7, 0x0C, 0x44, 0x1B, 0x81, 0xBD, 0x63, 0x8D, 0xD4, 0xC3, 0xF2, 0x10, 0x19, 0xE0,
     0xFB, 0xA1, 0x6E, 0x66, 0xEA, 0xAE, 0xD6, 0xCE, 0x06, 0x18, 0x4E, 0xEB, 0x78, 0x95, 0xDB, 0xBA,
@@ -84,41 +84,34 @@ impl MapleAES {
     }
 
     fn morph_iv(&self) -> [u8; 4] {
-        let mut new_sequence: [i32; 4] = [0xf2, 0x53, 0x50, 0xc6];
+        let mut new_sequence: [u8; 4] = [0xf2, 0x53, 0x50, 0xc6];
 
         for i in 0..4 {
-            let input = i32::from(self.iv[i]);
-            let table_input = SHIFT_KEY[input as usize];
+            let table_input = SHIFT_KEY[self.iv[i] as usize];
 
-            new_sequence[0] += SHIFT_KEY[new_sequence[1] as usize] - input;
-            new_sequence[1] -= new_sequence[2] ^ table_input;
-            new_sequence[2] ^= SHIFT_KEY[new_sequence[3] as usize] + input;
-            new_sequence[3] -= new_sequence[0] - table_input;
+            new_sequence[0] = new_sequence[0]
+                .wrapping_add(SHIFT_KEY[new_sequence[1] as usize].wrapping_sub(self.iv[i]));
+            new_sequence[1] = new_sequence[1].wrapping_sub(new_sequence[2] ^ table_input);
+            new_sequence[2] ^= SHIFT_KEY[new_sequence[3] as usize].wrapping_add(self.iv[i]);
+            new_sequence[3] =
+                new_sequence[3].wrapping_sub(new_sequence[0].wrapping_sub(table_input));
 
-            let mut val = (new_sequence[0]
-                | ((new_sequence[1] & 0xff) << 8)
-                | ((new_sequence[2] & 0xff) << 16)
-                | ((new_sequence[3] & 0xff) << 24))
-                >> 0;
+            let x = i32::from(new_sequence[1] & 0xff) << 8;
+            let y = i32::from(new_sequence[2] & 0xff) << 16;
+            let z = i32::from(new_sequence[3] & 0xff) << 24;
+            let mut val = (i32::from(new_sequence[0]) | x | y | z) as u32;
             let mut val2 = val >> 0x1d;
 
-            val = (val << 0x03) >> 0;
+            val = (val << 0x03) as u32;
             val2 |= val;
-            new_sequence[0] = val2 & 0xff;
-            new_sequence[1] = (val2 >> 8) & 0xff;
-            new_sequence[2] = (val2 >> 16) & 0xff;
-            new_sequence[3] = (val2 >> 24) & 0xff;
+
+            new_sequence[0] = (val2 & 0xff) as u8;
+            new_sequence[1] = ((val2 >> 8) & 0xff) as u8;
+            new_sequence[2] = ((val2 >> 16) & 0xff) as u8;
+            new_sequence[3] = ((val2 >> 24) & 0xff) as u8;
         }
 
-        // FIXME this is scary...
-        let morphed = [
-            new_sequence[0] as u8,
-            new_sequence[1] as u8,
-            new_sequence[2] as u8,
-            new_sequence[3] as u8,
-        ];
-
-        morphed
+        new_sequence
     }
 
     pub fn is_valid_header(&self, header: &BytesMut) -> bool {
