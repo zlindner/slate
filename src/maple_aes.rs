@@ -51,7 +51,7 @@ impl MapleAES {
     }
 
     pub fn transform(&mut self, mut data: BytesMut) -> BytesMut {
-        // 1460 - 4 (header bytes?) = 1456
+        // maplestory's 1460 byte block - 4 header bytes = 1456 bytes for body
         let mut current_block_length = BLOCK_LENGTH - 4;
 
         let iv_copy = [
@@ -78,6 +78,7 @@ impl MapleAES {
             current_block_length = BLOCK_LENGTH;
         }
 
+        // after each transform operation update the initialization vector
         self.iv = self.morph_iv();
 
         data
@@ -89,6 +90,7 @@ impl MapleAES {
         for i in 0..4 {
             let table_input = SHIFT_KEY[self.iv[i] as usize];
 
+            // need to use wrapping add/sub as all of these operations will overflow
             new_sequence[0] = new_sequence[0]
                 .wrapping_add(SHIFT_KEY[new_sequence[1] as usize].wrapping_sub(self.iv[i]));
             new_sequence[1] = new_sequence[1].wrapping_sub(new_sequence[2] ^ table_input);
@@ -99,12 +101,16 @@ impl MapleAES {
             let x = i32::from(new_sequence[1] & 0xff) << 8;
             let y = i32::from(new_sequence[2] & 0xff) << 16;
             let z = i32::from(new_sequence[3] & 0xff) << 24;
+            // "as u32" is effectively an unsigned/zero-fill right shift by 0
             let mut val = (i32::from(new_sequence[0]) | x | y | z) as u32;
             let mut val2 = val >> 0x1d;
 
+            // "as u32" is effectively an unsigned/zero-fill right shift by 0
             val = (val << 0x03) as u32;
             val2 |= val;
 
+            // the below computations will always result in a value that fits in a byte
+            // so downcasting as u8 should be fine here
             new_sequence[0] = (val2 & 0xff) as u8;
             new_sequence[1] = ((val2 >> 8) & 0xff) as u8;
             new_sequence[2] = ((val2 >> 16) & 0xff) as u8;
