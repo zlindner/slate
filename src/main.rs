@@ -73,7 +73,10 @@ async fn handle_connection(mut stream: TcpStream, addr: SocketAddr) -> Result<()
                     break;
                 }
 
-                // TODO get the packet handler for the op_code
+                match op_code {
+                    0x1 => handle_login_password(packet),
+                    _ => log::warn!("Unhandled packet 0x{:X?}", op_code),
+                }
             }
             Err(err) => println!("Socket closed with error: {:?}", err),
         }
@@ -93,4 +96,17 @@ fn login_handshake(iv_receive: [u8; 4], iv_send: [u8; 4]) -> Packet {
     packet.write_bytes(&iv_send);
     packet.write_byte(8); // locale
     packet
+}
+
+fn handle_login_password(mut packet: Packet) {
+    let username = packet.read_maple_string();
+    log::debug!("username: {}", username);
+
+    let password = packet.read_maple_string();
+    log::debug!("password: {}", password);
+
+    packet.advance(6);
+
+    let hwid = packet.read_bytes(4);
+    log::debug!("hwid: {:02X?}", hwid);
 }

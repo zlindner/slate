@@ -1,5 +1,6 @@
 use bytes::{Buf, BufMut, BytesMut};
 use std::fmt::{Display, Formatter, Result};
+use std::str;
 
 pub struct Packet {
     data: BytesMut,
@@ -44,8 +45,23 @@ impl Packet {
         self.write_bytes(&str.as_bytes());
     }
 
+    pub fn read_bytes(&mut self, num_bytes: usize) -> BytesMut {
+        self.data.split_to(num_bytes)
+    }
+
     pub fn read_short(&mut self) -> i16 {
         self.data.get_i16_le()
+    }
+
+    pub fn read_maple_string(&mut self) -> String {
+        let length = self.read_short() as usize;
+        let bytes = self.data.split_to(length);
+
+        str::from_utf8(&bytes).unwrap().to_string()
+    }
+
+    pub fn advance(&mut self, num_bytes: usize) {
+        self.data.advance(num_bytes);
     }
 }
 
