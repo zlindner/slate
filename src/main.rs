@@ -9,7 +9,7 @@ mod shanda;
 mod maple_codec;
 use crate::maple_codec::MapleCodec;
 
-use deadpool_postgres::{Manager, Pool, Runtime};
+use deadpool_postgres::{Manager, Pool};
 use dotenv::dotenv;
 use log::LevelFilter;
 use simple_logger::SimpleLogger;
@@ -51,16 +51,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     loop {
         let (stream, addr) = listener.accept().await?;
+        let pool = pool.clone();
 
         tokio::spawn(async move {
-            if let Err(e) = handle_connection(stream, addr).await {
+            if let Err(e) = handle_connection(stream, addr, pool).await {
                 log::error!("An error occurred while starting the login server: {:?}", e);
             }
         });
     }
 }
 
-async fn handle_connection(mut stream: TcpStream, addr: SocketAddr) -> Result<(), Box<dyn Error>> {
+async fn handle_connection(
+    mut stream: TcpStream,
+    addr: SocketAddr,
+    pool: Pool,
+) -> Result<(), Box<dyn Error>> {
     log::info!("Client connected to login server: {}", addr);
 
     let recv_iv: [u8; 4] = [0x46, 0x72, rand::random::<u8>(), 0x52];
@@ -97,7 +102,7 @@ async fn handle_connection(mut stream: TcpStream, addr: SocketAddr) -> Result<()
                 }
 
                 match op_code {
-                    0x1 => handle_login_password(packet),
+                    0x1 => handle_login_password(packet, &pool).await,
                     _ => log::warn!("Unhandled packet 0x{:X?}", op_code),
                 }
             }
@@ -121,7 +126,8 @@ fn login_handshake(iv_receive: [u8; 4], iv_send: [u8; 4]) -> Packet {
     packet
 }
 
-fn handle_login_password(mut packet: Packet) {
+// TODO need to look into whether having async db is actually better
+async fn handle_login_password(mut packet: Packet, pool: &Pool) {
     let username = packet.read_maple_string();
     log::debug!("username: {}", username);
 
@@ -132,4 +138,17 @@ fn handle_login_password(mut packet: Packet) {
 
     let hwid = packet.read_bytes(4);
     log::debug!("hwid: {:02X?}", hwid);
+
+    let client = pool.get().await.unwrap();
+    let rows = client
+        .query(
+            "SELECT password FROM accounts WHERE name = $1",
+            &[&username],
+        )
+        .await
+        .unwrap();
+
+    if rows.len() == 0 {
+        log::debug!("Account doesn't exist");
+    }
 }
