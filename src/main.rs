@@ -9,6 +9,7 @@ mod shanda;
 mod maple_codec;
 use crate::maple_codec::MapleCodec;
 
+use deadpool_postgres::{Manager, Pool, Runtime};
 use dotenv::dotenv;
 use log::LevelFilter;
 use simple_logger::SimpleLogger;
@@ -19,7 +20,7 @@ use tokio::{
     io::AsyncWriteExt,
     net::{TcpListener, TcpStream},
 };
-use tokio_postgres::{Config, NoTls};
+use tokio_postgres::NoTls;
 use tokio_stream::StreamExt;
 use tokio_util::codec::Decoder;
 
@@ -36,22 +37,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .init()
         .unwrap();
 
-    let db_config = Config::new()
-        .user(&env::var("DATABASE_USER").unwrap())
-        .password(&env::var("DATABASE_PASSWORD").unwrap())
-        .dbname(&env::var("DATABASE_NAME").unwrap())
-        .host("localhost")
-        .to_owned();
+    let mut pg_config = tokio_postgres::Config::new();
+    pg_config.user(&env::var("DATABASE_USER").unwrap());
+    pg_config.password(&env::var("DATABASE_PASSWORD").unwrap());
+    pg_config.dbname(&env::var("DATABASE_NAME").unwrap());
+    pg_config.host("localhost");
 
-    let (client, connection) = db_config.connect(NoTls).await?;
-
-    tokio::spawn(async move {
-        if let Err(e) = connection.await {
-            log::error!("An error occurred while connecting to the db: {}", e);
-        }
-    });
-
-    //let accounts = client.query("select * from accounts", &[]).await?;
+    let manager = Manager::new(pg_config, NoTls);
+    let pool = Pool::builder(manager).max_size(10).build().unwrap();
 
     let listener = TcpListener::bind("127.0.0.1:8484").await?;
     log::info!("Login server started on port 8484");

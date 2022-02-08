@@ -8,6 +8,7 @@ tokio = { version = "1.16.1", features = ["full"] }
 tokio-util = { version = "0.6.9", features = ["full"] }
 tokio-stream = { version = "0.1.0" }
 tokio-postgres = "0.7.5"
+deadpool-postgres = "0.10.1"
 log = "0.4.14"
 simple_logger = "2.1.0"
 rand = "0.8.4"
