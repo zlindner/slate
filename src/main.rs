@@ -9,19 +9,49 @@ mod shanda;
 mod maple_codec;
 use crate::maple_codec::MapleCodec;
 
+use dotenv::dotenv;
+use log::LevelFilter;
 use simple_logger::SimpleLogger;
+use std::env;
 use std::error::Error;
 use std::net::SocketAddr;
 use tokio::{
     io::AsyncWriteExt,
     net::{TcpListener, TcpStream},
 };
+use tokio_postgres::{Config, NoTls};
 use tokio_stream::StreamExt;
 use tokio_util::codec::Decoder;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    SimpleLogger::new().env().init().unwrap();
+    // load environment variables from .env
+    dotenv().ok();
+
+    SimpleLogger::new()
+        .with_module_level("tokio_util", LevelFilter::Debug)
+        .with_module_level("mio", LevelFilter::Debug)
+        .with_module_level("tokio_postgres", LevelFilter::Debug)
+        .env()
+        .init()
+        .unwrap();
+
+    let db_config = Config::new()
+        .user(&env::var("DATABASE_USER").unwrap())
+        .password(&env::var("DATABASE_PASSWORD").unwrap())
+        .dbname(&env::var("DATABASE_NAME").unwrap())
+        .host("localhost")
+        .to_owned();
+
+    let (client, connection) = db_config.connect(NoTls).await?;
+
+    tokio::spawn(async move {
+        if let Err(e) = connection.await {
+            log::error!("An error occurred while connecting to the db: {}", e);
+        }
+    });
+
+    //let accounts = client.query("select * from accounts", &[]).await?;
 
     let listener = TcpListener::bind("127.0.0.1:8484").await?;
     log::info!("Login server started on port 8484");
@@ -31,7 +61,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         tokio::spawn(async move {
             if let Err(e) = handle_connection(stream, addr).await {
-                log::error!("An error occurred: {:?}", e);
+                log::error!("An error occurred while starting the login server: {:?}", e);
             }
         });
     }
