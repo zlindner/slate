@@ -4,7 +4,7 @@ use deadpool_postgres::Pool;
 use std::error::Error;
 use tokio::net::TcpListener;
 
-pub struct LoginServer {}
+pub struct LoginServer;
 
 impl LoginServer {
     pub fn new() -> Self {

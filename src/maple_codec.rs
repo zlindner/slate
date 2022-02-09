@@ -7,16 +7,13 @@ use std::io;
 use tokio_util::codec::{Decoder, Encoder};
 
 pub struct MapleCodec {
-    recv_cipher: MapleAES,
-    send_cipher: MapleAES,
+    // 0: receive, 1: send
+    ciphers: (MapleAES, MapleAES),
 }
 
 impl MapleCodec {
-    pub fn new(recv_cipher: MapleAES, send_cipher: MapleAES) -> Self {
-        MapleCodec {
-            recv_cipher,
-            send_cipher,
-        }
+    pub fn new(ciphers: (MapleAES, MapleAES)) -> Self {
+        MapleCodec { ciphers }
     }
 }
 
@@ -37,14 +34,14 @@ impl Decoder for MapleCodec {
         let header = bytes;
 
         // validate the packet header
-        if !self.recv_cipher.is_valid_header(&header) {
+        if !self.ciphers.0.is_valid_header(&header) {
             log::error!("receieved a packet with an invalid header: {:#x}", header);
 
             return Ok(None);
         }
 
         // transform and decrypt the incoming packet's body
-        let decrypted = Shanda::decrypt(self.recv_cipher.transform(body));
+        let decrypted = Shanda::decrypt(self.ciphers.0.transform(body));
 
         Ok(Some(Packet::from_bytes(decrypted)))
     }
