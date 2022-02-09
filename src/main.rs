@@ -1,31 +1,21 @@
+mod client;
+mod login_server;
 mod maple_aes;
-use crate::maple_aes::MapleAES;
-
-mod packet;
-use crate::packet::Packet;
-
-mod shanda;
-
 mod maple_codec;
-use crate::maple_codec::MapleCodec;
+mod packet;
+mod shanda;
 
 use deadpool_postgres::{Manager, Pool};
 use dotenv::dotenv;
 use log::LevelFilter;
+use login_server::LoginServer;
 use simple_logger::SimpleLogger;
 use std::env;
 use std::error::Error;
-use std::net::SocketAddr;
-use tokio::{
-    io::AsyncWriteExt,
-    net::{TcpListener, TcpStream},
-};
 use tokio_postgres::NoTls;
-use tokio_stream::StreamExt;
-use tokio_util::codec::Decoder;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<(), Box<dyn Error>> {
     // load environment variables from .env
     dotenv().ok();
 
@@ -46,109 +36,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let manager = Manager::new(pg_config, NoTls);
     let pool = Pool::builder(manager).max_size(10).build().unwrap();
 
-    let listener = TcpListener::bind("127.0.0.1:8484").await?;
-    log::info!("Login server started on port 8484");
-
-    loop {
-        let (stream, addr) = listener.accept().await?;
-        let pool = pool.clone();
-
-        tokio::spawn(async move {
-            if let Err(e) = handle_connection(stream, addr, pool).await {
-                log::error!("An error occurred while starting the login server: {:?}", e);
-            }
-        });
-    }
-}
-
-async fn handle_connection(
-    mut stream: TcpStream,
-    addr: SocketAddr,
-    pool: Pool,
-) -> Result<(), Box<dyn Error>> {
-    log::info!("Client connected to login server: {}", addr);
-
-    let recv_iv: [u8; 4] = [0x46, 0x72, rand::random::<u8>(), 0x52];
-    log::debug!("recv_iv: {:X?}", recv_iv);
-    let recv_cipher = MapleAES::new(recv_iv, 83);
-
-    let send_iv: [u8; 4] = [0x52, 0x30, 0x78, 0x61];
-    log::debug!("send_iv: {:X?}", send_iv);
-    let send_cipher = MapleAES::new(send_iv, 0xffff - 83);
-
-    // write the initial unencrypted "hello" packet
-    let handshake = login_handshake(recv_iv, send_iv);
-    stream.write_all(&handshake.get_data()).await?;
-    stream.flush().await?;
-
-    let mut framed = MapleCodec::new(recv_cipher, send_cipher).framed(stream);
-
-    while let Some(message) = framed.next().await {
-        match message {
-            Ok(mut packet) => {
-                log::debug!("received packet: {}", packet);
-
-                let op_code = packet.read_short();
-                log::debug!("op_code: {} (0x{:X?})", op_code, op_code);
-
-                if op_code >= 0x200 {
-                    log::warn!(
-                        "Potential malicious packet sent to login server from {}: 0x{:X?}",
-                        addr,
-                        op_code
-                    );
-
-                    break;
-                }
-
-                match op_code {
-                    0x1 => handle_login_password(packet, &pool).await,
-                    _ => log::warn!("Unhandled packet 0x{:X?}", op_code),
-                }
-            }
-            Err(err) => println!("Socket closed with error: {:?}", err),
-        }
-    }
-
-    println!("Socket received FIN packet and closed connection");
+    LoginServer::new().start(&pool).await?;
 
     Ok(())
-}
-
-fn login_handshake(iv_receive: [u8; 4], iv_send: [u8; 4]) -> Packet {
-    let mut packet = Packet::new(18);
-    packet.write_short(14); // packet length (0x0E)
-    packet.write_short(83); // maple version (v83)
-    packet.write_maple_string("1"); // maple patch version (1)
-    packet.write_bytes(&iv_receive);
-    packet.write_bytes(&iv_send);
-    packet.write_byte(8); // locale
-    packet
-}
-
-// TODO need to look into whether having async db is actually better
-async fn handle_login_password(mut packet: Packet, pool: &Pool) {
-    let username = packet.read_maple_string();
-    log::debug!("username: {}", username);
-
-    let password = packet.read_maple_string();
-    log::debug!("password: {}", password);
-
-    packet.advance(6);
-
-    let hwid = packet.read_bytes(4);
-    log::debug!("hwid: {:02X?}", hwid);
-
-    let client = pool.get().await.unwrap();
-    let rows = client
-        .query(
-            "SELECT password FROM accounts WHERE name = $1",
-            &[&username],
-        )
-        .await
-        .unwrap();
-
-    if rows.len() == 0 {
-        log::debug!("Account doesn't exist");
-    }
 }
