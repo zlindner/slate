@@ -1,5 +1,5 @@
 mod client;
-mod login_server;
+mod login;
 mod maple_aes;
 mod maple_codec;
 mod packet;
@@ -8,7 +8,7 @@ mod shanda;
 use deadpool_postgres::{Manager, Pool};
 use dotenv::dotenv;
 use log::LevelFilter;
-use login_server::LoginServer;
+use login::server::LoginServer;
 use simple_logger::SimpleLogger;
 use std::env;
 use std::error::Error;

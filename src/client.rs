@@ -1,6 +1,6 @@
+use crate::login;
 use crate::maple_aes::MapleAES;
 use crate::maple_codec::MapleCodec;
-use crate::packet::Packet;
 
 use deadpool_postgres::Pool;
 use std::error::Error;
@@ -19,10 +19,11 @@ pub struct Client {
     ciphers: (MapleAES, MapleAES),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ClientType {
-    LOGIN,
-    CHANNEl,
+    Login,
+    Channel,
+    CashShop,
 }
 
 impl Client {
@@ -38,13 +39,15 @@ impl Client {
         }
     }
 
-    pub async fn handle_packets(mut self) -> Result<(), Box<dyn Error>> {
+    pub async fn connect(mut self) -> Result<(), Box<dyn Error>> {
         // TODO check self.client_type, add handler function for login/channel client
 
         // write the initial unencrypted "hello" packet
-        let handshake = login_handshake(&self.ciphers);
-        self.stream.write_all(&handshake.get_data()).await?;
-        self.stream.flush().await?;
+        if self.client_type == ClientType::Login {
+            let handshake = login::packets::handshake(&self.ciphers);
+            self.stream.write_all(&handshake.get_data()).await?;
+            self.stream.flush().await?;
+        }
 
         let mut framed = MapleCodec::new(self.ciphers).framed(self.stream);
 
@@ -67,7 +70,7 @@ impl Client {
                     }
 
                     match op_code {
-                        0x1 => handle_login(packet, &self.pool).await,
+                        0x1 => login::handlers::login(packet, &self.pool).await,
                         _ => log::warn!("Unhandled packet 0x{:X?}", op_code),
                     }
                 }
@@ -89,42 +92,4 @@ fn init_ciphers() -> (MapleAES, MapleAES) {
     let send_cipher = MapleAES::new(send_iv, 0xffff - 83);
 
     (recv_cipher, send_cipher)
-}
-
-fn login_handshake(ciphers: &(MapleAES, MapleAES)) -> Packet {
-    let mut packet = Packet::new(18);
-    packet.write_short(14); // packet length (0x0E)
-    packet.write_short(83); // maple version (v83)
-    packet.write_maple_string("1"); // maple patch version (1)
-    packet.write_bytes(&ciphers.0.iv); // receive iv
-    packet.write_bytes(&ciphers.1.iv); // send iv
-    packet.write_byte(8); // locale
-    packet
-}
-
-// TODO need to look into whether having async db is actually better
-async fn handle_login(mut packet: Packet, pool: &Pool) {
-    let username = packet.read_maple_string();
-    log::debug!("username: {}", username);
-
-    let password = packet.read_maple_string();
-    log::debug!("password: {}", password);
-
-    packet.advance(6);
-
-    let hwid = packet.read_bytes(4);
-    log::debug!("hwid: {:02X?}", hwid);
-
-    let client = pool.get().await.unwrap();
-    let rows = client
-        .query(
-            "SELECT password FROM accounts WHERE name = $1",
-            &[&username],
-        )
-        .await
-        .unwrap();
-
-    if rows.len() == 0 {
-        log::debug!("Account doesn't exist");
-    }
 }

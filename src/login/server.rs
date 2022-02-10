@@ -20,10 +20,10 @@ impl LoginServer {
             let pool = pool.clone();
 
             tokio::spawn(async move {
-                let client = Client::new(stream, addr, pool, ClientType::LOGIN);
+                let client = Client::new(stream, addr, pool, ClientType::Login);
 
-                if let Err(e) = client.handle_packets().await {
-                    log::error!("An error occurred while handling packets for client: {}", e);
+                if let Err(e) = client.connect().await {
+                    log::error!("An error occurred while connecting with client: {}", e);
                 }
             });
         }
