@@ -6,6 +6,7 @@ use std::cmp;
 
 type Aes256Ecb = Ecb<Aes256, Pkcs7>;
 
+#[derive(Clone)]
 pub struct MapleAES {
     pub iv: [u8; 4],
     cipher: Aes256Ecb,

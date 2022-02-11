@@ -3,20 +3,21 @@ use crate::maple_aes::MapleAES;
 use crate::maple_codec::MapleCodec;
 
 use deadpool_postgres::Pool;
+use futures::SinkExt;
 use std::error::Error;
 use std::net::SocketAddr;
-use tokio::{io::AsyncWriteExt, net::TcpStream};
+use tokio::net::TcpStream;
 use tokio_stream::StreamExt;
-use tokio_util::codec::Decoder;
+use tokio_util::codec::{Decoder, Framed};
 
 // TODO add session id?
 pub struct Client {
-    stream: TcpStream,
+    pub stream: Framed<TcpStream, MapleCodec>,
     addr: SocketAddr,
-    pool: Pool,
+    pub pool: Pool,
     client_type: ClientType,
     // 0: receive, 1: send
-    ciphers: (MapleAES, MapleAES),
+    pub ciphers: (MapleAES, MapleAES),
 }
 
 #[derive(Debug, PartialEq)]
@@ -30,28 +31,28 @@ impl Client {
     pub fn new(stream: TcpStream, addr: SocketAddr, pool: Pool, client_type: ClientType) -> Self {
         log::info!("Client connected to {:?} server: {}", client_type, addr);
 
+        let ciphers = init_ciphers();
+        let stream = MapleCodec::new(ciphers.clone()).framed(stream);
+
         Client {
             stream,
             addr,
             pool,
             client_type,
-            ciphers: init_ciphers(),
+            ciphers,
         }
     }
 
     pub async fn connect(mut self) -> Result<(), Box<dyn Error>> {
         // TODO check self.client_type, add handler function for login/channel client
 
-        // write the initial unencrypted "hello" packet
         if self.client_type == ClientType::Login {
             let handshake = login::packets::handshake(&self.ciphers);
-            self.stream.write_all(&handshake.get_data()).await?;
+            self.stream.send(handshake).await?;
             self.stream.flush().await?;
         }
 
-        let mut framed = MapleCodec::new(self.ciphers).framed(self.stream);
-
-        while let Some(message) = framed.next().await {
+        while let Some(message) = self.stream.next().await {
             match message {
                 Ok(mut packet) => {
                     log::debug!("received packet: {}", packet);
@@ -70,7 +71,7 @@ impl Client {
                     }
 
                     match op_code {
-                        0x1 => login::handlers::login(packet, &self.pool).await,
+                        0x1 => login::handlers::login(packet, &mut self).await,
                         _ => log::warn!("Unhandled packet 0x{:X?}", op_code),
                     }
                 }

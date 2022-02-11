@@ -3,7 +3,7 @@ use std::fmt::{Display, Formatter, Result};
 use std::str;
 
 pub struct Packet {
-    data: BytesMut,
+    pub data: BytesMut,
 }
 
 impl Packet {
@@ -15,10 +15,6 @@ impl Packet {
 
     pub fn from_bytes(bytes: BytesMut) -> Self {
         Packet { data: bytes }
-    }
-
-    pub fn get_data(&self) -> &BytesMut {
-        &self.data
     }
 
     pub fn write_byte(&mut self, byte: u8) {
@@ -35,7 +31,10 @@ impl Packet {
         self.data.put_i16_le(num);
     }
 
-    // TODO write int
+    pub fn write_int(&mut self, num: i32) {
+        self.data.put_i32_le(num);
+    }
+
     // TODO write long
     // TODO write string
 

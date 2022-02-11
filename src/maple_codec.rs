@@ -2,7 +2,7 @@ use crate::maple_aes::MapleAES;
 use crate::packet::Packet;
 use crate::shanda::Shanda;
 
-use bytes::{BufMut, Bytes, BytesMut};
+use bytes::{BufMut, BytesMut};
 use std::io;
 use tokio_util::codec::{Decoder, Encoder};
 
@@ -47,13 +47,17 @@ impl Decoder for MapleCodec {
     }
 }
 
-// TODO
-impl Encoder<Bytes> for MapleCodec {
+impl Encoder<Packet> for MapleCodec {
     type Error = io::Error;
 
-    fn encode(&mut self, data: Bytes, buf: &mut BytesMut) -> Result<(), io::Error> {
-        buf.reserve(data.len());
-        buf.put(data);
+    fn encode(&mut self, packet: Packet, buf: &mut BytesMut) -> Result<(), io::Error> {
+        log::debug!("sending packet: {}", packet);
+
+        // TODO encrypt data
+
+        buf.reserve(packet.data.len());
+        buf.put(packet.data);
+
         Ok(())
     }
 }

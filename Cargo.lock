@@ -451,6 +451,7 @@ dependencies = [
  "bytes",
  "deadpool-postgres",
  "dotenv",
+ "futures",
  "log",
  "pbkdf2",
  "rand",
