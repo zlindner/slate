@@ -51,7 +51,10 @@ impl Encoder<Packet> for MapleCodec {
     type Error = io::Error;
 
     fn encode(&mut self, packet: Packet, buf: &mut BytesMut) -> Result<(), io::Error> {
-        log::debug!("sending packet: {}", packet);
+        let header = self
+            .ciphers
+            .1
+            .create_packet_header(packet.data.len() as u32);
 
         // TODO encrypt data
 

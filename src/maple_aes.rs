@@ -125,4 +125,19 @@ impl MapleAES {
         ((header[0] ^ self.iv[2]) & 0xff) == ((self.maple_version >> 8) as u8 & 0xff)
             && (((header[1] ^ self.iv[3]) & 0xff) == (self.maple_version & 0xff) as u8)
     }
+
+    pub fn create_packet_header(&self, length: u32) -> [u8; 4] {
+        let mut a = u32::from(self.iv[3] & 0xff);
+        a |= (u32::from(self.iv[2]) << 8) & 0xff00;
+        a ^= u32::from(self.maple_version);
+
+        let b = a ^ (((length << 8) & 0xff00) | length >> 8);
+
+        [
+            ((a >> 8) & 0xff) as u8,
+            (a & 0xff) as u8,
+            ((b >> 8) & 0xff) as u8,
+            (b & 0xff) as u8,
+        ]
+    }
 }
