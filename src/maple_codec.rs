@@ -51,15 +51,25 @@ impl Encoder<Packet> for MapleCodec {
     type Error = io::Error;
 
     fn encode(&mut self, packet: Packet, buf: &mut BytesMut) -> Result<(), io::Error> {
+        // FIXME should find a better way to determine if we are sending the hello packet
+        if !packet.encrypt {
+            buf.reserve(packet.data.len());
+            buf.put(packet.data);
+            return Ok(());
+        }
+
+        // create the packet header
         let header = self
             .ciphers
             .1
             .create_packet_header(packet.data.len() as u32);
 
-        // TODO encrypt data
+        // encrypt and transform the packet's body
+        let encrypted = self.ciphers.1.transform(Shanda::encrypt(packet.data));
 
-        buf.reserve(packet.data.len());
-        buf.put(packet.data);
+        buf.reserve(header.len() + encrypted.len());
+        buf.put_slice(&header);
+        buf.put(encrypted);
 
         Ok(())
     }

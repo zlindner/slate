@@ -4,17 +4,22 @@ use std::str;
 
 pub struct Packet {
     pub data: BytesMut,
+    pub encrypt: bool,
 }
 
 impl Packet {
     pub fn new(size: usize) -> Self {
         Packet {
             data: BytesMut::with_capacity(size),
+            encrypt: true,
         }
     }
 
     pub fn from_bytes(bytes: BytesMut) -> Self {
-        Packet { data: bytes }
+        Packet {
+            data: bytes,
+            encrypt: true,
+        }
     }
 
     pub fn write_byte(&mut self, byte: u8) {
@@ -61,6 +66,10 @@ impl Packet {
 
     pub fn advance(&mut self, num_bytes: usize) {
         self.data.advance(num_bytes);
+    }
+
+    pub fn set_encrypt(&mut self, encrypt: bool) {
+        self.encrypt = encrypt;
     }
 }
 

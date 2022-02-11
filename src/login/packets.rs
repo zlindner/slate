@@ -4,6 +4,7 @@ use super::handlers::LoginError;
 
 pub fn handshake(ciphers: &(MapleAES, MapleAES)) -> Packet {
     let mut packet = Packet::new(18);
+    packet.set_encrypt(false);
     packet.write_short(14); // packet length (0x0E)
     packet.write_short(83); // maple version (v83)
     packet.write_maple_string("1"); // maple patch version (1)
