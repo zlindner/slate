@@ -1,6 +1,6 @@
 use crate::{maple_aes::MapleAES, packet::Packet};
 
-use super::handlers::LoginError;
+use super::handlers::LoginStatus;
 
 pub fn handshake(ciphers: &(MapleAES, MapleAES)) -> Packet {
     let mut packet = Packet::new(18);
@@ -14,7 +14,7 @@ pub fn handshake(ciphers: &(MapleAES, MapleAES)) -> Packet {
     packet
 }
 
-pub fn login_failed(reason: LoginError) -> Packet {
+pub fn login_failed(reason: LoginStatus) -> Packet {
     let mut packet = Packet::new(8);
     packet.write_short(0x0);
     packet.write_int(reason as i32);
