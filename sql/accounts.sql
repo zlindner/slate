@@ -7,7 +7,7 @@ create table accounts
     password        varchar(128) default ''::character varying                              not null,
     pin             varchar(10)  default ''::character varying                              not null,
     pic             varchar(26)  default ''::character varying                              not null,
-    logged_in       smallint     default 0                                                  not null,
+    login_status    smallint     default 0                                                  not null,
     last_login      timestamp,
     create_date     timestamp    default CURRENT_TIMESTAMP                                  not null,
     birthday        date         default '2015-01-01'::date                                 not null,
@@ -21,7 +21,7 @@ create table accounts
     gender          smallint     default 0                                                  not null,
     temp_ban        timestamp    default '2015-01-01 05:00:00'::timestamp without time zone not null,
     greason         smallint     default 0                                                  not null,
-    tos             boolean      default false                                              not null,
+    accepted_tos    boolean      default false                                              not null,
     site_logged     text,
     web_admin       boolean      default false,
     nick            varchar(20)  default NULL::character varying,
@@ -35,9 +35,6 @@ create table accounts
     constraint ranking1
         unique (id, banned)
 );
-
-alter table accounts
-    owner to postgres;
 
 create index accounts_id_name_index
     on accounts (id, name);

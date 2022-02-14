@@ -63,13 +63,22 @@ pub async fn login(mut packet: Packet, client: &mut Client) {
 
 async fn get_account(name: String, pool: &Pool) -> Option<Account> {
     let client = pool.get().await.unwrap();
-    let rows = client
+    let rows = match client
         .query(
-            "SELECT id, password, banned, tos FROM accounts WHERE name = $1",
+            "SELECT id, password, banned, accepted_tos FROM accounts WHERE name = $1",
             &[&name],
         )
         .await
-        .unwrap();
+    {
+        Ok(rows) => rows,
+        Err(e) => {
+            log::error!(
+                "An error occurred while retrieving account information: {}",
+                e
+            );
+            return None;
+        }
+    };
 
     if rows.len() == 0 {
         return None;
