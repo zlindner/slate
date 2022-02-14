@@ -1,23 +1,25 @@
 use bytes::{Buf, BufMut, BytesMut};
 use std::fmt::{Display, Formatter, Result};
+use std::str;
 
 pub struct Packet {
-    data: BytesMut,
+    pub data: BytesMut,
+    pub encrypt: bool,
 }
 
 impl Packet {
     pub fn new(size: usize) -> Self {
         Packet {
             data: BytesMut::with_capacity(size),
+            encrypt: true,
         }
     }
 
     pub fn from_bytes(bytes: BytesMut) -> Self {
-        Packet { data: bytes }
-    }
-
-    pub fn get_data(&self) -> &BytesMut {
-        &self.data
+        Packet {
+            data: bytes,
+            encrypt: true,
+        }
     }
 
     pub fn write_byte(&mut self, byte: u8) {
@@ -34,7 +36,14 @@ impl Packet {
         self.data.put_i16_le(num);
     }
 
-    // TODO write int
+    pub fn write_int(&mut self, num: i32) {
+        self.data.put_i32_le(num);
+    }
+
+    pub fn write_long(&mut self, num: i64) {
+        self.data.put_i64_le(num);
+    }
+
     // TODO write long
     // TODO write string
 
@@ -44,8 +53,27 @@ impl Packet {
         self.write_bytes(&str.as_bytes());
     }
 
+    pub fn read_bytes(&mut self, num_bytes: usize) -> BytesMut {
+        self.data.split_to(num_bytes)
+    }
+
     pub fn read_short(&mut self) -> i16 {
         self.data.get_i16_le()
+    }
+
+    pub fn read_maple_string(&mut self) -> String {
+        let length = self.read_short() as usize;
+        let bytes = self.data.split_to(length);
+
+        str::from_utf8(&bytes).unwrap().to_string()
+    }
+
+    pub fn advance(&mut self, num_bytes: usize) {
+        self.data.advance(num_bytes);
+    }
+
+    pub fn set_encrypt(&mut self, encrypt: bool) {
+        self.encrypt = encrypt;
     }
 }
 
