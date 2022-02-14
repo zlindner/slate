@@ -40,6 +40,10 @@ impl Packet {
         self.data.put_i32_le(num);
     }
 
+    pub fn write_long(&mut self, num: i64) {
+        self.data.put_i64_le(num);
+    }
+
     // TODO write long
     // TODO write string
 

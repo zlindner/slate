@@ -1,6 +1,6 @@
-use crate::login;
 use crate::maple_aes::MapleAES;
 use crate::maple_codec::MapleCodec;
+use crate::{login, packet::Packet};
 
 use deadpool_postgres::Pool;
 use futures::SinkExt;
@@ -80,6 +80,13 @@ impl Client {
         }
 
         log::info!("Client disconnected from {:?} server", self.client_type);
+
+        Ok(())
+    }
+
+    pub async fn send_packet(&mut self, packet: Packet) -> Result<(), Box<dyn Error>> {
+        self.stream.send(packet).await?;
+        self.stream.flush().await?;
 
         Ok(())
     }

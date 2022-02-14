@@ -1,29 +1,28 @@
+use crate::{client::Client, login::packets, packet::Packet};
+
 use deadpool_postgres::Pool;
-use futures::SinkExt;
 use pbkdf2::{
     password_hash::{PasswordHash, PasswordVerifier},
     Pbkdf2,
 };
 
-use crate::{client::Client, login::packets, packet::Packet};
-
-struct LoginAccount {
-    id: i32,
-    name: String,
+// TODO clean up this struct
+pub struct Account {
+    pub id: i32,
+    pub name: String,
     password_hash: String,
     banned: bool,
     accepted_tos: bool,
 }
 
 #[derive(Debug)]
-pub enum LoginStatus {
+pub enum LoginError {
     AccountNotFound = 5,
     InvalidPassword = 0,
     AccountBanned = 3,
     AcceptTOS = 23,
 }
 
-// TODO clean up error handling logic => possibly a "validate_account" function
 // TODO clean up accounts table
 pub async fn login(mut packet: Packet, client: &mut Client) {
     let name = packet.read_maple_string();
@@ -43,32 +42,26 @@ pub async fn login(mut packet: Packet, client: &mut Client) {
     let account = match get_account(name, &client.pool).await {
         Some(account) => account,
         None => {
-            send_login_failed(client, LoginStatus::AccountNotFound).await;
+            client
+                .send_packet(packets::login_failed(LoginError::AccountNotFound))
+                .await
+                .unwrap();
             return;
         }
     };
 
-    if account.banned {
-        send_login_failed(client, LoginStatus::AccountBanned).await;
+    if let Err(e) = validate_account(&account, password).await {
+        client.send_packet(packets::login_failed(e)).await.unwrap();
         return;
     }
 
-    // TODO check login state
-
-    if !account.accepted_tos {
-        // sends the accept tos modal
-        send_login_failed(client, LoginStatus::AcceptTOS).await;
-        return;
-    }
-
-    // validate the entered password
-    if let Err(e) = validate_password(account, password).await {
-        send_login_failed(client, e).await;
-        return;
-    }
+    client
+        .send_packet(packets::login_success(&account))
+        .await
+        .unwrap();
 }
 
-async fn get_account(name: String, pool: &Pool) -> Option<LoginAccount> {
+async fn get_account(name: String, pool: &Pool) -> Option<Account> {
     let client = pool.get().await.unwrap();
     let rows = client
         .query(
@@ -82,7 +75,7 @@ async fn get_account(name: String, pool: &Pool) -> Option<LoginAccount> {
         return None;
     }
 
-    let account = LoginAccount {
+    let account = Account {
         id: rows[0].get(0),
         name: name,
         password_hash: rows[0].get(1),
@@ -93,29 +86,38 @@ async fn get_account(name: String, pool: &Pool) -> Option<LoginAccount> {
     Some(account)
 }
 
-async fn validate_password(account: LoginAccount, password: String) -> Result<(), LoginStatus> {
-    // get the entered password's bytes
-    let password = password.as_bytes();
+async fn validate_account(account: &Account, password: String) -> Result<(), LoginError> {
+    if account.banned {
+        return Err(LoginError::AccountBanned);
+    }
 
-    // get the account's hashed password
-    let hash: String = account.password_hash;
-    let parsed_hash = PasswordHash::new(&hash).unwrap();
+    // TODO check login state
 
-    // check the entered password against the parsed hash
-    if Pbkdf2.verify_password(password, &parsed_hash).is_err() {
-        return Err(LoginStatus::InvalidPassword);
+    if !account.accepted_tos {
+        // sends the accept tos modal
+        return Err(LoginError::AcceptTOS);
+    }
+
+    // validate the entered password
+    if let Err(e) = validate_password(account, password).await {
+        return Err(e);
     }
 
     Ok(())
 }
 
-async fn send_login_failed(client: &mut Client, reason: LoginStatus) {
-    println!("An error occurred while logging in: {:?}", reason);
+async fn validate_password(account: &Account, password: String) -> Result<(), LoginError> {
+    // get the entered password's bytes
+    let password = password.as_bytes();
 
-    client
-        .stream
-        .send(packets::login_failed(reason))
-        .await
-        .unwrap();
-    client.stream.flush().await.unwrap();
+    // get the account's hashed password
+    let hash: &String = &account.password_hash;
+    let parsed_hash = PasswordHash::new(hash).unwrap();
+
+    // check the entered password against the parsed hash
+    if Pbkdf2.verify_password(password, &parsed_hash).is_err() {
+        return Err(LoginError::InvalidPassword);
+    }
+
+    Ok(())
 }
