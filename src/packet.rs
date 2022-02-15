@@ -53,6 +53,10 @@ impl Packet {
         self.write_bytes(&str.as_bytes());
     }
 
+    pub fn read_byte(&mut self) -> u8 {
+        self.data.get_u8()
+    }
+
     pub fn read_bytes(&mut self, num_bytes: usize) -> BytesMut {
         self.data.split_to(num_bytes)
     }

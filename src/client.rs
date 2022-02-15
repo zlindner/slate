@@ -1,3 +1,4 @@
+use crate::login::handlers::Account;
 use crate::maple_aes::MapleAES;
 use crate::maple_codec::MapleCodec;
 use crate::{login, packet::Packet};
@@ -18,6 +19,7 @@ pub struct Client {
     client_type: ClientType,
     // 0: receive, 1: send
     pub ciphers: (MapleAES, MapleAES),
+    pub account: Option<Account>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -40,6 +42,7 @@ impl Client {
             pool,
             client_type,
             ciphers,
+            account: None,
         }
     }
 
@@ -71,7 +74,8 @@ impl Client {
                     }
 
                     match op_code {
-                        0x1 => login::handlers::login(packet, &mut self).await,
+                        0x01 => login::handlers::login(packet, &mut self).await,
+                        0x07 => login::handlers::accept_tos(packet, &mut self).await,
                         _ => log::warn!("Unhandled packet 0x{:X?}", op_code),
                     }
                 }
@@ -84,11 +88,14 @@ impl Client {
         Ok(())
     }
 
-    pub async fn send_packet(&mut self, packet: Packet) -> Result<(), Box<dyn Error>> {
-        self.stream.send(packet).await?;
-        self.stream.flush().await?;
+    pub async fn send_packet(&mut self, packet: Packet) {
+        if let Err(e) = self.stream.send(packet).await {
+            log::debug!("An error occurred while sending packet: {}", e);
+        }
 
-        Ok(())
+        if let Err(e) = self.stream.flush().await {
+            log::debug!("An error occurred while flusing stream: {}", e);
+        }
     }
 }
 
