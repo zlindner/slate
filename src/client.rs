@@ -29,6 +29,14 @@ pub enum ClientType {
     CashShop,
 }
 
+#[derive(PartialEq)]
+pub enum LoginState {
+    LoggedOut = 0,
+    Transitioning = 1,
+    LoggedIn = 2,
+    Error = -1,
+}
+
 impl Client {
     pub fn new(stream: TcpStream, addr: SocketAddr, pool: Pool, client_type: ClientType) -> Self {
         log::info!("Client connected to {:?} server: {}", client_type, addr);
@@ -83,9 +91,22 @@ impl Client {
             }
         }
 
-        log::info!("Client disconnected from {:?} server", self.client_type);
+        // socket received the FIN packet/disconnect() was called
+        self.on_disconnect();
 
         Ok(())
+    }
+
+    pub async fn disconnect(&mut self) {
+        // close the client's socket, if successful on_disconnect() will be called from connect()
+        if let Err(e) = self.stream.close().await {
+            log::error!("An error occurred while disconnecting: {}", e);
+        }
+    }
+
+    fn on_disconnect(&self) {
+        log::info!("Client disconnected from {:?} server", self.client_type);
+        // TODO update login_state
     }
 
     pub async fn send_packet(&mut self, packet: Packet) {

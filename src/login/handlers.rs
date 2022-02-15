@@ -1,4 +1,8 @@
-use crate::{client::Client, login::packets, packet::Packet};
+use crate::{
+    client::{Client, LoginState},
+    login::packets,
+    packet::Packet,
+};
 
 use chrono::NaiveDateTime;
 use deadpool_postgres::Pool;
@@ -27,14 +31,6 @@ pub enum LoginError {
     AccountBanned = 3,
     AcceptTOS = 23,
     AlreadyLoggedIn = 7,
-}
-
-#[derive(PartialEq)]
-enum LoginState {
-    LoggedOut,
-    Transitioning,
-    LoggedIn,
-    Error,
 }
 
 // TODO switch to using sync db?
