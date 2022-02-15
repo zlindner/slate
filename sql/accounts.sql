@@ -7,7 +7,7 @@ create table accounts
     password        varchar(128) default ''::character varying                              not null,
     pin             varchar(10)  default ''::character varying                              not null,
     pic             varchar(26)  default ''::character varying                              not null,
-    login_status    smallint     default 0                                                  not null,
+    login_state     smallint     default 0                                                  not null,
     last_login      timestamp,
     create_date     timestamp    default CURRENT_TIMESTAMP                                  not null,
     birthday        date         default '2015-01-01'::date                                 not null,
