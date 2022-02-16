@@ -84,6 +84,7 @@ impl Client {
                     match op_code {
                         0x01 => login::handlers::login(packet, &mut self).await,
                         0x07 => login::handlers::accept_tos(packet, &mut self).await,
+                        0x0B => login::handlers::world_list(packet, &mut self).await,
                         _ => log::warn!("Unhandled packet 0x{:X?}", op_code),
                     }
                 }

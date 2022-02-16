@@ -43,3 +43,38 @@ pub fn login_success(account: &Account) -> Packet {
     packet.write_byte(2); // FIXME: 0 => register PIC, 1 => ask for PIC, 2 => disabled
     packet
 }
+
+// TODO pass in list/vec of channels for world
+pub fn world_details(id: i32, name: String, flag: i32, event_message: String) -> Packet {
+    // TODO size needs to grow based on number of channels
+    let mut packet = Packet::new(46);
+    packet.write_short(0x0A);
+    packet.write_byte(id as u8);
+    packet.write_maple_string(&name);
+    packet.write_byte(flag as u8);
+    packet.write_maple_string(&event_message);
+    packet.write_byte(100);
+    packet.write_byte(0);
+    packet.write_byte(100);
+    packet.write_byte(0);
+    packet.write_byte(0);
+    packet.write_byte(1); // number of channels TODO use size of channel vec
+
+    // TODO iterate through channel vec, do for each channel
+    packet.write_maple_string(&(name + "-1")); // TODO use channel id/index + 1
+    packet.write_int(100); // TODO channel capacity
+    packet.write_byte(1); // TODO world id? not sure what this is
+    packet.write_byte(0); // TODO channel id
+    packet.write_byte(0); // adult channel
+
+    packet.write_short(0);
+
+    packet
+}
+
+pub fn world_list_end() -> Packet {
+    let mut packet = Packet::new(3);
+    packet.write_short(0x0A);
+    packet.write_byte(0xFF);
+    packet
+}
