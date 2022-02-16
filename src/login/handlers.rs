@@ -98,6 +98,24 @@ pub async fn accept_tos(mut packet: Packet, client: &mut Client) {
     login_success(client).await;
 }
 
+pub async fn world_list(_packet: Packet, client: &mut Client) {
+    // TODO get a vec of all worlds, send world_details packet for each world in the vec
+    client
+        .send_packet(packets::world_details(
+            0,
+            "Scania".to_string(),
+            0,
+            "Scania!".to_string(),
+        ))
+        .await;
+
+    // send end of world list packet
+    client.send_packet(packets::world_list_end()).await;
+
+    // handle selection of world
+    // send recommended packet?
+}
+
 async fn get_account(name: &String, pool: &Pool) -> Option<Account> {
     let db = pool.get().await.unwrap();
     let rows = match db
