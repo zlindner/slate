@@ -1,7 +1,7 @@
 use crate::crypto::maple_aes::MapleAES;
+use crate::login;
 use crate::login::handlers::Account;
-use crate::maple_codec::MapleCodec;
-use crate::{login, packet::Packet};
+use crate::net::{maple_codec::MapleCodec, packet::Packet};
 
 use deadpool_postgres::Pool;
 use futures::SinkExt;

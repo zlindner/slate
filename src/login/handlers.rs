@@ -1,7 +1,7 @@
 use crate::{
     client::{Client, LoginState},
     login::packets,
-    packet::Packet,
+    net::packet::Packet,
 };
 
 use chrono::NaiveDateTime;

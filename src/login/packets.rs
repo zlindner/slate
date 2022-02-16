@@ -1,5 +1,5 @@
 use crate::crypto::maple_aes::MapleAES;
-use crate::packet::Packet;
+use crate::net::packet::Packet;
 
 use super::handlers::{Account, LoginError};
 

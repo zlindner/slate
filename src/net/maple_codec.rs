@@ -1,5 +1,5 @@
 use crate::crypto::{maple_aes::MapleAES, shanda::Shanda};
-use crate::packet::Packet;
+use crate::net::packet::Packet;
 
 use bytes::{BufMut, BytesMut};
 use std::io;
