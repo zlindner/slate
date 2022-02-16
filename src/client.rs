@@ -29,7 +29,7 @@ pub enum ClientType {
     CashShop,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum LoginState {
     LoggedOut = 0,
     Transitioning = 1,
@@ -92,7 +92,7 @@ impl Client {
         }
 
         // socket received the FIN packet/disconnect() was called
-        self.on_disconnect();
+        self.on_disconnect().await;
 
         Ok(())
     }
@@ -104,9 +104,10 @@ impl Client {
         }
     }
 
-    fn on_disconnect(&self) {
+    async fn on_disconnect(&mut self) {
         log::info!("Client disconnected from {:?} server", self.client_type);
-        // TODO update login_state
+
+        self.update_login_state(LoginState::LoggedOut).await;
     }
 
     pub async fn send_packet(&mut self, packet: Packet) {
@@ -116,6 +117,29 @@ impl Client {
 
         if let Err(e) = self.stream.flush().await {
             log::debug!("An error occurred while flusing stream: {}", e);
+        }
+    }
+
+    pub async fn update_login_state(&mut self, new_state: LoginState) {
+        if self.account.is_none() {
+            log::error!("Client's account is None");
+            return;
+        }
+
+        let account: &mut Account = self.account.as_mut().unwrap();
+        account.login_state = new_state;
+
+        let db = self.pool.get().await.unwrap();
+
+        if let Err(e) = db
+            .query(
+                "UPDATE accounts SET login_state = $1, last_login = CURRENT_TIMESTAMP WHERE id = $2",
+                &[&(new_state as i16), &account.id],
+            )
+            .await
+        {
+            log::error!("An error occurred while updating login state: {}", e);
+            return;
         }
     }
 }

@@ -18,7 +18,7 @@ pub struct Account {
     password: String,
     pin: String,
     pic: String,
-    login_state: LoginState,
+    pub login_state: LoginState,
     last_login: Option<NaiveDateTime>,
     banned: bool,
     accepted_tos: bool,
@@ -187,8 +187,7 @@ fn get_login_state(state: Option<i16>) -> LoginState {
 }
 
 async fn login_success(client: &mut Client) {
-    // TODO update login state
-    // TODO update last_loggedin
+    client.update_login_state(LoginState::LoggedIn).await;
 
     client
         .send_packet(packets::login_success(client.account.as_ref().unwrap()))
