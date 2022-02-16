@@ -1,5 +1,6 @@
-use crate::crypto::maple_aes::MapleAES;
 use crate::net::packet::Packet;
+use crate::world::WorldConfig;
+use crate::{crypto::maple_aes::MapleAES, world::World};
 
 use super::handlers::{Account, LoginError};
 
@@ -45,14 +46,14 @@ pub fn login_success(account: &Account) -> Packet {
 }
 
 // TODO pass in list/vec of channels for world
-pub fn world_details(id: i32, name: String, flag: i32, event_message: String) -> Packet {
+pub fn world_details(world: &WorldConfig) -> Packet {
     // TODO size needs to grow based on number of channels
     let mut packet = Packet::new(46);
     packet.write_short(0x0A);
-    packet.write_byte(id as u8);
-    packet.write_maple_string(&name);
-    packet.write_byte(flag as u8);
-    packet.write_maple_string(&event_message);
+    packet.write_byte(world.id as u8);
+    packet.write_maple_string(&world.name);
+    packet.write_byte(world.flag as u8);
+    packet.write_maple_string(&world.event_message);
     packet.write_byte(100);
     packet.write_byte(0);
     packet.write_byte(100);
@@ -61,7 +62,7 @@ pub fn world_details(id: i32, name: String, flag: i32, event_message: String) ->
     packet.write_byte(1); // number of channels TODO use size of channel vec
 
     // TODO iterate through channel vec, do for each channel
-    packet.write_maple_string(&(name + "-1")); // TODO use channel id/index + 1
+    packet.write_maple_string(&(world.name.to_owned() + "-1")); // TODO use channel id/index + 1
     packet.write_int(100); // TODO channel capacity
     packet.write_byte(1); // TODO world id? not sure what this is
     packet.write_byte(0); // TODO channel id

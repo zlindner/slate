@@ -2,6 +2,7 @@ mod client;
 mod crypto;
 mod login;
 mod net;
+mod world;
 
 use deadpool_postgres::{Manager, Pool};
 use dotenv::dotenv;
@@ -12,6 +13,28 @@ use postgres_openssl::MakeTlsConnector;
 use simple_logger::SimpleLogger;
 use std::env;
 use std::error::Error;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use world::World;
+
+pub struct Server {
+    worlds: Vec<World>,
+}
+
+impl Server {
+    fn new() -> Self {
+        Server { worlds: Vec::new() }
+    }
+
+    fn load_worlds(&mut self) {
+        let toml = std::fs::read_to_string("config/worlds.toml").unwrap();
+        let config: world::Config = toml::from_str(&toml).unwrap();
+
+        for world_config in config.worlds.into_iter() {
+            self.worlds.push(World::from_config(world_config));
+        }
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -39,7 +62,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let manager = Manager::new(pg_config, connector);
     let pool = Pool::builder(manager).max_size(10).build().unwrap();
 
-    LoginServer::new().start(&pool).await?;
+    let server = Arc::new(Mutex::new(Server::new()));
+    server.lock().await.load_worlds();
+
+    LoginServer::new().start(&server, &pool).await?;
 
     Ok(())
 }
