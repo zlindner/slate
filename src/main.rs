@@ -1,9 +1,8 @@
 mod client;
+mod crypto;
 mod login;
-mod maple_aes;
 mod maple_codec;
 mod packet;
-mod shanda;
 
 use deadpool_postgres::{Manager, Pool};
 use dotenv::dotenv;
