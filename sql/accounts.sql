@@ -32,7 +32,7 @@ create table accounts
     vote_points     integer      default 0                                                  not null,
     hwid            varchar(12)  default ''::character varying                              not null,
     language        smallint     default 2                                                  not null,
-    constraint ranking1
+    constraint accounts_ranking1
         unique (id, banned)
 );
 
