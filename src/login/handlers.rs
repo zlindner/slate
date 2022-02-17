@@ -169,6 +169,7 @@ pub async fn character_list(mut packet: Packet, client: &mut Client) {
 
     // TODO client.set_world(world)
     // TODO client.set_channel(channel)
+    client.send_packet(packets::character_list()).await;
 }
 
 async fn get_account(name: &String, pool: &Pool) -> Option<Account> {

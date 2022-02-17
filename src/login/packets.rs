@@ -91,3 +91,17 @@ pub fn world_status(status: CapacityStatus) -> Packet {
     packet.write_short(status as i16);
     packet
 }
+
+pub fn character_list() -> Packet {
+    let mut packet = Packet::new(9);
+    packet.write_short(0x0B);
+    packet.write_byte(0); // status
+
+    // TODO need to add data for each character
+
+    packet.write_byte(0);
+    packet.write_byte(2); // FIXME: 0 => register PIC, 1 => ask for PIC, 2 => disabled
+    packet.write_int(3); // number of character slots allowed for this client
+
+    packet
+}
