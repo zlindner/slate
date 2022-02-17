@@ -32,7 +32,7 @@ pub enum ClientType {
     CashShop,
 }
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub enum LoginState {
     LoggedOut = 0,
     Transitioning = 1,

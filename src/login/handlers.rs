@@ -192,11 +192,11 @@ async fn validate_password(account: &Account, password: String) -> Result<(), Lo
     Ok(())
 }
 
-fn get_login_state(state: Option<i16>) -> LoginState {
+fn get_login_state(state: i16) -> LoginState {
     match state {
-        Some(0) => LoginState::LoggedOut,
-        Some(1) => LoginState::Transitioning,
-        Some(2) => LoginState::LoggedOut,
+        0 => LoginState::LoggedOut,
+        1 => LoginState::Transitioning,
+        2 => LoginState::LoggedIn,
         _ => LoginState::Error,
     }
 }
