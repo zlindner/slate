@@ -172,6 +172,17 @@ pub async fn world_list(_packet: Packet, client: &mut Client) {
     // send recommended packet?
 }
 
+pub async fn validate_character_name(mut packet: Packet, client: &mut Client) {
+    let name = packet.read_maple_string();
+
+    // looks like the client has it's own "banned name" list, so we can skip implementing that for now
+    let valid = !is_name_taken(&name, &client.pool).await;
+
+    client
+        .send_packet(packets::character_name(&name, valid))
+        .await;
+}
+
 async fn get_account(name: &String, pool: &Pool) -> Option<Account> {
     let db = pool.get().await.unwrap();
     let rows = match db
@@ -266,4 +277,20 @@ async fn login_success(client: &mut Client) {
     client
         .send_packet(packets::login_success(client.account.as_ref().unwrap()))
         .await;
+}
+
+async fn is_name_taken(name: &str, pool: &Pool) -> bool {
+    let db = pool.get().await.unwrap();
+
+    let query = db
+        .query("SELECT id FROM characters WHERE name = $1", &[&name])
+        .await;
+
+    if query.is_err() {
+        return true;
+    }
+
+    // no rows found => name isn't taken
+    let rows = query.unwrap();
+    rows.len() > 0
 }

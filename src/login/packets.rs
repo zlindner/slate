@@ -105,3 +105,11 @@ pub fn character_list() -> Packet {
 
     packet
 }
+
+pub fn character_name(name: &str, valid: bool) -> Packet {
+    let mut packet = Packet::new(name.len() + 5);
+    packet.write_short(0x0D);
+    packet.write_maple_string(name);
+    packet.write_byte(!valid as u8); // name is taken => !valid
+    packet
+}
