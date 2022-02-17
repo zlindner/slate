@@ -135,6 +135,42 @@ pub async fn world_status(mut packet: Packet, client: &mut Client) {
         .await;
 }
 
+pub async fn character_list(mut packet: Packet, client: &mut Client) {
+    // not sure what this byte is for
+    packet.advance(1);
+
+    let world_id = packet.read_byte();
+
+    let server = client.server.clone();
+    let server = server.lock().await;
+    let world = server.worlds.get(world_id as usize);
+
+    // TODO add check to see if world.capacity_status is Full
+    if world.is_none() {
+        client
+            .send_packet(packets::world_status(CapacityStatus::Full))
+            .await;
+
+        return;
+    }
+
+    let world = world.unwrap();
+
+    let channel_id = packet.read_byte();
+    let channel = world.channels.get(channel_id as usize);
+
+    if channel.is_none() {
+        client
+            .send_packet(packets::world_status(CapacityStatus::Full))
+            .await;
+
+        return;
+    }
+
+    // TODO client.set_world(world)
+    // TODO client.set_channel(channel)
+}
+
 async fn get_account(name: &String, pool: &Pool) -> Option<Account> {
     let db = pool.get().await.unwrap();
     let rows = match db
