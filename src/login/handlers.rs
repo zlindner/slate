@@ -2,6 +2,7 @@ use crate::{
     client::{Client, LoginState},
     login::packets,
     net::packet::Packet,
+    world::CapacityStatus,
 };
 
 use chrono::NaiveDateTime;
@@ -111,6 +112,27 @@ pub async fn world_list(_packet: Packet, client: &mut Client) {
 
     // handle selection of world
     // send recommended packet?
+}
+
+pub async fn world_status(mut packet: Packet, client: &mut Client) {
+    let world_id = packet.read_short();
+
+    let server = client.server.clone();
+    let server = server.lock().await;
+    let world = server.worlds.get(world_id as usize);
+
+    if world.is_none() {
+        client
+            .send_packet(packets::world_status(CapacityStatus::Full))
+            .await;
+
+        return;
+    }
+
+    // TODO get the worlds capacity status based on number of current players, channel size, etc.
+    client
+        .send_packet(packets::world_status(CapacityStatus::Normal))
+        .await;
 }
 
 async fn get_account(name: &String, pool: &Pool) -> Option<Account> {

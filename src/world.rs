@@ -28,6 +28,13 @@ pub struct World {
     pub channels: Vec<Channel>,
 }
 
+#[derive(PartialEq, Clone, Copy, Debug)]
+pub enum CapacityStatus {
+    Normal = 0,
+    HighlyPopulated = 1,
+    Full = 2,
+}
+
 impl World {
     pub fn from_config(config: WorldConfig) -> Self {
         World {

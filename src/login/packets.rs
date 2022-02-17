@@ -1,7 +1,5 @@
-use bytes::Buf;
-
 use crate::net::packet::Packet;
-use crate::world::WorldConfig;
+use crate::world::CapacityStatus;
 use crate::{crypto::maple_aes::MapleAES, world::World};
 
 use super::handlers::{Account, LoginError};
@@ -84,5 +82,12 @@ pub fn world_list_end() -> Packet {
     let mut packet = Packet::new(3);
     packet.write_short(0x0A);
     packet.write_byte(0xFF);
+    packet
+}
+
+pub fn world_status(status: CapacityStatus) -> Packet {
+    let mut packet = Packet::new(4);
+    packet.write_short(0x03);
+    packet.write_short(status as i16);
     packet
 }
