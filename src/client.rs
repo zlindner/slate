@@ -1,13 +1,15 @@
 use crate::crypto::maple_aes::MapleAES;
-use crate::login;
 use crate::login::handlers::Account;
 use crate::net::{maple_codec::MapleCodec, packet::Packet};
+use crate::{login, Server};
 
 use deadpool_postgres::Pool;
 use futures::SinkExt;
 use std::error::Error;
 use std::net::SocketAddr;
+use std::sync::Arc;
 use tokio::net::TcpStream;
+use tokio::sync::Mutex;
 use tokio_stream::StreamExt;
 use tokio_util::codec::{Decoder, Framed};
 
@@ -15,6 +17,7 @@ use tokio_util::codec::{Decoder, Framed};
 pub struct Client {
     pub stream: Framed<TcpStream, MapleCodec>,
     addr: SocketAddr,
+    pub server: Arc<Mutex<Server>>,
     pub pool: Pool,
     client_type: ClientType,
     // 0: receive, 1: send
@@ -29,7 +32,7 @@ pub enum ClientType {
     CashShop,
 }
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub enum LoginState {
     LoggedOut = 0,
     Transitioning = 1,
@@ -38,7 +41,13 @@ pub enum LoginState {
 }
 
 impl Client {
-    pub fn new(stream: TcpStream, addr: SocketAddr, pool: Pool, client_type: ClientType) -> Self {
+    pub fn new(
+        stream: TcpStream,
+        addr: SocketAddr,
+        server: Arc<Mutex<Server>>,
+        pool: Pool,
+        client_type: ClientType,
+    ) -> Self {
         log::info!("Client connected to {:?} server: {}", client_type, addr);
 
         let ciphers = init_ciphers();
@@ -47,6 +56,7 @@ impl Client {
         Client {
             stream,
             addr,
+            server,
             pool,
             client_type,
             ciphers,

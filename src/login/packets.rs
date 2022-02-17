@@ -1,5 +1,8 @@
-use crate::crypto::maple_aes::MapleAES;
+use bytes::Buf;
+
 use crate::net::packet::Packet;
+use crate::world::WorldConfig;
+use crate::{crypto::maple_aes::MapleAES, world::World};
 
 use super::handlers::{Account, LoginError};
 
@@ -44,31 +47,36 @@ pub fn login_success(account: &Account) -> Packet {
     packet
 }
 
-// TODO pass in list/vec of channels for world
-pub fn world_details(id: i32, name: String, flag: i32, event_message: String) -> Packet {
-    // TODO size needs to grow based on number of channels
-    let mut packet = Packet::new(46);
-    packet.write_short(0x0A);
-    packet.write_byte(id as u8);
-    packet.write_maple_string(&name);
-    packet.write_byte(flag as u8);
-    packet.write_maple_string(&event_message);
-    packet.write_byte(100);
-    packet.write_byte(0);
-    packet.write_byte(100);
-    packet.write_byte(0);
-    packet.write_byte(0);
-    packet.write_byte(1); // number of channels TODO use size of channel vec
+pub fn world_details(world: &World) -> Packet {
+    let config = &world.config;
 
-    // TODO iterate through channel vec, do for each channel
-    packet.write_maple_string(&(name + "-1")); // TODO use channel id/index + 1
-    packet.write_int(100); // TODO channel capacity
-    packet.write_byte(1); // TODO world id? not sure what this is
-    packet.write_byte(0); // TODO channel id
-    packet.write_byte(0); // adult channel
+    // calculate the number of bytes for the packet
+    let mut len = 16 + config.name.len() + config.event_message.len();
+    // add 2 bytes for channel id (in case # of channels > 10)
+    len += (9 + config.name.len() + 2) * world.channels.len();
+
+    let mut packet = Packet::new(len);
+    packet.write_short(0x0A);
+    packet.write_byte(config.id as u8);
+    packet.write_maple_string(&config.name);
+    packet.write_byte(config.flag as u8);
+    packet.write_maple_string(&config.event_message);
+    packet.write_byte(100);
+    packet.write_byte(0);
+    packet.write_byte(100);
+    packet.write_byte(0);
+    packet.write_byte(0);
+    packet.write_byte(world.channels.len() as u8);
+
+    for channel in world.channels.iter() {
+        packet.write_maple_string(&(config.name.to_owned() + &(channel.id + 1).to_string()));
+        packet.write_int(100); // TODO channel capacity, not sure if this is max allowed or currently connected?
+        packet.write_byte(1); // TODO world id? not sure what this is
+        packet.write_byte(channel.id as u8);
+        packet.write_byte(0); // adult channel
+    }
 
     packet.write_short(0);
-
     packet
 }
 

@@ -99,15 +99,12 @@ pub async fn accept_tos(mut packet: Packet, client: &mut Client) {
 }
 
 pub async fn world_list(_packet: Packet, client: &mut Client) {
-    // TODO get a vec of all worlds, send world_details packet for each world in the vec
-    client
-        .send_packet(packets::world_details(
-            0,
-            "Scania".to_string(),
-            0,
-            "Scania!".to_string(),
-        ))
-        .await;
+    let server = client.server.clone();
+
+    // send world_details packet for each world
+    for world in server.lock().await.worlds.iter() {
+        client.send_packet(packets::world_details(&world)).await;
+    }
 
     // send end of world list packet
     client.send_packet(packets::world_list_end()).await;
@@ -195,11 +192,11 @@ async fn validate_password(account: &Account, password: String) -> Result<(), Lo
     Ok(())
 }
 
-fn get_login_state(state: Option<i16>) -> LoginState {
+fn get_login_state(state: i16) -> LoginState {
     match state {
-        Some(0) => LoginState::LoggedOut,
-        Some(1) => LoginState::Transitioning,
-        Some(2) => LoginState::LoggedOut,
+        0 => LoginState::LoggedOut,
+        1 => LoginState::Transitioning,
+        2 => LoginState::LoggedIn,
         _ => LoginState::Error,
     }
 }
