@@ -70,6 +70,64 @@ pub async fn login(mut packet: Packet, client: &mut Client) {
     login_success(client).await;
 }
 
+pub async fn character_list(mut packet: Packet, client: &mut Client) {
+    // not sure what this byte is for
+    packet.advance(1);
+
+    let world_id = packet.read_byte();
+
+    let server = client.server.clone();
+    let server = server.lock().await;
+    let world = server.worlds.get(world_id as usize);
+
+    // TODO add check to see if world.capacity_status is Full
+    if world.is_none() {
+        client
+            .send_packet(packets::world_status(CapacityStatus::Full))
+            .await;
+
+        return;
+    }
+
+    let world = world.unwrap();
+
+    let channel_id = packet.read_byte();
+    let channel = world.channels.get(channel_id as usize);
+
+    if channel.is_none() {
+        client
+            .send_packet(packets::world_status(CapacityStatus::Full))
+            .await;
+
+        return;
+    }
+
+    // TODO client.set_world(world)
+    // TODO client.set_channel(channel)
+    client.send_packet(packets::character_list()).await;
+}
+
+pub async fn world_status(mut packet: Packet, client: &mut Client) {
+    let world_id = packet.read_short();
+
+    let server = client.server.clone();
+    let server = server.lock().await;
+    let world = server.worlds.get(world_id as usize);
+
+    if world.is_none() {
+        client
+            .send_packet(packets::world_status(CapacityStatus::Full))
+            .await;
+
+        return;
+    }
+
+    // TODO get the worlds capacity status based on number of current players, channel size, etc.
+    client
+        .send_packet(packets::world_status(CapacityStatus::Normal))
+        .await;
+}
+
 pub async fn accept_tos(mut packet: Packet, client: &mut Client) {
     // Ok => 0x01, Cancel => 0x00
     let accepted = packet.read_byte();
@@ -112,64 +170,6 @@ pub async fn world_list(_packet: Packet, client: &mut Client) {
 
     // handle selection of world
     // send recommended packet?
-}
-
-pub async fn world_status(mut packet: Packet, client: &mut Client) {
-    let world_id = packet.read_short();
-
-    let server = client.server.clone();
-    let server = server.lock().await;
-    let world = server.worlds.get(world_id as usize);
-
-    if world.is_none() {
-        client
-            .send_packet(packets::world_status(CapacityStatus::Full))
-            .await;
-
-        return;
-    }
-
-    // TODO get the worlds capacity status based on number of current players, channel size, etc.
-    client
-        .send_packet(packets::world_status(CapacityStatus::Normal))
-        .await;
-}
-
-pub async fn character_list(mut packet: Packet, client: &mut Client) {
-    // not sure what this byte is for
-    packet.advance(1);
-
-    let world_id = packet.read_byte();
-
-    let server = client.server.clone();
-    let server = server.lock().await;
-    let world = server.worlds.get(world_id as usize);
-
-    // TODO add check to see if world.capacity_status is Full
-    if world.is_none() {
-        client
-            .send_packet(packets::world_status(CapacityStatus::Full))
-            .await;
-
-        return;
-    }
-
-    let world = world.unwrap();
-
-    let channel_id = packet.read_byte();
-    let channel = world.channels.get(channel_id as usize);
-
-    if channel.is_none() {
-        client
-            .send_packet(packets::world_status(CapacityStatus::Full))
-            .await;
-
-        return;
-    }
-
-    // TODO client.set_world(world)
-    // TODO client.set_channel(channel)
-    client.send_packet(packets::character_list()).await;
 }
 
 async fn get_account(name: &String, pool: &Pool) -> Option<Account> {
