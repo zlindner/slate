@@ -1,5 +1,7 @@
 use serde::Deserialize;
 
+use crate::channel::Channel;
+
 #[derive(Debug, Deserialize)]
 pub struct Config {
     pub worlds: Vec<WorldConfig>,
@@ -23,10 +25,21 @@ pub struct WorldConfig {
 
 pub struct World {
     pub config: WorldConfig,
+    pub channels: Vec<Channel>,
 }
 
 impl World {
     pub fn from_config(config: WorldConfig) -> Self {
-        World { config }
+        World {
+            config,
+            channels: Vec::new(),
+        }
+    }
+
+    pub fn load_channels(&mut self) {
+        for i in 0..self.config.channels {
+            let channel = Channel::new(i, self.config.id);
+            self.channels.push(channel);
+        }
     }
 }

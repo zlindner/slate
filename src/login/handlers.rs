@@ -103,9 +103,7 @@ pub async fn world_list(_packet: Packet, client: &mut Client) {
 
     // send world_details packet for each world
     for world in server.lock().await.worlds.iter() {
-        client
-            .send_packet(packets::world_details(&world.config))
-            .await;
+        client.send_packet(packets::world_details(&world)).await;
     }
 
     // send end of world list packet

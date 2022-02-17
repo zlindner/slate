@@ -1,3 +1,4 @@
+mod channel;
 mod client;
 mod crypto;
 mod login;
@@ -31,10 +32,18 @@ impl Server {
         let config: world::Config = toml::from_str(&toml).unwrap();
 
         for world_config in config.worlds.into_iter() {
-            self.worlds.push(World::from_config(world_config));
+            let mut world = World::from_config(world_config);
+            world.load_channels();
+
+            self.worlds.push(world);
         }
     }
 }
+
+// TODO:
+// Additionally, when you do want shared access to an IO resource, it is often better to spawn a task to manage
+// the IO resource, and to use message passing to communicate with that task.
+// ^^^ if we adopt this model for db access, we should be able to used std::sync::Mutex which is less expensive
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
