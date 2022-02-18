@@ -53,6 +53,10 @@ impl Packet {
         self.write_bytes(&str.as_bytes());
     }
 
+    pub fn write_fixed_string(&mut self, str: &str) {
+        self.write_bytes(&str.as_bytes());
+    }
+
     pub fn read_byte(&mut self) -> u8 {
         self.data.get_u8()
     }

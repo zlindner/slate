@@ -122,6 +122,7 @@ pub fn create_character(character: &Character) -> Packet {
 
     add_character_stats(&mut packet, character);
     add_character_style(&mut packet, character);
+    add_character_equipment(&mut packet, character);
 
     packet.write_byte(0); // view all
 
@@ -139,7 +140,14 @@ pub fn create_character(character: &Character) -> Packet {
 
 fn add_character_stats(packet: &mut Packet, character: &Character) {
     packet.write_int(character.id);
-    // TODO name
+
+    let mut padded_name = String::from(character.name.clone());
+
+    for _ in padded_name.len()..13 {
+        padded_name.push('\0');
+    }
+
+    packet.write_fixed_string(&padded_name);
 
     packet.write_byte(character.style.gender as u8);
     packet.write_byte(character.style.skin_colour as u8);
@@ -168,6 +176,7 @@ fn add_character_stats(packet: &mut Packet, character: &Character) {
     // TODO can add remaining skill info here for evan
     packet.write_short(character.stats.sp as i16);
     packet.write_int(character.stats.exp);
+    packet.write_short(character.stats.fame as i16);
     packet.write_int(character.stats.gacha_exp);
     packet.write_int(character.map);
     packet.write_byte(character.spawn_point as u8);
@@ -182,4 +191,29 @@ fn add_character_style(packet: &mut Packet, character: &Character) {
     packet.write_int(character.style.hair);
 }
 
-fn add_character_equipment(packet: &mut Packet, character: &Character) {}
+fn add_character_equipment(packet: &mut Packet, _: &Character) {
+    packet.write_byte(0x05); // 5
+    packet.write_int(1040010);
+
+    packet.write_byte(0x06); // 6
+    packet.write_int(1060006);
+
+    packet.write_byte(0x07); // 7
+    packet.write_int(1072038);
+
+    packet.write_byte(0x0B); // 11
+    packet.write_int(1322005);
+
+    packet.write_byte(0xFF);
+
+    // masked equips?
+    packet.write_byte(0xFF);
+
+    packet.write_int(0); // FIXME if item w/ id/pos? -111 is not null add its id here?
+
+    // pet stuff?
+    for _ in 0..3 {
+        // TODO if pet.get(i) != null write_int(pet(i) item id)
+        packet.write_int(0);
+    }
+}

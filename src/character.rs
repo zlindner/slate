@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub struct Character {
     pub id: i32,
     pub account_id: i32,
@@ -30,6 +31,7 @@ impl Character {
     }
 }
 
+#[derive(Debug)]
 pub struct Stats {
     pub exp: i32,
     pub gacha_exp: i32,
@@ -70,6 +72,7 @@ impl Default for Stats {
     }
 }
 
+#[derive(Debug)]
 pub struct Style {
     pub skin_colour: i32,
     pub gender: u8,
@@ -88,7 +91,7 @@ impl Style {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Rank {
     pub rank: i32,
     pub rank_move: i32,

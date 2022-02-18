@@ -199,6 +199,11 @@ pub async fn create_character(mut packet: Packet, client: &mut Client) {
     let weapon = packet.read_int();
     let gender = packet.read_byte();
 
+    log::debug!("top: {}", top);
+    log::debug!("bottom: {}", bottom);
+    log::debug!("shoes: {}", shoes);
+    log::debug!("weapon: {}", weapon);
+
     // TODO check if face, hair, top, bottom, shoes, weapon are valid => match the correct ids for starter gear
     // this is done to prevent packet editing during character creation
     // if invalid, disconnect the client
@@ -206,6 +211,7 @@ pub async fn create_character(mut packet: Packet, client: &mut Client) {
     // TODO check clients available character slots
     let style = character::Style::new(skin_colour, gender, hair + hair_colour, face);
     let character = Character::new(0, 0, name, style);
+    log::debug!("character: {:?}", character);
 
     client
         .send_packet(packets::create_character(&character))
