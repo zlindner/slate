@@ -65,6 +65,10 @@ impl Packet {
         self.data.get_i16_le()
     }
 
+    pub fn read_int(&mut self) -> i32 {
+        self.data.get_i32_le()
+    }
+
     pub fn read_maple_string(&mut self) -> String {
         let length = self.read_short() as usize;
         let bytes = self.data.split_to(length);

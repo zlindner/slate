@@ -1,3 +1,4 @@
+use crate::character::Character;
 use crate::net::packet::Packet;
 use crate::world::CapacityStatus;
 use crate::{crypto::maple_aes::MapleAES, world::World};
@@ -113,3 +114,72 @@ pub fn character_name(name: &str, valid: bool) -> Packet {
     packet.write_byte(!valid as u8); // name is taken => !valid
     packet
 }
+
+pub fn create_character(character: &Character) -> Packet {
+    let mut packet = Packet::new(256);
+    packet.write_short(0x0E);
+    packet.write_byte(0);
+
+    add_character_stats(&mut packet, character);
+    add_character_style(&mut packet, character);
+
+    packet.write_byte(0); // view all
+
+    // TODO if gm or gm job, write_byte(0) and return;
+
+    packet.write_byte(1); // world rank enabled
+    packet.write_int(character.rank.rank);
+    packet.write_int(character.rank.rank_move); // positive => upwards, negative => downwards
+    packet.write_int(character.rank.job_rank);
+    packet.write_int(character.rank.job_rank_move); // positive => upwards, negative => downwards
+
+    log::debug!("create_character packet size: {}", packet.data.len());
+    packet
+}
+
+fn add_character_stats(packet: &mut Packet, character: &Character) {
+    packet.write_int(character.id);
+    // TODO name
+
+    packet.write_byte(character.style.gender as u8);
+    packet.write_byte(character.style.skin_colour as u8);
+    packet.write_int(character.style.face);
+    packet.write_int(character.style.hair);
+
+    // pets
+    for _ in 0..3 {
+        // TODO get character.pet(i)
+        // if not null -> write_long(pet.id)
+        packet.write_long(0);
+    }
+
+    // stats
+    packet.write_byte(character.stats.level as u8);
+    packet.write_short(character.job as i16);
+    packet.write_short(character.stats.str as i16);
+    packet.write_short(character.stats.dex as i16);
+    packet.write_short(character.stats.int as i16);
+    packet.write_short(character.stats.luk as i16);
+    packet.write_short(character.stats.hp as i16);
+    packet.write_short(character.stats.max_hp as i16);
+    packet.write_short(character.stats.mp as i16);
+    packet.write_short(character.stats.max_mp as i16);
+    packet.write_short(character.stats.ap as i16);
+    // TODO can add remaining skill info here for evan
+    packet.write_short(character.stats.sp as i16);
+    packet.write_int(character.stats.exp);
+    packet.write_int(character.stats.gacha_exp);
+    packet.write_int(character.map);
+    packet.write_byte(character.spawn_point as u8);
+    packet.write_int(0);
+}
+
+fn add_character_style(packet: &mut Packet, character: &Character) {
+    packet.write_byte(character.style.gender as u8);
+    packet.write_byte(character.style.skin_colour as u8);
+    packet.write_int(character.style.face);
+    packet.write_byte(1); // mega?
+    packet.write_int(character.style.hair);
+}
+
+fn add_character_equipment(packet: &mut Packet, character: &Character) {}

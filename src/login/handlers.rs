@@ -1,4 +1,5 @@
 use crate::{
+    character::{self, Character},
     client::{Client, LoginState},
     login::packets,
     net::packet::Packet,
@@ -180,6 +181,34 @@ pub async fn validate_character_name(mut packet: Packet, client: &mut Client) {
 
     client
         .send_packet(packets::character_name(&name, valid))
+        .await;
+}
+
+pub async fn create_character(mut packet: Packet, client: &mut Client) {
+    let name = packet.read_maple_string();
+    let job = packet.read_int();
+
+    let face = packet.read_int();
+    let hair = packet.read_int();
+    let hair_colour = packet.read_int();
+    let skin_colour = packet.read_int();
+
+    let top = packet.read_int();
+    let bottom = packet.read_int();
+    let shoes = packet.read_int();
+    let weapon = packet.read_int();
+    let gender = packet.read_byte();
+
+    // TODO check if face, hair, top, bottom, shoes, weapon are valid => match the correct ids for starter gear
+    // this is done to prevent packet editing during character creation
+    // if invalid, disconnect the client
+
+    // TODO check clients available character slots
+    let style = character::Style::new(skin_colour, gender, hair + hair_colour, face);
+    let character = Character::new(0, 0, name, style);
+
+    client
+        .send_packet(packets::create_character(&character))
         .await;
 }
 
