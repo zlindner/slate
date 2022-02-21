@@ -7,9 +7,9 @@ create table characters
     account_id             integer      default 0                                                  not null
         constraint characters_account_id
             unique,
-    world                  integer      default 0                                                  not null,
+    world_id               integer      default 0                                                  not null,
     name                   varchar(13)  default ''::character varying                              not null,
-    level                  integer      default 1                                                  not null,
+    level                  smallint     default 1                                                  not null,
     exp                    integer      default 0                                                  not null,
     gacha_exp              integer      default 0                                                  not null,
     str                    integer      default 12                                                 not null,
@@ -23,7 +23,7 @@ create table characters
     mesos                  integer      default 0                                                  not null,
     hp_mp_used             integer      default 0                                                  not null,
     job                    integer      default 0                                                  not null,
-    skin_color             integer      default 0                                                  not null,
+    skin_colour            integer      default 0                                                  not null,
     gender                 smallint     default 0                                                  not null,
     fame                   integer      default 0                                                  not null,
     fquest                 integer      default 0                                                  not null,
@@ -91,5 +91,5 @@ create index characters_id_account_id_name_index
     on characters (id, account_id, name);
 
 create index characters_id_account_id_world_index
-    on characters (id, account_id, world);
+    on characters (id, account_id, world_id);
 

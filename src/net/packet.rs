@@ -53,6 +53,10 @@ impl Packet {
         self.write_bytes(&str.as_bytes());
     }
 
+    pub fn write_fixed_string(&mut self, str: &str) {
+        self.write_bytes(&str.as_bytes());
+    }
+
     pub fn read_byte(&mut self) -> u8 {
         self.data.get_u8()
     }
@@ -63,6 +67,10 @@ impl Packet {
 
     pub fn read_short(&mut self) -> i16 {
         self.data.get_i16_le()
+    }
+
+    pub fn read_int(&mut self) -> i32 {
+        self.data.get_i32_le()
     }
 
     pub fn read_maple_string(&mut self) -> String {

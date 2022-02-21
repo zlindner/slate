@@ -1,4 +1,5 @@
 mod channel;
+mod character;
 mod client;
 mod crypto;
 mod login;
