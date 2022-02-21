@@ -100,7 +100,7 @@ pub fn character_list() -> Packet {
 
     // TODO need to add data for each character
 
-    packet.write_byte(0);
+    packet.write_byte(0); // number of characters
     packet.write_byte(2); // FIXME: 0 => register PIC, 1 => ask for PIC, 2 => disabled
     packet.write_int(3); // number of character slots allowed for this client
 
@@ -174,7 +174,7 @@ fn add_character_stats(packet: &mut Packet, character: &Character) {
     packet.write_short(character.stats.max_mp as i16);
     packet.write_short(character.stats.ap as i16);
     // TODO can add remaining skill info here for evan
-    packet.write_short(character.stats.sp as i16);
+    packet.write_short(0); // TODO remainingSp
     packet.write_int(character.stats.exp);
     packet.write_short(character.stats.fame as i16);
     packet.write_int(character.stats.gacha_exp);

@@ -91,5 +91,5 @@ create index characters_id_account_id_name_index
     on characters (id, account_id, name);
 
 create index characters_id_account_id_world_index
-    on characters (id, account_id, world);
+    on characters (id, account_id, world_id);
 

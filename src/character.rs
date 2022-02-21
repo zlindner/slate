@@ -9,6 +9,7 @@ pub struct Character {
     pub style: Style,
     pub map: i32,
     pub spawn_point: i32,
+    pub gm: u8,
     pub rank: Rank,
 }
 
@@ -26,6 +27,7 @@ impl Character {
             style,
             map: 10000,     // FIXME default for beginnner (mushroom town)
             spawn_point: 0, // FIXME
+            gm: 0,
             rank: Default::default(),
         }
     }
@@ -47,7 +49,7 @@ pub struct Stats {
     pub mesos: i32,
     pub fame: i32,
     pub ap: i32,
-    pub sp: i32,
+    pub sp: String,
 }
 
 impl Default for Stats {
@@ -67,7 +69,7 @@ impl Default for Stats {
             mesos: 0,
             fame: 0,
             ap: 0,
-            sp: 0,
+            sp: "0,0,0,0,0,0,0,0,0,0".to_string(),
         }
     }
 }
