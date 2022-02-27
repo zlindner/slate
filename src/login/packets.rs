@@ -80,12 +80,12 @@ pub fn world_details(world: &World) -> Packet {
         let channel_name = &(world.config.name.to_owned() + &(channel.id + 1).to_string());
         packet.write_string(channel_name);
         // TODO channel capacity, not sure if this is max allowed or currently connected?
-        packet.write_int(100); 
+        packet.write_int(100);
         // TODO world id? not sure what this is
-        packet.write_byte(1); 
+        packet.write_byte(1);
         packet.write_byte(channel.id as u8);
         // is adult channel
-        packet.write_byte(0); 
+        packet.write_byte(0);
     }
 
     packet.write_short(0);
@@ -97,6 +97,29 @@ pub fn world_list_end() -> Packet {
     let mut packet = Packet::new();
     packet.write_short(0x0A);
     packet.write_byte(0xFF);
+    packet
+}
+
+// pre-selects a world for the client after loading the world/server list
+// TODO according to GMS, this should be the "most active" world
+pub fn world_select(world_id: i32) -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x1A);
+    packet.write_int(world_id);
+    packet
+}
+
+// displays the "Recommended World" text for each world when the client selects "View Recommended"
+pub fn view_recommended(worlds: &Vec<World>) -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x1B);
+    packet.write_byte(worlds.len() as u8);
+
+    for world in worlds.iter() {
+        packet.write_int(world.config.id);
+        packet.write_string(&world.config.recommended);
+    }
+
     packet
 }
 

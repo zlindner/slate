@@ -1,4 +1,4 @@
-use crate::{client::Client, Result, login::packets};
+use crate::{client::Client, login::packets, Result};
 
 #[derive(Debug)]
 pub struct WorldList;
@@ -13,14 +13,22 @@ impl WorldList {
         let connection = &mut client.connection;
 
         for world in shared.worlds.iter() {
-            connection.write_packet(packets::world_details(&world)).await?;
+            connection
+                .write_packet(packets::world_details(&world))
+                .await?;
         }
 
         // tell the client that we have sent details for all available worlds
         connection.write_packet(packets::world_list_end()).await?;
 
-        // TODO select_world?
-        // TODO recommended_world?
+        // pre-select world with id "0" for the client
+        // TODO this should be the most active world, not really a priority to fix
+        connection.write_packet(packets::world_select(0)).await?;
+
+        // add the recommended world text for each world
+        connection
+            .write_packet(packets::view_recommended(&shared.worlds))
+            .await?;
 
         Ok(())
     }

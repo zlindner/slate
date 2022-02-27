@@ -19,6 +19,7 @@ pub struct WorldConfig {
     // 0 => nothing, 1 => event, 2 => new, 3 => hot
     pub flag: i32,
     pub event_message: String,
+    pub recommended: String,
     exp_rate: i32,
     drop_rate: i32,
     boss_drop_rate: i32,
