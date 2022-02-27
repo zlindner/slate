@@ -1,2 +1,2 @@
-pub mod maple_codec;
+pub mod codec;
 pub mod packet;
