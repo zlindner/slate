@@ -24,51 +24,6 @@ pub struct Account {
     accepted_tos: bool,
 }
 
-#[derive(Debug)]
-pub enum LoginError {
-    AccountNotFound = 5,
-    InvalidPassword = 0,
-    AccountBanned = 3,
-    AcceptTOS = 23,
-    AlreadyLoggedIn = 7,
-}
-
-// TODO switch to using sync db?
-pub async fn login(mut packet: Packet, client: &mut Client) {
-    let name = packet.read_maple_string();
-    let password = packet.read_maple_string();
-    packet.advance(6);
-    let hwid = packet.read_bytes(4);
-
-    log::debug!(
-        "Attempting to login: [name: {}, password: {}, hwid: {:?}]",
-        name,
-        password,
-        hwid
-    );
-
-    // TODO check number of login attemps => not sure where to keep track
-
-    let account = match get_account(&name, &client.pool).await {
-        Some(account) => account,
-        None => {
-            client
-                .send_packet(packets::login_failed(LoginError::AccountNotFound))
-                .await;
-            return;
-        }
-    };
-
-    client.account = Some(account);
-
-    if let Err(e) = validate_account(client.account.as_ref().unwrap(), password).await {
-        client.send_packet(packets::login_failed(e)).await;
-        return;
-    }
-
-    login_success(client).await;
-}
-
 pub async fn character_list(mut packet: Packet, client: &mut Client) {
     // not sure what this byte is for
     packet.advance(1);

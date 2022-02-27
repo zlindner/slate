@@ -1,4 +1,4 @@
-use crate::{crypto::cipher::Cipher, net::packet::Packet};
+use crate::{crypto::cipher::Cipher, net::packet::Packet, world::World};
 
 // handshake packet sent immediately after a client establishes a connection with the login server
 // sets up client <-> server encryption via the passed initialization vectors and maple version
@@ -61,21 +61,14 @@ pub fn login_failed(reason: i32) -> Packet {
     packet
 }
 
-/*
+// contains info for the given world displayed to the client in the world/server list
 pub fn world_details(world: &World) -> Packet {
-    let config = &world.config;
-
-    // calculate the number of bytes for the packet
-    let mut len = 16 + config.name.len() + config.event_message.len();
-    // add 2 bytes for channel id (in case # of channels > 10)
-    len += (9 + config.name.len() + 2) * world.channels.len();
-
-    let mut packet = Packet::new(len);
+    let mut packet = Packet::new();
     packet.write_short(0x0A);
-    packet.write_byte(config.id as u8);
-    packet.write_maple_string(&config.name);
-    packet.write_byte(config.flag as u8);
-    packet.write_maple_string(&config.event_message);
+    packet.write_byte(world.config.id as u8);
+    packet.write_string(&world.config.name);
+    packet.write_byte(world.config.flag as u8);
+    packet.write_string(&world.config.event_message);
     packet.write_byte(100);
     packet.write_byte(0);
     packet.write_byte(100);
@@ -84,24 +77,30 @@ pub fn world_details(world: &World) -> Packet {
     packet.write_byte(world.channels.len() as u8);
 
     for channel in world.channels.iter() {
-        packet.write_maple_string(&(config.name.to_owned() + &(channel.id + 1).to_string()));
-        packet.write_int(100); // TODO channel capacity, not sure if this is max allowed or currently connected?
-        packet.write_byte(1); // TODO world id? not sure what this is
+        let channel_name = &(world.config.name.to_owned() + &(channel.id + 1).to_string());
+        packet.write_string(channel_name);
+        // TODO channel capacity, not sure if this is max allowed or currently connected?
+        packet.write_int(100); 
+        // TODO world id? not sure what this is
+        packet.write_byte(1); 
         packet.write_byte(channel.id as u8);
-        packet.write_byte(0); // adult channel
+        // is adult channel
+        packet.write_byte(0); 
     }
 
     packet.write_short(0);
     packet
 }
 
+// packet indicating that we have sent details for all available worlds
 pub fn world_list_end() -> Packet {
-    let mut packet = Packet::new(3);
+    let mut packet = Packet::new();
     packet.write_short(0x0A);
     packet.write_byte(0xFF);
     packet
 }
 
+/*
 pub fn world_status(status: CapacityStatus) -> Packet {
     let mut packet = Packet::new(4);
     packet.write_short(0x03);
