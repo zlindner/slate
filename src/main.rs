@@ -6,10 +6,9 @@ mod net;
 mod shutdown;
 mod world;
 
-use std::sync::Arc;
-
 use log::LevelFilter;
 use simple_logger::SimpleLogger;
+use std::sync::Arc;
 use tokio::{net::TcpListener, signal};
 use world::World;
 
