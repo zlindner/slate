@@ -4,22 +4,29 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-tokio = { version = "1.16.1", features = ["full"] }
-tokio-util = { version = "0.6.9", features = ["full"] }
-tokio-stream = { version = "0.1.0" }
-tokio-postgres = {version = "0.7.5", features = ["with-chrono-0_4"] }
+tokio = { version = "1.17.0", features = ["full"] }
+tokio-util = { version = "0.7.0", features = ["full"] }
+tokio-stream = "0.1.8"
+futures = "0.3.21"
+bytes = "1.1.0"
+
+# database
+tokio-postgres = { version = "0.7.5", features = ["with-chrono-0_4"] }
 deadpool-postgres = "0.10.1"
 postgres-openssl = "0.5.0"
-openssl = "0.10.32"
 chrono = "0.4.19"
+
+# crypto
+aes = "0.8.1"
+rand = "0.8.5"
+pbkdf2 = "0.10.1"
+openssl = "0.10.32"
+
+# logging
 log = "0.4.14"
 simple_logger = "2.1.0"
-rand = "0.8.4"
-aes = "0.7.5"
-block-modes = "0.8.1"
-bytes = "1.1.0"
+
+# misc
 dotenv = "0.15.0"
-pbkdf2 = "0.10.0"
-futures = "0.3.21"
 toml = "0.5.8"
 serde = { version = "1.0.136", features = ["derive"] }
