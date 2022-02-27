@@ -3,8 +3,6 @@ use crate::net::packet::Packet;
 use crate::world::CapacityStatus;
 use crate::{crypto::cipher::Cipher, world::World};
 
-use super::handlers::{Account, LoginError};
-
 // handshake packet sent immediately after a client establishes a connection with the login server
 // sets up client <-> server encryption via the passed initialization vectors and maple version
 pub fn handshake(send: &Cipher, recv: &Cipher) -> Packet {
@@ -24,32 +22,45 @@ pub fn handshake(send: &Cipher, recv: &Cipher) -> Packet {
     packet
 }
 
-pub fn login_failed(reason: LoginError) -> Packet {
-    let mut packet = Packet::new(8);
-    packet.write_short(0x0);
-    packet.write_int(reason as i32);
-    packet.write_short(0);
-    packet
-}
-
-pub fn login_success(account: &Account) -> Packet {
-    let mut packet = Packet::new(42 + account.name.len());
+// login success packet
+pub fn login_success(id: i32, name: &String) -> Packet {
+    let mut packet = Packet::new();
     packet.write_short(0x00);
     packet.write_int(0);
     packet.write_short(0);
-    packet.write_int(account.id);
-    packet.write_byte(0); // FIXME: gender byte => not sure if this matters, hardcoding for now
-    packet.write_byte(0); // FIXME: gm byte (0 / 1)
-    packet.write_byte(0); // FIXME: admin bytes (0 / 0x80)
-    packet.write_byte(0); // country code
-    packet.write_maple_string(&account.name);
+    // account id
+    packet.write_int(id);
+    // FIXME: gender byte => not sure if this matters, hardcoding for now
     packet.write_byte(0);
-    packet.write_byte(0); // is quiet ban
-    packet.write_long(0); // is quiet ban timestamp
-    packet.write_long(0); // creation timestamp
-    packet.write_int(1); // remove the world selector
-    packet.write_byte(1); // FIXME: 0 => pin enabled, 1 => pin disabled
-    packet.write_byte(2); // FIXME: 0 => register PIC, 1 => ask for PIC, 2 => disabled
+    // FIXME: gm byte (0 / 1)
+    packet.write_byte(0);
+    // FIXME: admin bytes (0 / 0x80)
+    packet.write_byte(0);
+    // country code
+    packet.write_byte(0);
+    packet.write_string(name);
+    packet.write_byte(0);
+    // is quiet banned
+    packet.write_byte(0);
+    // quiet ban timestamp
+    packet.write_long(0);
+    // creation timestamp
+    packet.write_long(0);
+    packet.write_int(1);
+    // FIXME: 0 => pin enabled, 1 => pin disabled
+    packet.write_byte(1);
+    // FIXME: 0 => register PIC, 1 => ask for PIC, 2 => disabled
+    packet.write_byte(2);
+    packet
+}
+
+// login failed packet containing the reason why the login failed
+pub fn login_failed(reason: i32) -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x00);
+    // reason code
+    packet.write_int(reason);
+    packet.write_short(0);
     packet
 }
 
