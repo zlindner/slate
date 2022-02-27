@@ -14,10 +14,12 @@ use openssl::ssl::{SslConnector, SslMethod, SslVerifyMode};
 use postgres_openssl::MakeTlsConnector;
 use simple_logger::SimpleLogger;
 use std::env;
-use std::error::Error;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use world::World;
+
+pub type Error = Box<dyn std::error::Error + Send + Sync>;
+pub type Result<T> = std::result::Result<T, Error>;
 
 pub struct Server {
     worlds: Vec<World>,
@@ -41,13 +43,8 @@ impl Server {
     }
 }
 
-// TODO:
-// Additionally, when you do want shared access to an IO resource, it is often better to spawn a task to manage
-// the IO resource, and to use message passing to communicate with that task.
-// ^^^ if we adopt this model for db access, we should be able to used std::sync::Mutex which is less expensive
-
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() -> Result<()> {
     // load environment variables from .env
     dotenv().ok();
 
