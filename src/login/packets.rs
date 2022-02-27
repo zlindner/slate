@@ -1,7 +1,4 @@
-use crate::character::Character;
-use crate::net::packet::Packet;
-use crate::world::CapacityStatus;
-use crate::{crypto::cipher::Cipher, world::World};
+use crate::{crypto::cipher::Cipher, net::packet::Packet};
 
 // handshake packet sent immediately after a client establishes a connection with the login server
 // sets up client <-> server encryption via the passed initialization vectors and maple version
@@ -64,6 +61,7 @@ pub fn login_failed(reason: i32) -> Packet {
     packet
 }
 
+/*
 pub fn world_details(world: &World) -> Packet {
     let config = &world.config;
 
@@ -235,3 +233,4 @@ fn add_character_equipment(packet: &mut Packet, _: &Character) {
         packet.write_int(0);
     }
 }
+*/
