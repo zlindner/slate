@@ -5,15 +5,22 @@ use crate::{crypto::cipher::Cipher, world::World};
 
 use super::handlers::{Account, LoginError};
 
-pub fn handshake(ciphers: &(Cipher, Cipher)) -> Packet {
-    let mut packet = Packet::new(18);
-    packet.set_encrypt(false);
-    packet.write_short(14); // packet length (0x0E)
-    packet.write_short(83); // maple version (v83)
-    packet.write_maple_string("1"); // maple patch version (1)
-    packet.write_bytes(&ciphers.0.iv); // receive iv
-    packet.write_bytes(&ciphers.1.iv); // send iv
-    packet.write_byte(8); // locale
+// handshake packet sent immediately after a client establishes a connection with the login server
+// sets up client <-> server encryption via the passed initialization vectors and maple version
+pub fn handshake(send: &Cipher, recv: &Cipher) -> Packet {
+    let mut packet = Packet::new();
+    // packet length (0x0E)
+    packet.write_short(0x0E);
+    // maple version
+    packet.write_short(83);
+    // maple patch version
+    packet.write_string("1");
+    // initialization vector for receive cipher
+    packet.write_bytes(&recv.iv);
+    // initialization vector for send cipher
+    packet.write_bytes(&send.iv);
+    // locale
+    packet.write_byte(8);
     packet
 }
 
