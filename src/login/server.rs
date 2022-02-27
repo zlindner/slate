@@ -81,6 +81,8 @@ impl Listener {
                 shared: Arc::clone(&self.shared),
                 login_attempts: 0,
                 id: -1,
+                pin: None,
+                pin_attempts: 0,
             };
 
             tokio::spawn(async move {

@@ -49,7 +49,7 @@ pub fn login_success(id: i32, name: &String) -> Packet {
     packet.write_long(0);
     packet.write_int(1);
     // FIXME: 0 => pin enabled, 1 => pin disabled
-    packet.write_byte(1);
+    packet.write_byte(0);
     // FIXME: 0 => register PIC, 1 => ask for PIC, 2 => disabled
     packet.write_byte(2);
     packet
@@ -62,6 +62,27 @@ pub fn login_failed(reason: i32) -> Packet {
     // reason code
     packet.write_int(reason);
     packet.write_short(0);
+    packet
+}
+
+pub enum PinOperation {
+    Accepted,
+    Register,
+    RequestAfterFailure,
+    ConnectionFailed,
+    Request,
+}
+
+// packet for various PIN operations
+// 0 => PIN was accepted
+// 1 => register a new PIN
+// 2 => invalid PIN / re-enter
+// 3 => connection failed due to system error
+// 4 => enter pin
+pub fn pin_operation(op: PinOperation) -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x06);
+    packet.write_byte(op as u8);
     packet
 }
 

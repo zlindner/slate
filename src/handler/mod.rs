@@ -8,6 +8,9 @@ use self::login::Login;
 mod world_status;
 use self::world_status::WorldStatus;
 
+mod after_login;
+use self::after_login::AfterLogin;
+
 mod world_list;
 use self::world_list::WorldList;
 
@@ -17,6 +20,7 @@ use self::unknown::Unknown;
 pub enum Handler {
     Login(Login),
     WorldStatus(WorldStatus),
+    AfterLogin(AfterLogin),
     WorldList(WorldList),
     Unknown(Unknown),
 }
@@ -28,6 +32,7 @@ impl Handler {
         let handler = match op_code {
             0x01 => Handler::Login(Login::new(packet)),
             0x06 => Handler::WorldStatus(WorldStatus::new(packet)),
+            0x09 => Handler::AfterLogin(AfterLogin::new(packet)),
             0x0B => Handler::WorldList(WorldList::new()),
             _ => {
                 if op_code >= 0x200 {
@@ -48,6 +53,7 @@ impl Handler {
         match self {
             Login(handler) => handler.handle(client).await,
             WorldStatus(handler) => handler.handle(client).await,
+            AfterLogin(handler) => handler.handle(client).await,
             WorldList(handler) => handler.handle(client).await,
             Unknown(handler) => handler.handle(),
         }

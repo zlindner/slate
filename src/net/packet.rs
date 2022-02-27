@@ -46,6 +46,10 @@ impl Packet {
         self.write_bytes(string.as_bytes());
     }
 
+    pub fn read_byte(&mut self) -> u8 {
+        self.bytes.get_u8()
+    }
+
     pub fn read_bytes(&mut self, len: usize) -> Bytes {
         self.bytes.split_to(len).freeze()
     }
@@ -66,6 +70,10 @@ impl Packet {
 
     pub fn len(&self) -> usize {
         self.bytes.len()
+    }
+
+    pub fn remaining(&self) -> usize {
+        self.bytes.remaining()
     }
 }
 

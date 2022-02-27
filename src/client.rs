@@ -13,6 +13,8 @@ pub struct Client {
     pub shared: Arc<Shared>,
     pub login_attempts: u8,
     pub id: i32,
+    pub pin: Option<String>,
+    pub pin_attempts: u8,
 }
 
 impl Client {
