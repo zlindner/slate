@@ -1,9 +1,13 @@
+use crate::character::Character;
+
 use serde::Deserialize;
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct World {
     pub config: WorldConfig,
     pub channels: Vec<Channel>,
+    pub players: HashMap<i32, Character>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -35,6 +39,12 @@ pub struct Channel {
     world_id: i32,
 }
 
+pub enum CapacityStatus {
+    Normal,
+    HighlyPopulated,
+    Full,
+}
+
 pub fn load_worlds() -> Vec<World> {
     let mut worlds = Vec::new();
     let toml = std::fs::read_to_string("config/worlds.toml").unwrap();
@@ -52,7 +62,11 @@ impl World {
     pub fn from_config(config: WorldConfig) -> Self {
         let channels = Self::load_channels(&config);
 
-        World { config, channels }
+        World {
+            config,
+            channels,
+            players: HashMap::new(),
+        }
     }
 
     pub fn load_channels(config: &WorldConfig) -> Vec<Channel> {
@@ -64,6 +78,19 @@ impl World {
         }
 
         channels
+    }
+
+    pub fn get_capacity_status(&self) -> CapacityStatus {
+        let max_capacity = self.channels.len() * 100;
+        let connected_players = self.players.len();
+
+        if connected_players >= max_capacity {
+            return CapacityStatus::Full;
+        } else if connected_players >= (max_capacity as f32 * 0.8) as usize {
+            return CapacityStatus::HighlyPopulated;
+        }
+
+        return CapacityStatus::Normal;
     }
 }
 

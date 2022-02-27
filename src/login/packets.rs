@@ -1,4 +1,8 @@
-use crate::{crypto::cipher::Cipher, net::packet::Packet, world::World};
+use crate::{
+    crypto::cipher::Cipher,
+    net::packet::Packet,
+    world::{CapacityStatus, World},
+};
 
 // handshake packet sent immediately after a client establishes a connection with the login server
 // sets up client <-> server encryption via the passed initialization vectors and maple version
@@ -123,14 +127,15 @@ pub fn view_recommended(worlds: &Vec<World>) -> Packet {
     packet
 }
 
-/*
+// packet contatining the capacity status (# of connected players) for a world
 pub fn world_status(status: CapacityStatus) -> Packet {
-    let mut packet = Packet::new(4);
+    let mut packet = Packet::new();
     packet.write_short(0x03);
     packet.write_short(status as i16);
     packet
 }
 
+/*
 pub fn character_list() -> Packet {
     let mut packet = Packet::new(9);
     packet.write_short(0x0B);
