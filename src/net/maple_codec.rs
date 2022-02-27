@@ -1,4 +1,4 @@
-use crate::crypto::{maple_aes::MapleAES, shanda::Shanda};
+use crate::crypto::{cipher::Cipher, shanda};
 use crate::net::packet::Packet;
 
 use bytes::{BufMut, BytesMut};
@@ -7,11 +7,11 @@ use tokio_util::codec::{Decoder, Encoder};
 
 pub struct MapleCodec {
     // 0: receive, 1: send
-    ciphers: (MapleAES, MapleAES),
+    ciphers: (Cipher, Cipher),
 }
 
 impl MapleCodec {
-    pub fn new(ciphers: (MapleAES, MapleAES)) -> Self {
+    pub fn new(ciphers: (Cipher, Cipher)) -> Self {
         MapleCodec { ciphers }
     }
 }
@@ -40,7 +40,7 @@ impl Decoder for MapleCodec {
         }
 
         // transform and decrypt the incoming packet's body
-        let decrypted = Shanda::decrypt(self.ciphers.0.transform(body));
+        let decrypted = shanda::decrypt(self.ciphers.0.transform(body));
 
         Ok(Some(Packet::from_bytes(decrypted)))
     }

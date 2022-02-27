@@ -1,11 +1,11 @@
 use crate::character::Character;
 use crate::net::packet::Packet;
 use crate::world::CapacityStatus;
-use crate::{crypto::maple_aes::MapleAES, world::World};
+use crate::{crypto::cipher::Cipher, world::World};
 
 use super::handlers::{Account, LoginError};
 
-pub fn handshake(ciphers: &(MapleAES, MapleAES)) -> Packet {
+pub fn handshake(ciphers: &(Cipher, Cipher)) -> Packet {
     let mut packet = Packet::new(18);
     packet.set_encrypt(false);
     packet.write_short(14); // packet length (0x0E)

@@ -1,4 +1,4 @@
-use crate::crypto::maple_aes::MapleAES;
+use crate::crypto::cipher::{Cipher, CipherType};
 use crate::login::handlers::Account;
 use crate::net::{maple_codec::MapleCodec, packet::Packet};
 use crate::{login, Server};
@@ -21,7 +21,7 @@ pub struct Client {
     pub pool: Pool,
     client_type: ClientType,
     // 0: receive, 1: send
-    pub ciphers: (MapleAES, MapleAES),
+    pub ciphers: (Cipher, Cipher),
     pub account: Option<Account>,
 }
 
@@ -159,12 +159,12 @@ impl Client {
     }
 }
 
-fn init_ciphers() -> (MapleAES, MapleAES) {
+fn init_ciphers() -> (Cipher, Cipher) {
     let recv_iv: [u8; 4] = [0x46, 0x72, rand::random::<u8>(), 0x52];
-    let recv_cipher = MapleAES::new(recv_iv, 83);
+    let recv_cipher = Cipher::new(CipherType::Receive);
 
     let send_iv: [u8; 4] = [0x52, 0x30, 0x78, 0x61];
-    let send_cipher = MapleAES::new(send_iv, 0xffff - 83);
+    let send_cipher = Cipher::new(CipherType::Send);
 
     (recv_cipher, send_cipher)
 }
