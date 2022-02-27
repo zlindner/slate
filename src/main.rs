@@ -1,6 +1,7 @@
 mod client;
 mod crypto;
 mod db;
+mod handler;
 mod login;
 mod net;
 mod shutdown;
