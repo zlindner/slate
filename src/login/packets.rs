@@ -86,6 +86,14 @@ pub fn pin_operation(op: PinOperation) -> Packet {
     packet
 }
 
+//
+pub fn pin_registered() -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x07);
+    packet.write_byte(0);
+    packet
+}
+
 // contains info for the given world displayed to the client in the world/server list
 pub fn world_details(world: &World) -> Packet {
     let mut packet = Packet::new();

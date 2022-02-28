@@ -1,6 +1,9 @@
 use crate::{
     client::Client,
-    login::packets::{self, PinOperation},
+    login::{
+        packets::{self, PinOperation},
+        queries,
+    },
     net::packet::Packet,
     Result,
 };
@@ -25,6 +28,8 @@ impl AfterLogin {
     }
 
     pub async fn handle(mut self, client: &mut Client) -> Result<()> {
+        let db = &client.db;
+
         let op = match (self.a, self.b) {
             (1, 1) => match client.pin {
                 None => Some(PinOperation::Register),
@@ -39,8 +44,8 @@ impl AfterLogin {
                 Self::validate_pin(client, pin, 2).await?
             }
             _ => {
-                // TODO update login state => logged out
-                // TODO disconnect client?
+                // TODO can possibly send PinOperation::ConnectionFailed here?
+                queries::update_login_state(client.id, 0, db).await?;
                 None
             }
         };

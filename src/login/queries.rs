@@ -28,3 +28,17 @@ pub async fn update_login_state(id: i32, login_state: i16, db: &Db) -> Result<()
 
     Ok(())
 }
+
+pub async fn update_pin(id: i32, pin: &String, db: &Db) -> Result<()> {
+    sqlx::query(
+        "UPDATE accounts \
+        SET pin = $1 \
+        WHERE id = $2",
+    )
+    .bind(pin)
+    .bind(id)
+    .execute(db)
+    .await?;
+
+    Ok(())
+}

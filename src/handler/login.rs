@@ -69,8 +69,15 @@ impl Login {
             let packet = packets::login_failed(e as i32);
             connection.write_packet(packet).await?;
         } else {
-            let id = account.get("id");
+            let id = account.get::<i32, _>("id");
+            let pin = account.get::<String, _>("pin");
+
             client.id = id;
+
+            if !pin.is_empty() {
+                client.pin = Some(pin);
+            }
+
             queries::update_login_state(id, 2, db).await?;
 
             let packet = packets::login_success(id, &self.name);
