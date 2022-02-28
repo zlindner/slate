@@ -1,4 +1,5 @@
 use crate::{
+    config::CONFIG,
     crypto::cipher::Cipher,
     net::packet::Packet,
     world::{CapacityStatus, World},
@@ -48,8 +49,8 @@ pub fn login_success(id: i32, name: &String) -> Packet {
     // creation timestamp
     packet.write_long(0);
     packet.write_int(1);
-    // FIXME: 0 => pin enabled, 1 => pin disabled
-    packet.write_byte(0);
+    // 0 => pin enabled, 1 => pin disabled
+    packet.write_byte(!CONFIG.enable_pin as u8);
     // FIXME: 0 => register PIC, 1 => ask for PIC, 2 => disabled
     packet.write_byte(2);
     packet

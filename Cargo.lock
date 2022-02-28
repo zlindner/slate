@@ -748,6 +748,7 @@ dependencies = [
  "bytes",
  "dotenv",
  "futures",
+ "lazy_static",
  "log",
  "pbkdf2",
  "rand",
