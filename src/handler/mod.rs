@@ -5,6 +5,9 @@ use crate::Result;
 mod login;
 use self::login::Login;
 
+mod character_list;
+use self::character_list::CharacterList;
+
 mod world_status;
 use self::world_status::WorldStatus;
 
@@ -22,6 +25,7 @@ use self::unknown::Unknown;
 
 pub enum Handler {
     Login(Login),
+    CharacterList(CharacterList),
     WorldStatus(WorldStatus),
     AfterLogin(AfterLogin),
     RegisterPin(RegisterPin),
@@ -35,6 +39,7 @@ impl Handler {
 
         let handler = match op_code {
             0x01 => Handler::Login(Login::new(packet)),
+            0x05 => Handler::CharacterList(CharacterList::new(packet)),
             0x06 => Handler::WorldStatus(WorldStatus::new(packet)),
             0x09 => Handler::AfterLogin(AfterLogin::new(packet)),
             0x0A => Handler::RegisterPin(RegisterPin::new(packet)),
@@ -57,6 +62,7 @@ impl Handler {
 
         match self {
             Login(handler) => handler.handle(client).await,
+            CharacterList(handler) => handler.handle(client).await,
             WorldStatus(handler) => handler.handle(client).await,
             AfterLogin(handler) => handler.handle(client).await,
             RegisterPin(handler) => handler.handle(client).await,

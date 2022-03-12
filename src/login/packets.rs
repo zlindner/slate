@@ -1,9 +1,20 @@
+use std::slice::SliceIndex;
+
 use crate::{
+    character::{self, Character},
     config::CONFIG,
     crypto::cipher::Cipher,
     net::packet::Packet,
     world::{CapacityStatus, World},
 };
+
+pub enum PinOperation {
+    Accepted,
+    Register,
+    RequestAfterFailure,
+    ConnectionFailed,
+    Request,
+}
 
 // handshake packet sent immediately after a client establishes a connection with the login server
 // sets up client <-> server encryption via the passed initialization vectors and maple version
@@ -48,6 +59,7 @@ pub fn login_success(id: i32, name: &String) -> Packet {
     packet.write_long(0);
     // creation timestamp
     packet.write_long(0);
+    // remove the "select the world you want to play in"
     packet.write_int(1);
     // 0 => pin enabled, 1 => pin disabled
     packet.write_byte(!CONFIG.enable_pin as u8);
@@ -64,14 +76,6 @@ pub fn login_failed(reason: i32) -> Packet {
     packet.write_int(reason);
     packet.write_short(0);
     packet
-}
-
-pub enum PinOperation {
-    Accepted,
-    Register,
-    RequestAfterFailure,
-    ConnectionFailed,
-    Request,
 }
 
 // packet for various PIN operations
@@ -165,21 +169,145 @@ pub fn world_status(status: CapacityStatus) -> Packet {
     packet
 }
 
-/*
-pub fn character_list() -> Packet {
-    let mut packet = Packet::new(9);
+pub fn character_list(characters: &Vec<Character>) -> Packet {
+    let mut packet = Packet::new();
     packet.write_short(0x0B);
-    packet.write_byte(0); // status
+    // status code
+    packet.write_byte(0);
+    // number of characters
+    packet.write_byte(characters.len() as u8);
 
-    // TODO need to add data for each character
+    for character in characters.iter() {
+        write_character(character, &mut packet, false);
+    }
 
-    packet.write_byte(0); // number of characters
-    packet.write_byte(2); // FIXME: 0 => register PIC, 1 => ask for PIC, 2 => disabled
-    packet.write_int(3); // number of character slots allowed for this client
-
+    // FIXME: 0 => register PIC, 1 => ask for PIC, 2 => disabled
+    packet.write_byte(2);
+    // number of character slots
+    // TODO should be configurable via config/oxide.toml
+    packet.write_int(3);
     packet
 }
 
+fn write_character(character: &Character, packet: &mut Packet, view_all: bool) {
+    write_character_stats(character, packet);
+    write_character_style(character, packet);
+    write_character_equipment(character, packet);
+
+    if !view_all {
+        packet.write_byte(0);
+    }
+
+    // TODO check for gm job as well?
+    if character.gm > 1 {
+        packet.write_byte(0);
+        return;
+    }
+
+    // TODO load from oxide.toml?
+    let enable_rankings = true;
+    packet.write_byte(enable_rankings as u8);
+
+    if enable_rankings {
+        packet.write_int(character.rank.rank);
+        // positive/negative indicate direction of move
+        packet.write_int(character.rank.rank_move);
+        packet.write_int(character.rank.job_rank);
+        // positive/negative indicate direction of move
+        packet.write_int(character.rank.job_rank_move);
+    }
+}
+
+fn write_character_stats(character: &Character, packet: &mut Packet) {
+    packet.write_int(character.id);
+
+    let mut padded_name = String::from(character.name.clone());
+
+    for _ in padded_name.len()..13 {
+        padded_name.push('\0');
+    }
+
+    packet.write_fixed_string(&padded_name);
+
+    // style
+    packet.write_byte(character.style.gender as u8);
+    packet.write_byte(character.style.skin_colour as u8);
+    packet.write_int(character.style.face);
+    packet.write_int(character.style.hair);
+
+    // pets
+    for i in 0..3 {
+        match character.pets.get(i) {
+            Some(pet) => packet.write_long(pet.id.into()),
+            None => packet.write_long(0),
+        }
+    }
+
+    // stats
+    packet.write_byte(character.stats.level as u8);
+    packet.write_short(character.job as i16);
+    packet.write_short(character.stats.str as i16);
+    packet.write_short(character.stats.dex as i16);
+    packet.write_short(character.stats.int as i16);
+    packet.write_short(character.stats.luk as i16);
+    packet.write_short(character.stats.hp as i16);
+    packet.write_short(character.stats.max_hp as i16);
+    packet.write_short(character.stats.mp as i16);
+    packet.write_short(character.stats.max_mp as i16);
+    packet.write_short(character.stats.ap as i16);
+    // TODO can add remaining skill info here for evan
+    // TODO get characters remaining sp for job
+    packet.write_short(0);
+    packet.write_int(character.stats.exp);
+    packet.write_short(character.stats.fame as i16);
+    packet.write_int(character.stats.gacha_exp);
+    packet.write_int(character.map);
+    packet.write_byte(character.spawn_point as u8);
+    packet.write_int(0);
+}
+
+fn write_character_style(character: &Character, packet: &mut Packet) {
+    packet.write_byte(character.style.gender);
+    packet.write_byte(character.style.skin_colour as u8);
+    packet.write_int(character.style.face);
+    // TODO add mega parameter => I think for diplaying char in megaphone message?
+    packet.write_byte(1);
+    packet.write_int(character.style.hair);
+}
+
+fn write_character_equipment(character: &Character, packet: &mut Packet) {
+    packet.write_byte(0x05); // 5
+    packet.write_int(1040010);
+
+    packet.write_byte(0x06); // 6
+    packet.write_int(1060006);
+
+    packet.write_byte(0x07); // 7
+    packet.write_int(1072038);
+
+    packet.write_byte(0x0B); // 11
+    packet.write_int(1322005);
+
+    packet.write_byte(0xFF);
+
+    // TODO masked equips
+    packet.write_byte(0xFF);
+
+    // FIXME
+    // Item cWeapon = equip.getItem((short) -111);
+    // p.writeInt(cWeapon != null ? cWeapon.getItemId() : 0);
+    packet.write_int(0);
+
+    // pets
+    for i in 0..3 {
+        match character.pets.get(i) {
+            Some(pet) => packet.write_int(pet.item_id),
+            None => packet.write_int(0),
+        }
+    }
+}
+
+/*
 pub fn character_name(name: &str, valid: bool) -> Packet {
     let mut packet = Packet::new(name.len() + 5);
     packet.write_short(0x0D);
@@ -209,85 +337,5 @@ pub fn create_character(character: &Character) -> Packet {
 
     log::debug!("create_character packet size: {}", packet.data.len());
     packet
-}
-
-fn add_character_stats(packet: &mut Packet, character: &Character) {
-    packet.write_int(character.id);
-
-    let mut padded_name = String::from(character.name.clone());
-
-    for _ in padded_name.len()..13 {
-        padded_name.push('\0');
-    }
-
-    packet.write_fixed_string(&padded_name);
-
-    packet.write_byte(character.style.gender as u8);
-    packet.write_byte(character.style.skin_colour as u8);
-    packet.write_int(character.style.face);
-    packet.write_int(character.style.hair);
-
-    // pets
-    for _ in 0..3 {
-        // TODO get character.pet(i)
-        // if not null -> write_long(pet.id)
-        packet.write_long(0);
-    }
-
-    // stats
-    packet.write_byte(character.stats.level as u8);
-    packet.write_short(character.job as i16);
-    packet.write_short(character.stats.str as i16);
-    packet.write_short(character.stats.dex as i16);
-    packet.write_short(character.stats.int as i16);
-    packet.write_short(character.stats.luk as i16);
-    packet.write_short(character.stats.hp as i16);
-    packet.write_short(character.stats.max_hp as i16);
-    packet.write_short(character.stats.mp as i16);
-    packet.write_short(character.stats.max_mp as i16);
-    packet.write_short(character.stats.ap as i16);
-    // TODO can add remaining skill info here for evan
-    packet.write_short(0); // TODO remainingSp
-    packet.write_int(character.stats.exp);
-    packet.write_short(character.stats.fame as i16);
-    packet.write_int(character.stats.gacha_exp);
-    packet.write_int(character.map);
-    packet.write_byte(character.spawn_point as u8);
-    packet.write_int(0);
-}
-
-fn add_character_style(packet: &mut Packet, character: &Character) {
-    packet.write_byte(character.style.gender as u8);
-    packet.write_byte(character.style.skin_colour as u8);
-    packet.write_int(character.style.face);
-    packet.write_byte(1); // mega?
-    packet.write_int(character.style.hair);
-}
-
-fn add_character_equipment(packet: &mut Packet, _: &Character) {
-    packet.write_byte(0x05); // 5
-    packet.write_int(1040010);
-
-    packet.write_byte(0x06); // 6
-    packet.write_int(1060006);
-
-    packet.write_byte(0x07); // 7
-    packet.write_int(1072038);
-
-    packet.write_byte(0x0B); // 11
-    packet.write_int(1322005);
-
-    packet.write_byte(0xFF);
-
-    // masked equips?
-    packet.write_byte(0xFF);
-
-    packet.write_int(0); // FIXME if item w/ id/pos? -111 is not null add its id here?
-
-    // pet stuff?
-    for _ in 0..3 {
-        // TODO if pet.get(i) != null write_int(pet(i) item id)
-        packet.write_int(0);
-    }
 }
 */

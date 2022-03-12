@@ -80,9 +80,11 @@ impl Listener {
                 shutdown: Shutdown::new(self.notify_shutdown.subscribe()),
                 shared: Arc::clone(&self.shared),
                 login_attempts: 0,
-                id: -1,
-                pin: None,
                 pin_attempts: 0,
+                id: None,
+                pin: None,
+                world_id: None,
+                channel_id: None,
             };
 
             tokio::spawn(async move {

@@ -45,7 +45,7 @@ impl AfterLogin {
             }
             _ => {
                 // TODO can possibly send PinOperation::ConnectionFailed here?
-                queries::update_login_state(client.id, 0, db).await?;
+                queries::update_login_state(client.id.unwrap(), 0, db).await?;
                 None
             }
         };

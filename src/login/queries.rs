@@ -1,6 +1,6 @@
-use crate::{db::Db, Result};
+use crate::{character::Character, client, db::Db, Result};
 
-use sqlx::postgres::PgRow;
+use sqlx::{postgres::PgRow, Executor, Statement};
 
 pub async fn get_account(name: &String, db: &Db) -> Result<PgRow> {
     let res = sqlx::query(
@@ -41,4 +41,18 @@ pub async fn update_pin(id: i32, pin: &String, db: &Db) -> Result<()> {
     .await?;
 
     Ok(())
+}
+
+pub async fn get_characters(client_id: i32, world_id: i32, db: &Db) -> Result<Vec<PgRow>> {
+    let res = sqlx::query(
+        "SELECT * \
+        FROM characters \
+        WHERE account_id = $1 AND world_id = $2",
+    )
+    .bind(client_id)
+    .bind(world_id)
+    .fetch_all(db)
+    .await?;
+
+    Ok(res)
 }

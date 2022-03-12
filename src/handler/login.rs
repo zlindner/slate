@@ -72,7 +72,7 @@ impl Login {
             let id = account.get::<i32, _>("id");
             let pin = account.get::<String, _>("pin");
 
-            client.id = id;
+            client.id = Some(id);
 
             if !pin.is_empty() {
                 client.pin = Some(pin);

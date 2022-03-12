@@ -39,6 +39,7 @@ pub struct Channel {
     world_id: i32,
 }
 
+#[derive(Debug, PartialEq)]
 pub enum CapacityStatus {
     Normal,
     HighlyPopulated,

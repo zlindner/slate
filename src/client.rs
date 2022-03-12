@@ -12,9 +12,11 @@ pub struct Client {
     pub shutdown: Shutdown,
     pub shared: Arc<Shared>,
     pub login_attempts: u8,
-    pub id: i32,
-    pub pin: Option<String>,
     pub pin_attempts: u8,
+    pub id: Option<i32>,
+    pub pin: Option<String>,
+    pub world_id: Option<i32>,
+    pub channel_id: Option<i32>,
 }
 
 impl Client {
@@ -56,8 +58,8 @@ impl Client {
     }
 
     pub async fn on_disconnect(&mut self) -> Result<()> {
-        if self.id != -1 {
-            queries::update_login_state(self.id, 0, &self.db).await?;
+        if let Some(id) = self.id {
+            queries::update_login_state(id, 0, &self.db).await?;
         }
 
         Ok(())

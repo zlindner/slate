@@ -23,16 +23,16 @@ impl RegisterPin {
         let connection = &mut client.connection;
 
         if self.flag == 0 {
-            queries::update_login_state(client.id, 0, db).await?;
+            queries::update_login_state(client.id.unwrap(), 0, db).await?;
             return Ok(());
         }
 
         let pin = self.packet.read_string();
         client.pin = Some(pin.clone());
-        queries::update_pin(client.id, &pin, db).await?;
+        queries::update_pin(client.id.unwrap(), &pin, db).await?;
 
         connection.write_packet(packets::pin_registered()).await?;
-        queries::update_login_state(client.id, 0, db).await?;
+        queries::update_login_state(client.id.unwrap(), 0, db).await?;
 
         Ok(())
     }
