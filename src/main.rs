@@ -1,55 +1,31 @@
-mod channel;
 mod character;
 mod client;
+mod config;
 mod crypto;
+mod db;
+mod handler;
 mod login;
 mod net;
+mod shutdown;
 mod world;
 
-use deadpool_postgres::{Manager, Pool};
-use dotenv::dotenv;
 use log::LevelFilter;
-use login::server::LoginServer;
-use openssl::ssl::{SslConnector, SslMethod, SslVerifyMode};
-use postgres_openssl::MakeTlsConnector;
 use simple_logger::SimpleLogger;
-use std::env;
-use std::error::Error;
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::{net::TcpListener, signal};
 use world::World;
 
-pub struct Server {
+pub type Error = Box<dyn std::error::Error + Send + Sync>;
+pub type Result<T> = std::result::Result<T, Error>;
+
+#[derive(Debug)]
+pub struct Shared {
     worlds: Vec<World>,
 }
 
-impl Server {
-    fn new() -> Self {
-        Server { worlds: Vec::new() }
-    }
-
-    fn load_worlds(&mut self) {
-        let toml = std::fs::read_to_string("config/worlds.toml").unwrap();
-        let config: world::Config = toml::from_str(&toml).unwrap();
-
-        for world_config in config.worlds.into_iter() {
-            let mut world = World::from_config(world_config);
-            world.load_channels();
-
-            self.worlds.push(world);
-        }
-    }
-}
-
-// TODO:
-// Additionally, when you do want shared access to an IO resource, it is often better to spawn a task to manage
-// the IO resource, and to use message passing to communicate with that task.
-// ^^^ if we adopt this model for db access, we should be able to used std::sync::Mutex which is less expensive
-
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
-    // load environment variables from .env
-    dotenv().ok();
+async fn main() -> Result<()> {
+    dotenv::dotenv().ok();
 
     SimpleLogger::new()
         .with_module_level("tokio_util", LevelFilter::Debug)
@@ -59,23 +35,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .init()
         .unwrap();
 
-    let mut pg_config = tokio_postgres::Config::new();
-    pg_config.host(&env::var("DATABASE_HOST").unwrap());
-    pg_config.dbname(&env::var("DATABASE_NAME").unwrap());
-    pg_config.user(&env::var("DATABASE_USER").unwrap());
-    pg_config.password(&env::var("DATABASE_PASSWORD").unwrap());
+    let shared = Arc::new(Shared {
+        worlds: world::load_worlds(),
+    });
 
-    let mut ssl_builder = SslConnector::builder(SslMethod::tls()).unwrap();
-    ssl_builder.set_verify(SslVerifyMode::NONE);
-    let connector = MakeTlsConnector::new(ssl_builder.build());
-
-    let manager = Manager::new(pg_config, connector);
-    let pool = Pool::builder(manager).max_size(10).build().unwrap();
-
-    let server = Arc::new(Mutex::new(Server::new()));
-    server.lock().await.load_worlds();
-
-    LoginServer::new().start(&server, &pool).await?;
+    let listener = TcpListener::bind("127.0.0.1:8484").await?;
+    login::server::start(listener, signal::ctrl_c(), &shared).await;
 
     Ok(())
 }

@@ -1,17 +1,9 @@
-use aes::Aes256;
-use block_modes::block_padding::Pkcs7;
-use block_modes::{BlockMode, Ecb};
+use aes::{
+    cipher::{generic_array::GenericArray, BlockEncrypt, KeyInit},
+    Aes256,
+};
 use bytes::BytesMut;
-use std::cmp;
-
-type Aes256Ecb = Ecb<Aes256, Pkcs7>;
-
-#[derive(Clone)]
-pub struct MapleAES {
-    pub iv: [u8; 4],
-    cipher: Aes256Ecb,
-    pub maple_version: u16,
-}
+use rand::random;
 
 const KEY: [u8; 32] = [
     0x13, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0xB4, 0x00, 0x00, 0x00,
@@ -37,23 +29,30 @@ const SHIFT_KEY: [u8; 256] = [
     0x84, 0x7F, 0x61, 0x1E, 0xCF, 0xC5, 0xD1, 0x56, 0x3D, 0xCA, 0xF4, 0x05, 0xC6, 0xE5, 0x08, 0x49,
 ];
 
-const BLOCK_LENGTH: usize = 1460;
+pub enum CipherType {
+    Send,
+    Receive,
+}
 
-impl MapleAES {
-    pub fn new(iv: [u8; 4], maple_version: u16) -> Self {
-        let cipher = Aes256Ecb::new_from_slices(&KEY, Default::default()).unwrap();
-        let maple_version: u16 = ((maple_version >> 8) & 0xff) | ((maple_version << 8) & 0xff00);
+#[derive(Debug)]
+pub struct Cipher {
+    pub cipher: Aes256,
+    pub iv: [u8; 4],
+    pub version: u16,
+}
 
-        MapleAES {
-            iv,
-            cipher,
-            maple_version,
+impl Cipher {
+    pub fn new(cipher_type: CipherType) -> Self {
+        Self {
+            cipher: Aes256::new(&GenericArray::from(KEY)),
+            iv: Self::generate_iv(&cipher_type),
+            version: Self::generate_version(&cipher_type),
         }
     }
 
     pub fn transform(&mut self, mut data: BytesMut) -> BytesMut {
         // maplestory's 1460 byte block - 4 header bytes = 1456 bytes for body
-        let mut current_block_length = BLOCK_LENGTH - 4;
+        let mut current_block_length = 1460 - 4;
 
         let iv_copy = [
             self.iv[0], self.iv[1], self.iv[2], self.iv[3], self.iv[0], self.iv[1], self.iv[2],
@@ -64,19 +63,19 @@ impl MapleAES {
         let mut i = 0;
 
         while i < data.len() {
-            let block = cmp::min(data.len() - i, current_block_length);
-            let mut xor_key = iv_copy.to_vec();
+            let block = std::cmp::min(data.len() - i, current_block_length);
+            let mut xor_key = GenericArray::from(iv_copy);
 
             for j in 0..block {
                 if j % 16 == 0 {
-                    xor_key = self.cipher.clone().encrypt_vec(&xor_key);
+                    self.cipher.encrypt_block(&mut xor_key);
                 }
 
                 data[i + j] ^= xor_key[j % 16];
             }
 
             i += block;
-            current_block_length = BLOCK_LENGTH;
+            current_block_length = 1460;
         }
 
         // after each transform operation update the initialization vector
@@ -121,23 +120,19 @@ impl MapleAES {
         new_sequence
     }
 
-    pub fn is_valid_header(&self, header: &BytesMut) -> bool {
-        ((header[0] ^ self.iv[2]) & 0xff) == ((self.maple_version >> 8) as u8 & 0xff)
-            && (((header[1] ^ self.iv[3]) & 0xff) == (self.maple_version & 0xff) as u8)
+    fn generate_iv(cipher_type: &CipherType) -> [u8; 4] {
+        match cipher_type {
+            CipherType::Send => return [0x52, 0x30, 0x78, 0x61],
+            CipherType::Receive => return [0x46, 0x72, random::<u8>(), 0x52],
+        }
     }
 
-    pub fn create_packet_header(&self, length: u32) -> [u8; 4] {
-        let mut a = u32::from(self.iv[3] & 0xff);
-        a |= (u32::from(self.iv[2]) << 8) & 0xff00;
-        a ^= u32::from(self.maple_version);
+    fn generate_version(cipher_type: &CipherType) -> u16 {
+        let version: u16 = match cipher_type {
+            CipherType::Send => 0xffff - 83,
+            CipherType::Receive => 83,
+        };
 
-        let b = a ^ (((length << 8) & 0xff00) | length >> 8);
-
-        [
-            ((a >> 8) & 0xff) as u8,
-            (a & 0xff) as u8,
-            ((b >> 8) & 0xff) as u8,
-            (b & 0xff) as u8,
-        ]
+        ((version >> 8) & 0xff) | ((version << 8) & 0xff00)
     }
 }

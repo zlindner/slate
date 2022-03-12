@@ -26,7 +26,7 @@ create table characters
     skin_colour            integer      default 0                                                  not null,
     gender                 smallint     default 0                                                  not null,
     fame                   integer      default 0                                                  not null,
-    fquest                 integer      default 0                                                  not null,
+    quest_fame             integer      default 0                                                  not null,
     hair                   integer      default 0                                                  not null,
     face                   integer      default 0                                                  not null,
     ap                     integer      default 0                                                  not null,

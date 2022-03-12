@@ -1,103 +1,94 @@
-use bytes::{Buf, BufMut, BytesMut};
-use std::fmt::{Display, Formatter, Result};
-use std::str;
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use std::fmt::{Display, Formatter};
 
+#[derive(Debug)]
 pub struct Packet {
-    pub data: BytesMut,
-    pub encrypt: bool,
+    pub bytes: BytesMut,
 }
 
 impl Packet {
-    pub fn new(size: usize) -> Self {
-        Packet {
-            data: BytesMut::with_capacity(size),
-            encrypt: true,
+    pub fn new() -> Self {
+        Self {
+            // TODO: 1024 bytes should be fine for now, can increase to 2048 if there are some
+            // larger packets. I believe the max maplestory packet size is 1460 bytes?
+            // "It is important to note that this function does not specify the length of the
+            // returned BytesMut, but only the capacity"
+            bytes: BytesMut::with_capacity(1024),
         }
     }
 
     pub fn from_bytes(bytes: BytesMut) -> Self {
-        Packet {
-            data: bytes,
-            encrypt: true,
-        }
+        Self { bytes }
     }
 
     pub fn write_byte(&mut self, byte: u8) {
-        self.data.put_u8(byte);
+        self.bytes.put_u8(byte);
     }
 
     pub fn write_bytes(&mut self, bytes: &[u8]) {
-        self.data.put_slice(bytes);
+        self.bytes.put_slice(bytes);
     }
 
-    // TODO write boolean
-
-    pub fn write_short(&mut self, num: i16) {
-        self.data.put_i16_le(num);
+    pub fn write_short(&mut self, short: i16) {
+        self.bytes.put_i16_le(short);
     }
 
-    pub fn write_int(&mut self, num: i32) {
-        self.data.put_i32_le(num);
+    pub fn write_int(&mut self, int: i32) {
+        self.bytes.put_i32_le(int);
     }
 
-    pub fn write_long(&mut self, num: i64) {
-        self.data.put_i64_le(num);
+    pub fn write_long(&mut self, long: i64) {
+        self.bytes.put_i64_le(long);
     }
 
-    // TODO write long
-    // TODO write string
-
-    pub fn write_maple_string(&mut self, str: &str) {
-        // write the string length as an i16/short
-        self.write_short(str.len() as i16);
-        self.write_bytes(&str.as_bytes());
+    pub fn write_string(&mut self, string: &str) {
+        self.write_short(string.len() as i16);
+        self.write_bytes(string.as_bytes());
     }
 
-    pub fn write_fixed_string(&mut self, str: &str) {
-        self.write_bytes(&str.as_bytes());
+    pub fn write_fixed_string(&mut self, string: &str) {
+        self.write_bytes(string.as_bytes());
     }
 
     pub fn read_byte(&mut self) -> u8 {
-        self.data.get_u8()
+        self.bytes.get_u8()
     }
 
-    pub fn read_bytes(&mut self, num_bytes: usize) -> BytesMut {
-        self.data.split_to(num_bytes)
+    pub fn read_bytes(&mut self, len: usize) -> Bytes {
+        self.bytes.split_to(len).freeze()
     }
 
     pub fn read_short(&mut self) -> i16 {
-        self.data.get_i16_le()
+        self.bytes.get_i16_le()
     }
 
-    pub fn read_int(&mut self) -> i32 {
-        self.data.get_i32_le()
+    pub fn read_string(&mut self) -> String {
+        let len = self.read_short() as usize;
+        let bytes = self.bytes.split_to(len);
+        std::str::from_utf8(&bytes).unwrap().into()
     }
 
-    pub fn read_maple_string(&mut self) -> String {
-        let length = self.read_short() as usize;
-        let bytes = self.data.split_to(length);
-
-        str::from_utf8(&bytes).unwrap().to_string()
+    pub fn skip(&mut self, num: usize) {
+        self.bytes.advance(num)
     }
 
-    pub fn advance(&mut self, num_bytes: usize) {
-        self.data.advance(num_bytes);
+    pub fn len(&self) -> usize {
+        self.bytes.len()
     }
 
-    pub fn set_encrypt(&mut self, encrypt: bool) {
-        self.encrypt = encrypt;
+    pub fn remaining(&self) -> usize {
+        self.bytes.remaining()
     }
 }
 
-// BytesMut refuses to format properly without this...
 impl Display for Packet {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "[")?;
 
-        let len = self.data.len();
+        let len = self.bytes.len();
 
         for i in 0..len {
-            write!(f, "{:02X}", self.data[i])?;
+            write!(f, "{:02X}", self.bytes[i])?;
 
             if i != len - 1 {
                 write!(f, ", ")?;

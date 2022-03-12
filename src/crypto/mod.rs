@@ -1,2 +1,2 @@
-pub mod maple_aes;
+pub mod cipher;
 pub mod shanda;
