@@ -1,6 +1,6 @@
-use crate::{character::Character, client, db::Db, Result};
+use crate::{db::Db, Result};
 
-use sqlx::{postgres::PgRow, Executor, Statement};
+use sqlx::postgres::PgRow;
 
 pub async fn get_account(name: &String, db: &Db) -> Result<PgRow> {
     let res = sqlx::query(

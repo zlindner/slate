@@ -11,6 +11,7 @@ mod world;
 
 use log::LevelFilter;
 use simple_logger::SimpleLogger;
+use std::env;
 use std::sync::Arc;
 use tokio::{net::TcpListener, signal};
 use world::World;
@@ -39,7 +40,7 @@ async fn main() -> Result<()> {
         worlds: world::load_worlds(),
     });
 
-    let listener = TcpListener::bind("127.0.0.1:8484").await?;
+    let listener = TcpListener::bind(&env::var("SERVER_ADDRESS").unwrap()).await?;
     login::server::start(listener, signal::ctrl_c(), &shared).await;
 
     Ok(())

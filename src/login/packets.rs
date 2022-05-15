@@ -1,7 +1,5 @@
-use std::slice::SliceIndex;
-
 use crate::{
-    character::{self, Character},
+    character::Character,
     config::CONFIG,
     crypto::cipher::Cipher,
     net::packet::Packet,

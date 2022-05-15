@@ -39,6 +39,7 @@ impl Handler {
 
         let handler = match op_code {
             0x01 => Handler::Login(Login::new(packet)),
+            0x04 => Handler::WorldList(WorldList::new()),
             0x05 => Handler::CharacterList(CharacterList::new(packet)),
             0x06 => Handler::WorldStatus(WorldStatus::new(packet)),
             0x09 => Handler::AfterLogin(AfterLogin::new(packet)),
