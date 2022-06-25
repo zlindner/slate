@@ -11,7 +11,7 @@ impl Unknown {
     }
 
     pub fn handle(self) -> Result<()> {
-        log::debug!("Unknown packet: {}", self.op_code);
+        log::debug!("Unknown packet: 0x{:02x}", self.op_code);
         Ok(())
     }
 }

@@ -1,4 +1,10 @@
-use crate::{client::Client, db, net::connection::Connection, shutdown::Shutdown, Result, Shared};
+use crate::{
+    client::Client,
+    db::{self, Db},
+    net::connection::Connection,
+    shutdown::Shutdown,
+    Result, Shared,
+};
 
 use std::{
     future::Future,
@@ -12,6 +18,8 @@ use tokio::{
     sync::{broadcast, mpsc},
 };
 
+use super::queries;
+
 #[derive(Debug)]
 struct Listener {
     listener: TcpListener,
@@ -21,7 +29,11 @@ struct Listener {
     shared: Arc<Shared>,
 }
 
-pub async fn start(listener: TcpListener, shutdown: impl Future, shared: &Arc<Shared>) {
+pub async fn start(
+    listener: TcpListener,
+    shutdown: impl Future,
+    shared: &Arc<Shared>,
+) -> Result<()> {
     let (notify_shutdown, _) = broadcast::channel(1);
     let (shutdown_complete_tx, shutdown_complete_rx) = mpsc::channel(1);
 
@@ -33,8 +45,11 @@ pub async fn start(listener: TcpListener, shutdown: impl Future, shared: &Arc<Sh
         shared: Arc::clone(shared),
     };
 
+    // initialize the database
+    let db = db::new().await?;
+
     tokio::select! {
-        res = server.start() => {
+        res = server.start(&db) => {
             if let Err(e) = res {
                 log::error!("Login server failed to accept connection: {}", e);
             }
@@ -60,14 +75,23 @@ pub async fn start(listener: TcpListener, shutdown: impl Future, shared: &Arc<Sh
 
     // wait for all active connections to finish processing
     let _ = shutdown_complete_rx.recv().await;
+
+    // perform final cleanup
+    cleanup(&db).await?;
+
+    Ok(())
+}
+
+async fn cleanup(db: &Db) -> Result<()> {
+    queries::logout_all(db).await?;
+
+    Ok(())
 }
 
 impl Listener {
-    async fn start(&mut self) -> Result<()> {
+    async fn start(&mut self, db: &Db) -> Result<()> {
         log::info!("Login server started on port 8484");
-
         let session_id = AtomicUsize::new(0);
-        let db = db::new().await?;
 
         loop {
             // accept() returns a (TcpStream, SockAddr), ignore the SockAddr for now

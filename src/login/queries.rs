@@ -56,3 +56,15 @@ pub async fn get_characters(client_id: i32, world_id: i32, db: &Db) -> Result<Ve
 
     Ok(res)
 }
+
+pub async fn logout_all(db: &Db) -> Result<()> {
+    sqlx::query(
+        "UPDATE accounts \
+        SET login_state = 0, last_login = CURRENT_TIMESTAMP \
+        where login_state = 1",
+    )
+    .execute(db)
+    .await?;
+
+    Ok(())
+}
