@@ -31,7 +31,6 @@ async fn main() -> Result<()> {
     SimpleLogger::new()
         .with_module_level("tokio_util", LevelFilter::Debug)
         .with_module_level("mio", LevelFilter::Debug)
-        .with_module_level("tokio_postgres", LevelFilter::Debug)
         .env()
         .init()
         .unwrap();
@@ -41,7 +40,7 @@ async fn main() -> Result<()> {
     });
 
     let listener = TcpListener::bind(&env::var("SERVER_ADDRESS").unwrap()).await?;
-    login::server::start(listener, signal::ctrl_c(), &shared).await;
+    login::server::start(listener, signal::ctrl_c(), &shared).await?;
 
     Ok(())
 }
