@@ -1,9 +1,5 @@
 use super::{codec::MapleCodec, packet::Packet};
-use crate::{
-    crypto::cipher::{Cipher, CipherType},
-    login::packets,
-    Result,
-};
+use crate::{crypto::cipher::Cipher, login::packets, Result};
 
 use futures::SinkExt;
 use tokio::{io::AsyncWriteExt, net::TcpStream};
@@ -17,8 +13,8 @@ pub struct Connection {
 
 impl Connection {
     pub async fn new(mut socket: TcpStream) -> Result<Self> {
-        let send = Cipher::new(CipherType::Send);
-        let recv = Cipher::new(CipherType::Receive);
+        let send = Cipher::new(0xffff - 83);
+        let recv = Cipher::new(83);
 
         Self::handshake(&mut socket, &send, &recv).await?;
 
@@ -35,6 +31,7 @@ impl Connection {
 
     pub async fn write_packet(&mut self, packet: Packet) -> Result<()> {
         self.stream.send(packet).await?;
+        // FIXME not sure if we actually need to flush on every packet write?
         self.stream.flush().await?;
         Ok(())
     }
@@ -43,6 +40,7 @@ impl Connection {
         Ok(self.stream.close().await?)
     }
 
+    // FIXME: this should be in login server rather than connection
     // write the login server handshake packet directly to the TcpStream
     // we can't use write_packet() here since that will automatically encrypt the packet, and the
     // handshake is required to be unencrypted to setup client <-> server encryption

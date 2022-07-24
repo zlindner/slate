@@ -29,11 +29,6 @@ const SHIFT_KEY: [u8; 256] = [
     0x84, 0x7F, 0x61, 0x1E, 0xCF, 0xC5, 0xD1, 0x56, 0x3D, 0xCA, 0xF4, 0x05, 0xC6, 0xE5, 0x08, 0x49,
 ];
 
-pub enum CipherType {
-    Send,
-    Receive,
-}
-
 #[derive(Debug)]
 pub struct Cipher {
     pub cipher: Aes256,
@@ -42,11 +37,11 @@ pub struct Cipher {
 }
 
 impl Cipher {
-    pub fn new(cipher_type: CipherType) -> Self {
+    pub fn new(version: u16) -> Self {
         Self {
             cipher: Aes256::new(&GenericArray::from(KEY)),
             iv: random::<[u8; 4]>(),
-            version: Self::generate_version(&cipher_type),
+            version: ((version >> 8) & 0xff) | ((version << 8) & 0xff00),
         }
     }
 
@@ -118,14 +113,5 @@ impl Cipher {
         }
 
         new_sequence
-    }
-
-    fn generate_version(cipher_type: &CipherType) -> u16 {
-        let version: u16 = match cipher_type {
-            CipherType::Send => 0xffff - 83,
-            CipherType::Receive => 83,
-        };
-
-        ((version >> 8) & 0xff) | ((version << 8) & 0xff00)
     }
 }
