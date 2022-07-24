@@ -1,14 +1,12 @@
-use lazy_static::lazy_static;
+use once_cell::sync::OnceCell;
 use serde::Deserialize;
 
-lazy_static! {
-    pub static ref CONFIG: OxideConfig = load_oxide_config();
-}
+pub static CONFIG: OnceCell<OxideConfig> = OnceCell::new();
 
 #[derive(Debug, Deserialize)]
 pub struct OxideConfig {
-    pub enable_pin: bool,
-    pub enable_pic: bool,
+    pub enable_pin: u8,
+    pub enable_pic: u8,
 }
 
 fn load_oxide_config() -> OxideConfig {

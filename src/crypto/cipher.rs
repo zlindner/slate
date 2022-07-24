@@ -31,7 +31,7 @@ const SHIFT_KEY: [u8; 256] = [
 
 #[derive(Debug)]
 pub struct Cipher {
-    pub cipher: Aes256,
+    cipher: Aes256,
     pub iv: [u8; 4],
     pub version: u16,
 }

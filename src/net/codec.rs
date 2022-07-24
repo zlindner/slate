@@ -3,7 +3,6 @@ use crate::{
     crypto::{cipher::Cipher, shanda},
     Error, Result,
 };
-
 use bytes::{BufMut, BytesMut};
 use tokio_util::codec::{Decoder, Encoder};
 
@@ -79,7 +78,7 @@ impl Decoder for MapleCodec {
 
         // decrypt the packet body
         let decrypted = shanda::decrypt(self.recv.transform(body));
-        let packet = Packet::from_bytes(decrypted);
+        let packet = Packet::wrap(decrypted);
 
         Ok(Some(packet))
     }

@@ -1,3 +1,4 @@
+use super::queries;
 use crate::{
     client::Client,
     db::{self, Db},
@@ -5,7 +6,6 @@ use crate::{
     shutdown::Shutdown,
     Result, Shared,
 };
-
 use std::{
     future::Future,
     sync::{
@@ -17,8 +17,6 @@ use tokio::{
     net::TcpListener,
     sync::{broadcast, mpsc},
 };
-
-use super::queries;
 
 #[derive(Debug)]
 struct Listener {

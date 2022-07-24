@@ -17,7 +17,7 @@ impl Packet {
         }
     }
 
-    pub fn from_bytes(bytes: BytesMut) -> Self {
+    pub fn wrap(bytes: BytesMut) -> Self {
         Self { bytes }
     }
 
@@ -88,7 +88,7 @@ impl Display for Packet {
         let len = self.bytes.len();
 
         for i in 0..len {
-            write!(f, "{:02X}", self.bytes[i])?;
+            write!(f, "0x{:02X}", self.bytes[i])?;
 
             if i != len - 1 {
                 write!(f, ", ")?;
