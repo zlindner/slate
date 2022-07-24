@@ -60,9 +60,9 @@ pub fn login_success(id: i32, name: &String) -> Packet {
     // remove the "select the world you want to play in"
     packet.write_int(1);
     // 0 => pin enabled, 1 => pin disabled
-    packet.write_byte(CONFIG.get().unwrap().enable_pin);
+    packet.write_byte(CONFIG.enable_pin);
     // 0 => register PIC, 1 => ask for PIC, 2 => disabled
-    packet.write_byte(CONFIG.get().unwrap().enable_pic);
+    packet.write_byte(CONFIG.enable_pic);
     packet
 }
 
