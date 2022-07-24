@@ -45,7 +45,7 @@ impl Cipher {
     pub fn new(cipher_type: CipherType) -> Self {
         Self {
             cipher: Aes256::new(&GenericArray::from(KEY)),
-            iv: Self::generate_iv(&cipher_type),
+            iv: random::<[u8; 4]>(),
             version: Self::generate_version(&cipher_type),
         }
     }
@@ -118,13 +118,6 @@ impl Cipher {
         }
 
         new_sequence
-    }
-
-    fn generate_iv(cipher_type: &CipherType) -> [u8; 4] {
-        match cipher_type {
-            CipherType::Send => return [0x52, 0x30, 0x78, 0x61],
-            CipherType::Receive => return [0x46, 0x72, random::<u8>(), 0x52],
-        }
     }
 
     fn generate_version(cipher_type: &CipherType) -> u16 {
