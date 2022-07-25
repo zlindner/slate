@@ -9,7 +9,6 @@ use crate::{
     Result,
 };
 
-#[derive(Debug)]
 pub struct DeleteCharacter {
     pic: String,
     character_id: i32,

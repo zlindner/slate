@@ -8,7 +8,6 @@ use crate::{
     Result,
 };
 
-#[derive(Debug)]
 pub struct AfterLogin {
     a: u8,
     b: u8,

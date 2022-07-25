@@ -7,7 +7,6 @@ use crate::{
     Result,
 };
 
-#[derive(Debug)]
 pub struct CharacterList {
     world_id: u8,
     channel_id: u8,

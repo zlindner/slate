@@ -9,7 +9,6 @@ use regex::Regex;
 
 static VALID_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"[a-zA-Z0-9]{3,12}").unwrap());
 
-#[derive(Debug)]
 pub struct CharacterName {
     name: String,
 }

@@ -1,6 +1,5 @@
 use crate::Result;
 
-#[derive(Debug)]
 pub struct Unknown {
     op_code: i16,
 }

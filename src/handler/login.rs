@@ -12,7 +12,6 @@ use pbkdf2::{
 };
 use sqlx::{postgres::PgRow, Row};
 
-#[derive(Debug)]
 pub struct Login {
     name: String,
     password: String,

@@ -5,7 +5,6 @@ use crate::{
     Result,
 };
 
-#[derive(Debug)]
 pub struct RegisterPin {
     flag: u8,
     packet: Packet,

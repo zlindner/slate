@@ -1,6 +1,5 @@
 use crate::{client::Client, login::packets, net::packet::Packet, world::CapacityStatus, Result};
 
-#[derive(Debug)]
 pub struct WorldStatus {
     world_id: i16,
 }

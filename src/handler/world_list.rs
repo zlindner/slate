@@ -1,6 +1,5 @@
 use crate::{client::Client, login::packets, Result};
 
-#[derive(Debug)]
 pub struct WorldList;
 
 impl WorldList {

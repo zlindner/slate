@@ -91,7 +91,6 @@ static STARTER_FACE: Lazy<HashSet<i32>> = Lazy::new(|| {
     .collect()
 });
 
-#[derive(Debug)]
 pub struct CreateCharacter {
     name: String,
     job: i32,
