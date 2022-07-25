@@ -305,6 +305,14 @@ fn write_character_equipment(character: &Character, packet: &mut Packet) {
     }
 }
 
+pub fn new_character(character: &Character) -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x0E);
+    packet.write_byte(0);
+    write_character(character, &mut packet, false);
+    packet
+}
+
 /*
 pub fn character_name(name: &str, valid: bool) -> Packet {
     let mut packet = Packet::new(name.len() + 5);

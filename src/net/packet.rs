@@ -62,6 +62,10 @@ impl Packet {
         self.bytes.get_i16_le()
     }
 
+    pub fn read_int(&mut self) -> i32 {
+        self.bytes.get_i32_le()
+    }
+
     pub fn read_string(&mut self) -> String {
         let len = self.read_short() as usize;
         let bytes = self.bytes.split_to(len);

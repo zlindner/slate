@@ -1,7 +1,7 @@
+use dashmap::DashMap;
 use sqlx::{postgres::PgRow, Row};
 
 use self::pet::Pet;
-
 mod pet;
 
 #[derive(Debug)]
@@ -17,8 +17,32 @@ pub struct Character {
     pub spawn_point: i32,
     pub gm: u8,
     pub rank: Rank,
-
     pub pets: Vec<Pet>,
+    pub inventory: DashMap<i16, i32>,
+}
+
+impl Character {
+    // TODO should probably change this to load() in the future, character data spans
+    // across several tables/queries
+    pub fn from_row(row: &PgRow) -> Self {
+        Self {
+            id: row.get::<i32, _>("id"),
+            account_id: row.get::<i32, _>("account_id"),
+            world_id: row.get::<i32, _>("world_id"),
+            name: row.get::<String, _>("name"),
+            stats: Stats::from_row(row),
+            job: row.get::<i32, _>("job"),
+            style: Style::from_row(row),
+            map: row.get::<i32, _>("map"),
+            spawn_point: row.get::<i32, _>("spawn_point"),
+            gm: row.get::<i16, _>("gm") as u8,
+            rank: Rank::from_row(row),
+            // TODO load from pets table
+            pets: Vec::new(),
+            // TODO load from ? table
+            inventory: DashMap::new(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -38,65 +62,6 @@ pub struct Stats {
     pub fame: i32,
     pub ap: i32,
     pub sp: String,
-}
-
-#[derive(Debug)]
-pub struct Style {
-    pub skin_colour: i32,
-    pub gender: u8,
-    pub hair: i32,
-    pub face: i32,
-}
-
-#[derive(Default, Debug)]
-pub struct Rank {
-    pub rank: i32,
-    pub rank_move: i32,
-    pub job_rank: i32,
-    pub job_rank_move: i32,
-}
-
-impl Character {
-    pub fn new(account_id: i32, world_id: i32, name: String, style: Style) -> Self {
-        // TODO pass in job, call default function for each job
-
-        Self {
-            id: 0, // FIXME
-            account_id,
-            world_id,
-            name,
-            stats: Default::default(),
-            job: 0, // TODO different for explorer, cygnus, aran, etc.
-            style,
-            map: 10000,     // FIXME default for beginnner (mushroom town)
-            spawn_point: 0, // FIXME
-            gm: 0,
-            rank: Default::default(),
-            pets: Vec::new(),
-        }
-    }
-
-    // TODO should probably change this to load() in the future, character data spans
-    // across several tables/queries
-    pub fn from_row(row: &PgRow) -> Self {
-        Self {
-            id: row.get::<i32, _>("id"),
-            account_id: row.get::<i32, _>("account_id"),
-            world_id: row.get::<i32, _>("world_id"),
-            name: row.get::<String, _>("name"),
-            stats: Stats::from_row(row),
-            job: row.get::<i32, _>("job"),
-            style: Style::from_row(row),
-            map: row.get::<i32, _>("map"),
-            spawn_point: row.get::<i32, _>("spawn_point"),
-            gm: row.get::<i16, _>("gm") as u8,
-            rank: Rank::from_row(row),
-            // TODO load from pets table
-            pets: Vec::new(),
-        }
-    }
-
-    // TODO new_explorer, new_cygnus, new_aran, etc.
 }
 
 impl Stats {
@@ -143,6 +108,14 @@ impl Default for Stats {
     }
 }
 
+#[derive(Debug)]
+pub struct Style {
+    pub skin_colour: i32,
+    pub gender: u8,
+    pub hair: i32,
+    pub face: i32,
+}
+
 impl Style {
     fn from_row(row: &PgRow) -> Self {
         Self {
@@ -152,6 +125,14 @@ impl Style {
             face: row.get::<i32, _>("face"),
         }
     }
+}
+
+#[derive(Default, Debug)]
+pub struct Rank {
+    pub rank: i32,
+    pub rank_move: i32,
+    pub job_rank: i32,
+    pub job_rank_move: i32,
 }
 
 impl Rank {

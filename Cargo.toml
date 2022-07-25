@@ -27,3 +27,4 @@ dotenv = "0.15.0"
 toml = "0.5.9"
 serde = { version = "1.0.140", features = ["derive"] }
 once_cell = "1.13.0"
+dashmap = "5.3.4"
