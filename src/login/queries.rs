@@ -102,3 +102,16 @@ pub async fn create_character(character: &Character, db: &Db) -> Result<()> {
 
     Ok(())
 }
+
+pub async fn get_character_id_by_name(name: &String, db: &Db) -> Result<Option<PgRow>> {
+    let res = sqlx::query(
+        "SELECT id \
+        FROM characters \
+        WHERE name = $1",
+    )
+    .bind(name)
+    .fetch_optional(db)
+    .await?;
+
+    Ok(res)
+}

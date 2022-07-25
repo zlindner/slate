@@ -1,6 +1,6 @@
 use crate::client::Client;
 use crate::net::packet::Packet;
-use crate::Result;
+use crate::{handler, Result};
 
 mod login;
 use self::login::Login;
@@ -20,6 +20,9 @@ use self::register_pin::RegisterPin;
 mod world_list;
 use self::world_list::WorldList;
 
+mod character_name;
+use self::character_name::CharacterName;
+
 mod create_character;
 use self::create_character::CreateCharacter;
 
@@ -33,6 +36,7 @@ pub enum Handler {
     AfterLogin(AfterLogin),
     RegisterPin(RegisterPin),
     WorldList(WorldList),
+    CharacterName(CharacterName),
     CreateCharacter(CreateCharacter),
     Unknown(Unknown),
 }
@@ -49,6 +53,7 @@ impl Handler {
             0x09 => Handler::AfterLogin(AfterLogin::new(packet)),
             0x0A => Handler::RegisterPin(RegisterPin::new(packet)),
             0x0B => Handler::WorldList(WorldList::new()),
+            0x15 => Handler::CharacterName(CharacterName::new(packet)),
             0x16 => Handler::CreateCharacter(CreateCharacter::new(packet)),
             _ => {
                 if op_code >= 0x200 {
@@ -73,6 +78,7 @@ impl Handler {
             AfterLogin(handler) => handler.handle(client).await,
             RegisterPin(handler) => handler.handle(client).await,
             WorldList(handler) => handler.handle(client).await,
+            CharacterName(handler) => handler.handle(client).await,
             CreateCharacter(handler) => handler.handle(client).await,
             Unknown(handler) => handler.handle(),
         }
