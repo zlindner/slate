@@ -2,7 +2,6 @@ use crate::{
     db::Db, handler::Handler, login::queries, net::connection::Connection, shutdown::Shutdown,
     Result, Shared,
 };
-
 use std::sync::Arc;
 
 pub struct Client {
@@ -13,8 +12,10 @@ pub struct Client {
     pub shared: Arc<Shared>,
     pub login_attempts: u8,
     pub pin_attempts: u8,
-    pub id: Option<i32>,
+    pub pic_attempts: u8,
     pub pin: Option<String>,
+    pub pic: Option<String>,
+    pub id: Option<i32>,
     pub world_id: Option<i32>,
     pub channel_id: Option<i32>,
 }

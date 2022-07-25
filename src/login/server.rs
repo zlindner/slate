@@ -103,8 +103,10 @@ impl Listener {
                 shared: Arc::clone(&self.shared),
                 login_attempts: 0,
                 pin_attempts: 0,
-                id: None,
+                pic_attempts: 0,
                 pin: None,
+                pic: None,
+                id: None,
                 world_id: None,
                 channel_id: None,
             };

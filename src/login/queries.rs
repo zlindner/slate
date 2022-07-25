@@ -115,3 +115,17 @@ pub async fn get_character_id_by_name(name: &String, db: &Db) -> Result<Option<P
 
     Ok(res)
 }
+
+pub async fn delete_character(character_id: i32, db: &Db) -> Result<()> {
+    sqlx::query(
+        "DELETE FROM characters \
+        WHERE id = $1",
+    )
+    .bind(character_id)
+    .execute(db)
+    .await?;
+
+    // TODO need to delete reference to this character in like 10 other tables (buddies, bbs_threads, bbs_replies, wishlists, etc.)
+
+    Ok(())
+}

@@ -10,4 +10,5 @@ pub static CONFIG: Lazy<OxideConfig> = Lazy::new(|| {
 pub struct OxideConfig {
     pub enable_pin: u8,
     pub enable_pic: u8,
+    pub bypass_pic: bool,
 }

@@ -179,8 +179,8 @@ pub fn character_list(characters: &Vec<Character>) -> Packet {
         write_character(character, &mut packet, false);
     }
 
-    // FIXME: 0 => register PIC, 1 => ask for PIC, 2 => disabled
-    packet.write_byte(2);
+    // 0 => register PIC, 1 => ask for PIC, 2 => disabled
+    packet.write_byte(CONFIG.enable_pic);
     // number of character slots
     // TODO should be configurable via config/oxide.toml
     packet.write_int(3);
@@ -321,35 +321,19 @@ pub fn character_name(name: &String, valid: bool) -> Packet {
     packet
 }
 
-/*
-pub fn character_name(name: &str, valid: bool) -> Packet {
-    let mut packet = Packet::new(name.len() + 5);
-    packet.write_short(0x0D);
-    packet.write_maple_string(name);
-    packet.write_byte(!valid as u8); // name is taken => !valid
-    packet
+pub enum PicOperation {
+    Success = 0x00,
+    UnknownError = 0x09,
+    InvalidPic = 0x14,
+    GuildMasterError = 0x16,
+    PendingWorldTransferError = 0x1A,
+    HasFamilyError = 0x1D,
 }
 
-pub fn create_character(character: &Character) -> Packet {
-    let mut packet = Packet::new(256);
-    packet.write_short(0x0E);
-    packet.write_byte(0);
-
-    add_character_stats(&mut packet, character);
-    add_character_style(&mut packet, character);
-    add_character_equipment(&mut packet, character);
-
-    packet.write_byte(0); // view all
-
-    // TODO if gm or gm job, write_byte(0) and return;
-
-    packet.write_byte(1); // world rank enabled
-    packet.write_int(character.rank.rank);
-    packet.write_int(character.rank.rank_move); // positive => upwards, negative => downwards
-    packet.write_int(character.rank.job_rank);
-    packet.write_int(character.rank.job_rank_move); // positive => upwards, negative => downwards
-
-    log::debug!("create_character packet size: {}", packet.data.len());
+pub fn delete_character(character_id: i32, op: PicOperation) -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x0F);
+    packet.write_int(character_id);
+    packet.write_byte(op as u8);
     packet
 }
-*/

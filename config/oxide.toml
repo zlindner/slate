@@ -5,4 +5,5 @@ enable_pin = 1
 # 0: register PIC
 # 1: ask for PIC
 # 2: disabled
-enable_pic = 2
+enable_pic = 1
+bypass_pic = true
