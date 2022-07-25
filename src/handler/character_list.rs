@@ -26,7 +26,7 @@ impl CharacterList {
         }
     }
 
-    pub async fn handle(mut self, client: &mut Client) -> Result<()> {
+    pub async fn handle(self, client: &mut Client) -> Result<()> {
         let shared = &client.shared;
         let db = &client.db;
         let connection = &mut client.connection;
