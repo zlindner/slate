@@ -1,6 +1,6 @@
 use crate::client::Client;
 use crate::net::packet::Packet;
-use crate::{handler, Result};
+use crate::Result;
 
 mod login;
 use self::login::Login;
@@ -26,6 +26,9 @@ use self::character_name::CharacterName;
 mod create_character;
 use self::create_character::CreateCharacter;
 
+mod delete_character;
+use self::delete_character::DeleteCharacter;
+
 mod unknown;
 use self::unknown::Unknown;
 
@@ -38,6 +41,7 @@ pub enum Handler {
     WorldList(WorldList),
     CharacterName(CharacterName),
     CreateCharacter(CreateCharacter),
+    DeleteCharacter(DeleteCharacter),
     Unknown(Unknown),
 }
 
@@ -55,6 +59,7 @@ impl Handler {
             0x0B => Handler::WorldList(WorldList::new()),
             0x15 => Handler::CharacterName(CharacterName::new(packet)),
             0x16 => Handler::CreateCharacter(CreateCharacter::new(packet)),
+            0x17 => Handler::DeleteCharacter(DeleteCharacter::new(packet)),
             _ => {
                 if op_code >= 0x200 {
                     log::warn!("Potential malicious packet: {}", op_code);
@@ -80,6 +85,7 @@ impl Handler {
             WorldList(handler) => handler.handle(client).await,
             CharacterName(handler) => handler.handle(client).await,
             CreateCharacter(handler) => handler.handle(client).await,
+            DeleteCharacter(handler) => handler.handle(client).await,
             Unknown(handler) => handler.handle(),
         }
     }

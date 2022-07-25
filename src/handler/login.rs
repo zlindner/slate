@@ -70,13 +70,13 @@ impl Login {
             connection.write_packet(packet).await?;
         } else {
             let id = account.get::<i32, _>("id");
-            let pin = account.get::<String, _>("pin");
-
             client.id = Some(id);
 
-            if !pin.is_empty() {
-                client.pin = Some(pin);
-            }
+            let pin = account.get::<String, _>("pin");
+            client.pin = Some(pin);
+
+            let pic = account.get::<String, _>("pic");
+            client.pic = Some(pic);
 
             queries::update_login_state(id, 2, db).await?;
 
