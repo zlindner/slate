@@ -60,9 +60,9 @@ pub fn login_success(id: i32, name: &String) -> Packet {
     // remove the "select the world you want to play in"
     packet.write_int(1);
     // 0 => pin enabled, 1 => pin disabled
-    packet.write_byte(CONFIG.get().unwrap().enable_pin);
+    packet.write_byte(CONFIG.enable_pin);
     // 0 => register PIC, 1 => ask for PIC, 2 => disabled
-    packet.write_byte(CONFIG.get().unwrap().enable_pic);
+    packet.write_byte(CONFIG.enable_pic);
     packet
 }
 
@@ -303,6 +303,22 @@ fn write_character_equipment(character: &Character, packet: &mut Packet) {
             None => packet.write_int(0),
         }
     }
+}
+
+pub fn new_character(character: &Character) -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x0E);
+    packet.write_byte(0);
+    write_character(character, &mut packet, false);
+    packet
+}
+
+pub fn character_name(name: &String, valid: bool) -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x0D);
+    packet.write_string(name);
+    packet.write_byte(!valid as u8);
+    packet
 }
 
 /*

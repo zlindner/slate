@@ -1,5 +1,4 @@
-use crate::{db::Db, Result};
-
+use crate::{character::Character, db::Db, Result};
 use sqlx::postgres::PgRow;
 
 pub async fn get_account(name: &String, db: &Db) -> Result<PgRow> {
@@ -67,4 +66,52 @@ pub async fn logout_all(db: &Db) -> Result<()> {
     .await?;
 
     Ok(())
+}
+
+pub async fn create_character(character: &Character, db: &Db) -> Result<()> {
+    sqlx::query(
+        "INSERT INTO characters \
+        (account_id, world_id, name, level, str, dex, luk, int, hp, mp, max_hp, max_mp, mesos, job, skin_colour, gender, hair, face, ap, sp, map, spawn_point, gm) \
+        VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)",
+    )
+    .bind(character.account_id)
+    .bind(character.world_id)
+    .bind(character.name.clone())
+    .bind(character.stats.level)
+    .bind(character.stats.str)
+    .bind(character.stats.dex)
+    .bind(character.stats.luk)
+    .bind(character.stats.int)
+    .bind(character.stats.hp)
+    .bind(character.stats.mp)
+    .bind(character.stats.max_hp)
+    .bind(character.stats.max_mp)
+    .bind(character.stats.mesos)
+    .bind(character.job)
+    .bind(character.style.skin_colour)
+    .bind(character.style.gender as i16)
+    .bind(character.style.hair)
+    .bind(character.style.face)
+    .bind(character.stats.ap)
+    .bind(character.stats.sp.clone())
+    .bind(character.map)
+    .bind(character.spawn_point)
+    .bind(character.gm as i16)
+    .execute(db)
+    .await?;
+
+    Ok(())
+}
+
+pub async fn get_character_id_by_name(name: &String, db: &Db) -> Result<Option<PgRow>> {
+    let res = sqlx::query(
+        "SELECT id \
+        FROM characters \
+        WHERE name = $1",
+    )
+    .bind(name)
+    .fetch_optional(db)
+    .await?;
+
+    Ok(res)
 }
