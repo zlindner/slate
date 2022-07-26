@@ -724,7 +724,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "oxide"
+name = "oxide-login"
 version = "0.1.0"
 dependencies = [
  "aes",

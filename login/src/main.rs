@@ -39,7 +39,7 @@ async fn main() -> Result<()> {
         worlds: world::load_worlds(),
     });
 
-    let listener = TcpListener::bind(&env::var("SERVER_ADDRESS").unwrap()).await?;
+    let listener = TcpListener::bind(&env::var("LOGIN_SERVER_ADDR").unwrap()).await?;
     login::server::start(listener, signal::ctrl_c(), &shared).await?;
 
     Ok(())
