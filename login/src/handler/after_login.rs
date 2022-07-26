@@ -5,8 +5,8 @@ use crate::{
         queries,
     },
     net::packet::Packet,
-    Result,
 };
+use oxide_core::Result;
 
 pub struct AfterLogin {
     a: u8,

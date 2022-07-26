@@ -1,4 +1,5 @@
-use crate::{character::Character, db::Db, Result};
+use crate::{character::Character, db::Db};
+use oxide_core::Result;
 use sqlx::postgres::PgRow;
 
 pub async fn get_account(name: &String, db: &Db) -> Result<PgRow> {

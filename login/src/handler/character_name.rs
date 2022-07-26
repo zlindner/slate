@@ -2,9 +2,9 @@ use crate::{
     client::Client,
     login::{packets, queries},
     net::packet::Packet,
-    Result,
 };
 use once_cell::sync::Lazy;
+use oxide_core::Result;
 use regex::Regex;
 
 static VALID_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"[a-zA-Z0-9]{3,12}").unwrap());

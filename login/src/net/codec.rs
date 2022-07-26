@@ -1,9 +1,7 @@
 use super::packet::Packet;
-use crate::{
-    crypto::{cipher::Cipher, shanda},
-    Error, Result,
-};
+use crate::crypto::{cipher::Cipher, shanda};
 use bytes::{BufMut, BytesMut};
+use oxide_core::{Error, Result};
 use tokio_util::codec::{Decoder, Encoder};
 
 #[derive(Debug)]

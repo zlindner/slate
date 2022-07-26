@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+# oxide
+oxide-core = { path = "../core" }
+
+# net
 tokio = { version = "1.20.0", features = ["full"] }
 tokio-util = { version = "0.7.3", features = ["full"] }
 tokio-stream = "0.1.9"

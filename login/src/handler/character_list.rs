@@ -4,8 +4,8 @@ use crate::{
     login::{packets, queries},
     net::packet::Packet,
     world::CapacityStatus,
-    Result,
 };
+use oxide_core::Result;
 
 pub struct CharacterList {
     world_id: u8,

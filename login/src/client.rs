@@ -1,7 +1,8 @@
 use crate::{
     db::Db, handler::Handler, login::queries, net::connection::Connection, shutdown::Shutdown,
-    Result, Shared,
+    Shared,
 };
+use oxide_core::Result;
 use std::sync::Arc;
 
 pub struct Client {

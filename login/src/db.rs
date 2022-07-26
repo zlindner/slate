@@ -1,5 +1,4 @@
-use crate::Result;
-
+use oxide_core::Result;
 use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions},
     Pool, Postgres,

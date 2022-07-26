@@ -6,8 +6,8 @@ use crate::{
         queries,
     },
     net::packet::Packet,
-    Result,
 };
+use oxide_core::Result;
 
 pub struct DeleteCharacter {
     pic: String,

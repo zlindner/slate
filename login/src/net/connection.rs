@@ -1,7 +1,7 @@
 use super::{codec::MapleCodec, packet::Packet};
-use crate::{crypto::cipher::Cipher, login::packets, Result};
-
+use crate::{crypto::cipher::Cipher, login::packets};
 use futures::SinkExt;
+use oxide_core::Result;
 use tokio::{io::AsyncWriteExt, net::TcpStream};
 use tokio_stream::StreamExt;
 use tokio_util::codec::{Decoder, Framed};

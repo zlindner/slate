@@ -724,6 +724,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "oxide-core"
+version = "0.1.0"
+
+[[package]]
 name = "oxide-login"
 version = "0.1.0"
 dependencies = [
@@ -734,6 +738,7 @@ dependencies = [
  "futures",
  "log",
  "once_cell",
+ "oxide-core",
  "pbkdf2",
  "rand",
  "regex",

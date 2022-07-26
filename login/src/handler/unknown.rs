@@ -1,4 +1,4 @@
-use crate::Result;
+use oxide_core::Result;
 
 pub struct Unknown {
     op_code: i16,

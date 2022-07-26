@@ -1,4 +1,5 @@
-use crate::{client::Client, login::packets, Result};
+use crate::{client::Client, login::packets};
+use oxide_core::Result;
 
 pub struct WorldList;
 

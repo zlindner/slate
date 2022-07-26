@@ -4,8 +4,9 @@ use crate::{
     db::{self, Db},
     net::connection::Connection,
     shutdown::Shutdown,
-    Result, Shared,
+    Shared,
 };
+use oxide_core::Result;
 use std::{
     future::Future,
     sync::{

@@ -2,10 +2,9 @@ use crate::{
     client::Client,
     login::{packets, queries},
     net::packet::Packet,
-    Result,
 };
-
 use bytes::Bytes;
+use oxide_core::Result;
 use pbkdf2::{
     password_hash::{PasswordHash, PasswordVerifier},
     Pbkdf2,

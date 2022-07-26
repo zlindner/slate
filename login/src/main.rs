@@ -10,14 +10,12 @@ mod shutdown;
 mod world;
 
 use log::LevelFilter;
+use oxide_core::Result;
 use simple_logger::SimpleLogger;
 use std::env;
 use std::sync::Arc;
 use tokio::{net::TcpListener, signal};
 use world::World;
-
-pub type Error = Box<dyn std::error::Error + Send + Sync>;
-pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug)]
 pub struct Shared {
