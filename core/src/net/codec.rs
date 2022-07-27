@@ -1,10 +1,8 @@
-use super::packet::Packet;
-use crate::crypto::{cipher::Cipher, shanda};
+use super::{cipher::Cipher, packet::Packet, shanda};
+use crate::{Error, Result};
 use bytes::{BufMut, BytesMut};
-use oxide_core::{Error, Result};
 use tokio_util::codec::{Decoder, Encoder};
 
-#[derive(Debug)]
 pub struct MapleCodec {
     send: Cipher,
     recv: Cipher,
@@ -59,7 +57,10 @@ impl Decoder for MapleCodec {
     type Error = Error;
 
     fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Packet>> {
-        if buf.is_empty() {
+        // we need to check if the packet is as least 4 bytes otherwise
+        // split_off will panic (and packet/header is invalid)
+        if buf.len() < 4 {
+            log::error!("Invalid packet length");
             return Ok(None);
         }
 
@@ -70,7 +71,7 @@ impl Decoder for MapleCodec {
 
         // validate the packet header
         if !self.is_valid_header(&bytes) {
-            log::error!("Packet contains an invalid header: {:?}", bytes);
+            log::error!("Invalid packet header");
             return Ok(None);
         }
 

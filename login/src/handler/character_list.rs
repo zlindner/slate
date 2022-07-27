@@ -2,10 +2,9 @@ use crate::{
     character::Character,
     client::Client,
     login::{packets, queries},
-    net::packet::Packet,
     world::CapacityStatus,
 };
-use oxide_core::Result;
+use oxide_core::{net::Packet, Result};
 
 pub struct CharacterList {
     world_id: u8,

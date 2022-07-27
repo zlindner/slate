@@ -1,8 +1,8 @@
+use oxide_core::net::{cipher::Cipher, Packet};
+
 use crate::{
     character::Character,
     config::CONFIG,
-    crypto::cipher::Cipher,
-    net::packet::Packet,
     world::{CapacityStatus, World},
 };
 

@@ -1,9 +1,8 @@
 use crate::{
     client::Client,
     login::{packets, queries},
-    net::packet::Packet,
 };
-use oxide_core::Result;
+use oxide_core::{net::Packet, Result};
 
 pub struct RegisterPin {
     flag: u8,

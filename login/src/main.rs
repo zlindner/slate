@@ -1,7 +1,6 @@
 mod character;
 mod client;
 mod config;
-mod crypto;
 mod db;
 mod handler;
 mod login;
@@ -10,11 +9,11 @@ mod shutdown;
 mod world;
 
 use log::LevelFilter;
-use oxide_core::Result;
+use oxide_core::net::Packet;
+use oxide_core::{net::TcpServer, Result};
 use simple_logger::SimpleLogger;
 use std::env;
 use std::sync::Arc;
-use tokio::{net::TcpListener, signal};
 use world::World;
 
 #[derive(Debug)]
@@ -37,8 +36,9 @@ async fn main() -> Result<()> {
         worlds: world::load_worlds(),
     });
 
-    let listener = TcpListener::bind(&env::var("LOGIN_SERVER_ADDR").unwrap()).await?;
-    login::server::start(listener, signal::ctrl_c(), &shared).await?;
+    TcpServer::new(env::var("LOGIN_SERVER_ADDR").unwrap())
+        .start()
+        .await?;
 
     Ok(())
 }

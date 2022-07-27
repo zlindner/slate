@@ -1,7 +1,6 @@
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use std::fmt::{Display, Formatter};
 
-#[derive(Debug)]
 pub struct Packet {
     pub bytes: BytesMut,
 }

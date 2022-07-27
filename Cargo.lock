@@ -726,6 +726,17 @@ dependencies = [
 [[package]]
 name = "oxide-core"
 version = "0.1.0"
+dependencies = [
+ "aes",
+ "bytes",
+ "futures",
+ "log",
+ "rand",
+ "simple_logger",
+ "tokio",
+ "tokio-stream",
+ "tokio-util",
+]
 
 [[package]]
 name = "oxide-login"

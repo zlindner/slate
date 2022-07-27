@@ -1,5 +1,5 @@
-use crate::{client::Client, login::packets, net::packet::Packet, world::CapacityStatus};
-use oxide_core::Result;
+use crate::{client::Client, login::packets, world::CapacityStatus};
+use oxide_core::{net::Packet, Result};
 
 pub struct WorldStatus {
     world_id: i16,

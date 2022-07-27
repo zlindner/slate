@@ -1,6 +1,5 @@
 use crate::client::Client;
-use crate::net::packet::Packet;
-use oxide_core::Result;
+use oxide_core::{net::Packet, Result};
 
 mod login;
 use self::login::Login;

@@ -2,11 +2,10 @@ use crate::{
     character::{Character, Rank, Stats, Style},
     client::Client,
     login::{packets, queries},
-    net::packet::Packet,
 };
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
-use oxide_core::Result;
+use oxide_core::{net::Packet, Result};
 use std::collections::HashSet;
 
 static STARTER_WEAPONS: Lazy<HashSet<i32>> = Lazy::new(|| {

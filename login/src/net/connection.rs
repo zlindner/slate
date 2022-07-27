@@ -1,12 +1,14 @@
-use super::{codec::MapleCodec, packet::Packet};
-use crate::{crypto::cipher::Cipher, login::packets};
 use futures::SinkExt;
-use oxide_core::Result;
+use oxide_core::{
+    net::{cipher::Cipher, codec::MapleCodec, Packet},
+    Result,
+};
 use tokio::{io::AsyncWriteExt, net::TcpStream};
 use tokio_stream::StreamExt;
 use tokio_util::codec::{Decoder, Framed};
 
-#[derive(Debug)]
+use crate::login::packets;
+
 pub struct Connection {
     stream: Framed<TcpStream, MapleCodec>,
 }
