@@ -13,6 +13,7 @@ tokio-util = { version = "0.7.3", features = ["full"] }
 tokio-stream = "0.1.9"
 futures = "0.3.21"
 bytes = "1.2.0"
+async-trait = "0.1.56"
 
 # database
 sqlx = { version = "0.6.0", features = [ "runtime-tokio-native-tls" , "postgres" ] }

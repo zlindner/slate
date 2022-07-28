@@ -1,5 +1,6 @@
-use super::{cipher::Cipher, codec::MapleCodec};
+use super::{cipher::Cipher, codec::MapleCodec, Packet};
 use crate::{util::Shutdown, Result};
+use async_trait::async_trait;
 use futures::SinkExt;
 use tokio::{
     net::{TcpListener, TcpStream},
@@ -9,16 +10,25 @@ use tokio::{
 use tokio_stream::StreamExt;
 use tokio_util::codec::{Decoder, Framed};
 
-pub struct TcpServer {
+#[async_trait]
+pub trait HandlePacket {
+    // TODO pass in connection
+    async fn handle(&self, packet: Packet) -> Result<()>;
+}
+
+pub struct Server {
     addr: String,
 }
 
-impl TcpServer {
+impl Server {
     pub fn new(addr: String) -> Self {
         Self { addr }
     }
 
-    pub async fn start(&self) -> Result<()> {
+    pub async fn start(
+        self,
+        handler: impl HandlePacket + Send + Sync + Copy + 'static,
+    ) -> Result<()> {
         log::info!("Server started @ {}", self.addr);
 
         let notify_shutdown: broadcast::Sender<()> = broadcast::channel(1).0;
@@ -28,7 +38,7 @@ impl TcpServer {
         ) = mpsc::channel(1);
 
         tokio::select! {
-            res = self.listen(&notify_shutdown) => {
+            res = self.listen(&notify_shutdown, handler) => {
                 if let Err(e) = res {
                     log::error!("Server listen error: {}", e);
                 }
@@ -50,7 +60,11 @@ impl TcpServer {
         Ok(())
     }
 
-    async fn listen(&self, notify_shutdown: &broadcast::Sender<()>) -> Result<()> {
+    async fn listen(
+        self,
+        notify_shutdown: &broadcast::Sender<()>,
+        handler: impl HandlePacket + Send + Sync + Copy + 'static,
+    ) -> Result<()> {
         let listener = TcpListener::bind(&self.addr).await?;
 
         loop {
@@ -65,7 +79,7 @@ impl TcpServer {
                 let recv = Cipher::new(83);
                 let mut maple_stream = MapleCodec::new(send, recv).framed(stream);
 
-                if let Err(e) = Self::connect(&mut maple_stream, shutdown).await {
+                if let Err(e) = Self::connect(&mut maple_stream, shutdown, handler).await {
                     log::error!("Client connection error: {}", e);
                 }
 
@@ -79,6 +93,7 @@ impl TcpServer {
     async fn connect(
         stream: &mut Framed<TcpStream, MapleCodec>,
         mut shutdown: Shutdown,
+        handler: impl HandlePacket + Send + Sync + Copy + 'static,
     ) -> Result<()> {
         log::info!("Client connected to server");
 
@@ -97,6 +112,7 @@ impl TcpServer {
             };
 
             log::debug!("Received packet: {}", packet);
+            HandlePacket::handle(&handler, packet).await?;
         }
 
         Ok(())

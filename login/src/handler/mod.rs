@@ -1,90 +1,37 @@
-use crate::client::Client;
-use oxide_core::{net::Packet, Result};
-
-mod login;
-use self::login::Login;
-
-mod character_list;
-use self::character_list::CharacterList;
-
-mod world_status;
-use self::world_status::WorldStatus;
-
-mod after_login;
-use self::after_login::AfterLogin;
-
-mod register_pin;
-use self::register_pin::RegisterPin;
-
-mod world_list;
-use self::world_list::WorldList;
-
-mod character_name;
-use self::character_name::CharacterName;
-
-mod create_character;
-use self::create_character::CreateCharacter;
-
-mod delete_character;
-use self::delete_character::DeleteCharacter;
+use async_trait::async_trait;
+use oxide_core::net::{HandlePacket, Packet};
+use oxide_core::Result;
 
 mod unknown;
 use self::unknown::Unknown;
 
-pub enum Handler {
-    Login(Login),
-    CharacterList(CharacterList),
-    WorldStatus(WorldStatus),
-    AfterLogin(AfterLogin),
-    RegisterPin(RegisterPin),
-    WorldList(WorldList),
-    CharacterName(CharacterName),
-    CreateCharacter(CreateCharacter),
-    DeleteCharacter(DeleteCharacter),
+#[derive(Copy, Clone)]
+pub struct LoginServerHandler;
+
+#[async_trait]
+impl HandlePacket for LoginServerHandler {
+    async fn handle(&self, packet: Packet) -> Result<()> {
+        Handler::get(packet).handle().await
+    }
+}
+
+enum Handler {
     Unknown(Unknown),
 }
 
 impl Handler {
-    pub fn get(mut packet: Packet) -> Option<Self> {
+    fn get(mut packet: Packet) -> Self {
         let op_code = packet.read_short();
 
-        let handler = match op_code {
-            0x01 => Handler::Login(Login::new(packet)),
-            0x04 => Handler::WorldList(WorldList::new()),
-            0x05 => Handler::CharacterList(CharacterList::new(packet)),
-            0x06 => Handler::WorldStatus(WorldStatus::new(packet)),
-            0x09 => Handler::AfterLogin(AfterLogin::new(packet)),
-            0x0A => Handler::RegisterPin(RegisterPin::new(packet)),
-            0x0B => Handler::WorldList(WorldList::new()),
-            0x15 => Handler::CharacterName(CharacterName::new(packet)),
-            0x16 => Handler::CreateCharacter(CreateCharacter::new(packet)),
-            0x17 => Handler::DeleteCharacter(DeleteCharacter::new(packet)),
-            _ => {
-                if op_code >= 0x200 {
-                    log::warn!("Potential malicious packet: {}", op_code);
-                    return None;
-                }
-
-                Handler::Unknown(Unknown::new(op_code))
-            }
-        };
-
-        Some(handler)
+        match op_code {
+            _ => Self::Unknown(Unknown::new(op_code)),
+        }
     }
 
-    pub async fn handle(self, client: &mut Client) -> Result<()> {
+    async fn handle(self) -> Result<()> {
         use Handler::*;
 
         match self {
-            Login(handler) => handler.handle(client).await,
-            CharacterList(handler) => handler.handle(client).await,
-            WorldStatus(handler) => handler.handle(client).await,
-            AfterLogin(handler) => handler.handle(client).await,
-            RegisterPin(handler) => handler.handle(client).await,
-            WorldList(handler) => handler.handle(client).await,
-            CharacterName(handler) => handler.handle(client).await,
-            CreateCharacter(handler) => handler.handle(client).await,
-            DeleteCharacter(handler) => handler.handle(client).await,
             Unknown(handler) => handler.handle(),
         }
     }

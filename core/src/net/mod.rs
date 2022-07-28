@@ -5,5 +5,10 @@ pub mod shanda;
 pub(crate) mod packet;
 pub use self::packet::Packet;
 
-pub(crate) mod tcp_server;
-pub use self::tcp_server::TcpServer;
+pub(crate) mod server;
+pub use self::server::Server;
+
+pub(crate) mod connection;
+pub use self::connection::Connection;
+
+pub use self::server::HandlePacket;

@@ -34,6 +34,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-trait"
+version = "0.1.56"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "96cf8829f67d2eab0b2dfa42c5d0ef737e0724e4a82b01b3e292456202b19716"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "atoi"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -728,6 +739,7 @@ name = "oxide-core"
 version = "0.1.0"
 dependencies = [
  "aes",
+ "async-trait",
  "bytes",
  "futures",
  "log",
@@ -743,6 +755,7 @@ name = "oxide-login"
 version = "0.1.0"
 dependencies = [
  "aes",
+ "async-trait",
  "bytes",
  "dashmap",
  "dotenv",

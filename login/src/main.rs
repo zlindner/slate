@@ -1,25 +1,10 @@
-mod character;
-mod client;
-mod config;
-mod db;
 mod handler;
-mod login;
-mod net;
-mod shutdown;
-mod world;
 
+use handler::LoginServerHandler;
 use log::LevelFilter;
-use oxide_core::net::Packet;
-use oxide_core::{net::TcpServer, Result};
+use oxide_core::{net::Server, Result};
 use simple_logger::SimpleLogger;
 use std::env;
-use std::sync::Arc;
-use world::World;
-
-#[derive(Debug)]
-pub struct Shared {
-    worlds: Vec<World>,
-}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -32,12 +17,8 @@ async fn main() -> Result<()> {
         .init()
         .unwrap();
 
-    let shared = Arc::new(Shared {
-        worlds: world::load_worlds(),
-    });
-
-    TcpServer::new(env::var("LOGIN_SERVER_ADDR").unwrap())
-        .start()
+    Server::new(env::var("LOGIN_SERVER_ADDR").unwrap())
+        .start(LoginServerHandler)
         .await?;
 
     Ok(())
