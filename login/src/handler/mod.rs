@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use oxide_core::net::{HandlePacket, Packet};
+use oxide_core::net::{Connection, HandlePacket, Packet};
 use oxide_core::Result;
 
 mod unknown;
@@ -10,8 +10,8 @@ pub struct LoginServerHandler;
 
 #[async_trait]
 impl HandlePacket for LoginServerHandler {
-    async fn handle(&self, packet: Packet) -> Result<()> {
-        Handler::get(packet).handle().await
+    async fn handle(&self, packet: Packet, connection: &Connection) -> Result<()> {
+        Handler::get(packet).handle(connection).await
     }
 }
 
@@ -28,7 +28,7 @@ impl Handler {
         }
     }
 
-    async fn handle(self) -> Result<()> {
+    async fn handle(self, connection: &Connection) -> Result<()> {
         use Handler::*;
 
         match self {

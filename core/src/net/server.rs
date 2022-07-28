@@ -1,20 +1,10 @@
-use super::{cipher::Cipher, codec::MapleCodec, Packet};
+use super::{Connection, HandlePacket};
 use crate::{util::Shutdown, Result};
-use async_trait::async_trait;
-use futures::SinkExt;
 use tokio::{
-    net::{TcpListener, TcpStream},
+    net::TcpListener,
     signal,
     sync::{broadcast, mpsc},
 };
-use tokio_stream::StreamExt;
-use tokio_util::codec::{Decoder, Framed};
-
-#[async_trait]
-pub trait HandlePacket {
-    // TODO pass in connection
-    async fn handle(&self, packet: Packet) -> Result<()>;
-}
 
 pub struct Server {
     addr: String,
@@ -75,53 +65,18 @@ impl Server {
             let shutdown = Shutdown::new(notify_shutdown.subscribe());
 
             tokio::spawn(async move {
-                let send = Cipher::new(0xffff - 83);
-                let recv = Cipher::new(83);
-                let mut maple_stream = MapleCodec::new(send, recv).framed(stream);
+                log::info!("Client connected to server");
+                let mut connection = Connection::new(stream, shutdown);
 
-                if let Err(e) = Self::connect(&mut maple_stream, shutdown, handler).await {
-                    log::error!("Client connection error: {}", e);
+                if let Err(e) = connection.read_packets(&handler).await {
+                    log::error!("Connection error: {}", e);
                 }
 
-                if let Err(e) = Self::disconnect(&mut maple_stream).await {
-                    log::error!("Client disconnect error: {}", e);
+                log::info!("Client disconnected from server");
+                if let Err(e) = connection.disconnect().await {
+                    log::error!("Connection error: {}", e);
                 }
             });
         }
-    }
-
-    async fn connect(
-        stream: &mut Framed<TcpStream, MapleCodec>,
-        mut shutdown: Shutdown,
-        handler: impl HandlePacket + Send + Sync + Copy + 'static,
-    ) -> Result<()> {
-        log::info!("Client connected to server");
-
-        while !shutdown.is_shutdown() {
-            let maybe_packet = tokio::select! {
-                res = stream.try_next() => res?,
-                _ = shutdown.recv() => {
-                    return Ok(());
-                }
-            };
-
-            // None => client disconnected
-            let packet = match maybe_packet {
-                Some(packet) => packet,
-                None => return Ok(()),
-            };
-
-            log::debug!("Received packet: {}", packet);
-            HandlePacket::handle(&handler, packet).await?;
-        }
-
-        Ok(())
-    }
-
-    async fn disconnect(stream: &mut Framed<TcpStream, MapleCodec>) -> Result<()> {
-        log::info!("Client disconnected from server");
-        // TODO don't know if this is right
-        stream.close().await?;
-        Ok(())
     }
 }
