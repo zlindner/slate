@@ -7,6 +7,7 @@ use std::env;
 mod event_handler;
 mod packet_handler;
 mod packets;
+mod queries;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -19,11 +20,12 @@ async fn main() -> Result<()> {
         .init()
         .unwrap();
 
+    // create db pool with 10 max connections
     let db = db::new(10).await?;
 
     Server::new(
         env::var("LOGIN_SERVER_ADDR").unwrap(),
-        LoginServerEventHandler,
+        LoginServerEventHandler::new(db),
     )
     .start()
     .await?;

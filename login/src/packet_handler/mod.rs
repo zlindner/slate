@@ -1,8 +1,5 @@
-use oxide_core::net::codec::MapleCodec;
-use oxide_core::net::Packet;
-use oxide_core::Result;
-use tokio::net::TcpStream;
-use tokio_util::codec::Framed;
+use oxide_core::net::{Connection, Packet};
+use oxide_core::{Db, Result};
 
 mod unknown;
 use self::unknown::Unknown;
@@ -20,7 +17,7 @@ impl LoginServerPacketHandler {
         }
     }
 
-    pub async fn handle(self, stream: &mut Framed<TcpStream, MapleCodec>) -> Result<()> {
+    pub async fn handle(self, connection: &mut Connection, db: &Db) -> Result<()> {
         use LoginServerPacketHandler::*;
 
         match self {

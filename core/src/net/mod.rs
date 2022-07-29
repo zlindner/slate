@@ -10,3 +10,6 @@ pub use self::server::Server;
 
 pub(crate) mod event;
 pub use self::event::Events;
+
+pub(crate) mod connection;
+pub use self::connection::Connection;

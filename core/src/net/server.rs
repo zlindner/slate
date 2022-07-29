@@ -1,7 +1,10 @@
-use super::{codec::MapleCodec, Events, Packet};
+use super::{codec::MapleCodec, Connection, Events, Packet};
 use crate::{util::Shutdown, Error, Result};
 use futures::TryStreamExt;
-use std::sync::Arc;
+use std::sync::{
+    atomic::{AtomicUsize, Ordering},
+    Arc,
+};
 use tokio::{
     net::{TcpListener, TcpStream},
     signal,
@@ -56,19 +59,21 @@ impl Server {
 
     async fn listen(&self, notify_shutdown: &broadcast::Sender<()>) -> Result<()> {
         let listener = TcpListener::bind(&self.addr).await?;
+        let session_id = AtomicUsize::new(0);
 
         loop {
             let (stream, _) = listener.accept().await?;
             let mut shutdown = Shutdown::new(notify_shutdown.subscribe());
             let events = self.events.clone();
+            let session_id = session_id.fetch_add(1, Ordering::SeqCst);
 
             tokio::spawn(async move {
-                let mut stream = MapleCodec::new().framed(stream);
-                events.on_connect(&mut stream).await;
+                let mut connection = Connection::new(stream, session_id);
+                events.on_connect(&mut connection).await;
 
                 while !shutdown.is_shutdown() {
                     let maybe_packet = tokio::select! {
-                        res = Self::read_packet(&mut stream) => res?,
+                        res = connection.read_packet() => res?,
                         _ = shutdown.recv() => {
                             return Ok::<(), Error>(());
                         }
@@ -80,17 +85,11 @@ impl Server {
                         None => return Ok(()),
                     };
 
-                    events.on_packet(&mut stream, packet).await;
+                    events.on_packet(&mut connection, packet).await;
                 }
 
                 Ok(())
             });
-        }
-    }
-
-    async fn read_packet(stream: &mut Framed<TcpStream, MapleCodec>) -> Result<Option<Packet>> {
-        loop {
-            return Ok(stream.try_next().await?);
         }
     }
 }

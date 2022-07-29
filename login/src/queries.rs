@@ -1,5 +1,4 @@
-use crate::{character::Character, db::Db};
-use oxide_core::Result;
+use oxide_core::{Db, Result};
 use sqlx::postgres::PgRow;
 
 pub async fn get_account(name: &String, db: &Db) -> Result<PgRow> {
@@ -69,6 +68,7 @@ pub async fn logout_all(db: &Db) -> Result<()> {
     Ok(())
 }
 
+/*
 pub async fn create_character(character: &Character, db: &Db) -> Result<()> {
     sqlx::query(
         "INSERT INTO characters \
@@ -103,6 +103,7 @@ pub async fn create_character(character: &Character, db: &Db) -> Result<()> {
 
     Ok(())
 }
+*/
 
 pub async fn get_character_id_by_name(name: &String, db: &Db) -> Result<Option<PgRow>> {
     let res = sqlx::query(
