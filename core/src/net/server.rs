@@ -80,7 +80,7 @@ impl Server {
 
                 while !shutdown.is_shutdown() {
                     let maybe_packet = tokio::select! {
-                        res = stream.try_next() => res?,
+                        res = Self::read_packet(&mut stream) => res?,
                         _ = shutdown.recv() => {
                             return Ok::<(), Error>(());
                         }
@@ -97,6 +97,12 @@ impl Server {
 
                 Ok(())
             });
+        }
+    }
+
+    async fn read_packet(stream: &mut Framed<TcpStream, MapleCodec>) -> Result<Option<Packet>> {
+        loop {
+            return Ok(stream.try_next().await?);
         }
     }
 }

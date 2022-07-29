@@ -6,6 +6,7 @@ use std::env;
 
 mod event_handler;
 mod packet_handler;
+mod packets;
 
 #[tokio::main]
 async fn main() -> Result<()> {

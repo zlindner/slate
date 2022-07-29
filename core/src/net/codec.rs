@@ -4,8 +4,8 @@ use bytes::{BufMut, BytesMut};
 use tokio_util::codec::{Decoder, Encoder};
 
 pub struct MapleCodec {
-    send: Cipher,
-    recv: Cipher,
+    pub send: Cipher,
+    pub recv: Cipher,
 }
 
 impl MapleCodec {
@@ -60,7 +60,7 @@ impl Decoder for MapleCodec {
         // we need to check if the packet is as least 4 bytes otherwise
         // split_off will panic (and packet/header is invalid)
         if buf.len() < 4 {
-            log::error!("Invalid packet length");
+            log::debug!("Invalid packet: {:?}", buf);
             return Ok(None);
         }
 
@@ -71,7 +71,7 @@ impl Decoder for MapleCodec {
 
         // validate the packet header
         if !self.is_valid_header(&bytes) {
-            log::error!("Invalid packet header");
+            log::debug!("Invalid packet header: {:?}", bytes);
             return Ok(None);
         }
 
