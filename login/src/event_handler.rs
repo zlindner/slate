@@ -2,16 +2,17 @@ use crate::{packet_handler::LoginServerPacketHandler, packets};
 use async_trait::async_trait;
 use oxide_core::{
     net::{Connection, Events, Packet},
-    Db,
+    Db, Redis,
 };
 
 pub struct LoginServerEventHandler {
     db: Db,
+    redis: Redis,
 }
 
 impl LoginServerEventHandler {
-    pub fn new(db: Db) -> Self {
-        Self { db }
+    pub fn new(db: Db, redis: Redis) -> Self {
+        Self { db, redis }
     }
 }
 
@@ -36,7 +37,7 @@ impl Events for LoginServerEventHandler {
         log::debug!("Received packet: {}", packet);
 
         if let Err(e) = LoginServerPacketHandler::get(packet)
-            .handle(connection, &self.db.clone())
+            .handle(connection, &self.db.clone(), &self.redis.clone())
             .await
         {
             log::error!("Handle packet error: {}", e);

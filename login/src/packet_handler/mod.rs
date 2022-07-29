@@ -1,5 +1,5 @@
 use oxide_core::net::{Connection, Packet};
-use oxide_core::{Db, Result};
+use oxide_core::{Db, Redis, Result};
 
 mod unknown;
 use self::unknown::Unknown;
@@ -17,7 +17,7 @@ impl LoginServerPacketHandler {
         }
     }
 
-    pub async fn handle(self, connection: &mut Connection, db: &Db) -> Result<()> {
+    pub async fn handle(self, connection: &mut Connection, db: &Db, redis: &Redis) -> Result<()> {
         use LoginServerPacketHandler::*;
 
         match self {

@@ -26,9 +26,10 @@ impl Connection {
     }
 
     pub async fn write_packet(&mut self, packet: Packet) -> Result<()> {
-        Ok(())
+        self.stream.send(packet).await
     }
 
+    /// Writes a raw (unencrypted) packet directly to the streams write buffer
     pub async fn write_raw_packet(&mut self, packet: Packet) -> Result<()> {
         self.stream.write_buffer_mut().put_slice(&packet.bytes);
         self.stream.flush().await
