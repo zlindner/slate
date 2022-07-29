@@ -1,11 +1,11 @@
-use crate::{
-    client::Client,
-    login::{
-        packets::{self, PinOperation},
-        queries,
-    },
+use crate::login::{
+    packets::{self, PinOperation},
+    queries,
 };
-use oxide_core::{net::Packet, Result};
+use oxide_core::{
+    net::{Connection, Packet},
+    Result,
+};
 
 pub struct AfterLogin {
     a: u8,
@@ -25,7 +25,7 @@ impl AfterLogin {
         Self { a, b, packet }
     }
 
-    pub async fn handle(mut self, client: &mut Client) -> Result<()> {
+    pub async fn handle(mut self, client: &mut Connection) -> Result<()> {
         let db = &client.db;
 
         let op = match (self.a, self.b) {
@@ -59,7 +59,7 @@ impl AfterLogin {
     }
 
     async fn validate_pin(
-        client: &mut Client,
+        client: &mut Connection,
         pin: String,
         flag: u8,
     ) -> Result<Option<PinOperation>> {

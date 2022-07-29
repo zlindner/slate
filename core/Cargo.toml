@@ -10,6 +10,7 @@ tokio-stream = "0.1.9"
 futures = "0.3.21"
 bytes = "1.2.0"
 async-trait = "0.1.56"
+sqlx = { version = "0.6.0", features = [ "runtime-tokio-native-tls" , "postgres" ] }
 
 # crypto
 aes = "0.8.1"

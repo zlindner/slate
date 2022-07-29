@@ -745,6 +745,7 @@ dependencies = [
  "log",
  "rand",
  "simple_logger",
+ "sqlx",
  "tokio",
  "tokio-stream",
  "tokio-util",
