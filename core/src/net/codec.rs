@@ -9,8 +9,11 @@ pub struct MapleCodec {
 }
 
 impl MapleCodec {
-    pub fn new(send: Cipher, recv: Cipher) -> Self {
-        Self { send, recv }
+    pub fn new() -> Self {
+        Self {
+            send: Cipher::new(0xffff - 83),
+            recv: Cipher::new(83),
+        }
     }
 
     fn create_packet_header(&self, len: usize) -> [u8; 4] {

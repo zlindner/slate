@@ -1,6 +1,5 @@
-use super::{cipher::Cipher, codec::MapleCodec, Packet};
+use super::{codec::MapleCodec, Events, Packet};
 use crate::{util::Shutdown, Error, Result};
-use async_trait::async_trait;
 use futures::TryStreamExt;
 use std::sync::Arc;
 use tokio::{
@@ -13,14 +12,6 @@ use tokio_util::codec::{Decoder, Framed};
 pub struct Server {
     addr: String,
     events: Arc<Box<dyn Events>>,
-}
-
-#[async_trait]
-pub trait Events: Send + Sync {
-    async fn on_start(&self, addr: &str);
-    async fn on_connect(&self, stream: &mut Framed<TcpStream, MapleCodec>);
-    async fn on_packet(&self, stream: &mut Framed<TcpStream, MapleCodec>, packet: Packet);
-    async fn on_disconnect(&self, stream: &mut Framed<TcpStream, MapleCodec>);
 }
 
 impl Server {
@@ -72,10 +63,7 @@ impl Server {
             let events = self.events.clone();
 
             tokio::spawn(async move {
-                let send = Cipher::new(0xffff - 83);
-                let recv = Cipher::new(83);
-                let mut stream = MapleCodec::new(send, recv).framed(stream);
-
+                let mut stream = MapleCodec::new().framed(stream);
                 events.on_connect(&mut stream).await;
 
                 while !shutdown.is_shutdown() {
