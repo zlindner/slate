@@ -72,7 +72,7 @@ impl Decoder for MapleCodec {
         // validate the packet header
         if !self.is_valid_header(&bytes) {
             log::error!("Invalid packet header");
-            //return Ok(None);
+            return Ok(None);
         }
 
         // decrypt the packet body
