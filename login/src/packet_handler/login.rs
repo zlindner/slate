@@ -1,22 +1,16 @@
-use crate::{
-    client::Client,
-    login::{packets, queries},
-};
+use crate::packets;
 use bytes::Bytes;
-use oxide_core::{net::Packet, Result};
+use deadpool_redis::redis::cmd;
+use oxide_core::{
+    net::{Connection, Packet},
+    Db, Redis, Result,
+};
 use pbkdf2::{
     password_hash::{PasswordHash, PasswordVerifier},
     Pbkdf2,
 };
-use sqlx::{postgres::PgRow, Row};
+use sqlx::FromRow;
 
-pub struct Login {
-    name: String,
-    password: String,
-    hwid: Bytes,
-}
-
-#[derive(Debug)]
 enum LoginError {
     InvalidPassword = 0,
     Banned = 3,
@@ -24,6 +18,24 @@ enum LoginError {
     TooManyAttempts = 6,
     InUse = 7,
     AcceptTOS = 23,
+}
+
+#[derive(FromRow)]
+struct Account {
+    id: i32,
+    name: String,
+    password: String,
+    pin: String,
+    pic: String,
+    login_state: i16,
+    banned: bool,
+    accepted_tos: bool,
+}
+
+pub struct Login {
+    name: String,
+    password: String,
+    hwid: Bytes,
 }
 
 impl Login {
@@ -40,75 +52,84 @@ impl Login {
         }
     }
 
-    pub async fn handle(self, client: &mut Client) -> Result<()> {
-        let db = &client.db;
-        let connection = &mut client.connection;
+    // TODO look into using a hashmap for each session / user
+    // can probably save us from a bunch of db calls?
+    // https://redis.io/commands/?group=hash
+    pub async fn handle(self, connection: &mut Connection, db: &Db, redis: &Redis) -> Result<()> {
+        let mut r = redis.get().await?;
 
-        client.login_attempts += 1;
+        // TODO need to handle case where key doesn't exist yet?
+        let key = format!("login/login_attempts/{}", connection.session_id);
+        let mut login_attempts: i32 = cmd("GET").arg(&key).query_async(&mut r).await?;
 
-        if client.login_attempts >= 5 {
+        if login_attempts >= 5 {
             let packet = packets::login_failed(LoginError::TooManyAttempts as i32);
             connection.write_packet(packet).await?;
-            client.disconnect().await?;
+            // TODO move to on_disconnect or something
+            cmd("DEL").arg(key).query_async(&mut r).await?;
+            // TODO disconnect client
             return Ok(());
         }
 
-        let account = match queries::get_account(&self.name, db).await {
+        login_attempts += 1;
+
+        cmd("SET")
+            .arg(&[key, login_attempts.to_string()])
+            .query_async(&mut r)
+            .await?;
+
+        let account = match get_account(&self.name, db).await {
             Ok(account) => account,
-            Err(_) => {
-                let packet = packets::login_failed(LoginError::NotFound as i32);
-                connection.write_packet(packet).await?;
+            Err(err) => {
+                log::error!("get_account error: {}", err);
+                connection
+                    .write_packet(packets::login_failed(LoginError::NotFound as i32))
+                    .await?;
                 return Ok(());
             }
         };
 
-        if let Some(e) = self.validate_account(&account).await {
-            let packet = packets::login_failed(e as i32);
+        let error = match account {
+            Account { login_state: 1, .. } | Account { login_state: 2, .. } => {
+                Some(LoginError::InUse)
+            }
+            Account { banned: true, .. } => Some(LoginError::Banned),
+            Account {
+                accepted_tos: false,
+                ..
+            } => Some(LoginError::AcceptTOS),
+            _ => {
+                // parse the hash stored in db
+                let hash = PasswordHash::new(&account.password).unwrap();
+                // check the entered password against the hash
+                match Pbkdf2.verify_password(self.password.as_bytes(), &hash) {
+                    Ok(_) => None,
+                    Err(_) => Some(LoginError::InvalidPassword),
+                }
+            }
+        };
+
+        if error.is_some() {
+            let packet = packets::login_failed(error.unwrap() as i32);
             connection.write_packet(packet).await?;
         } else {
-            let id = account.get::<i32, _>("id");
-            client.id = Some(id);
-
-            let pin = account.get::<String, _>("pin");
-            client.pin = Some(pin);
-
-            let pic = account.get::<String, _>("pic");
-            client.pic = Some(pic);
-
-            queries::update_login_state(id, 2, db).await?;
-
-            let packet = packets::login_success(id, &self.name);
+            let packet = packets::login_success(account.id, &self.name);
             connection.write_packet(packet).await?;
         }
 
         Ok(())
     }
+}
 
-    async fn validate_account(&self, account: &PgRow) -> Option<LoginError> {
-        if account.get::<bool, _>("banned") {
-            return Some(LoginError::Banned);
-        }
+async fn get_account(name: &String, db: &Db) -> Result<Account> {
+    let account: Account = sqlx::query_as(
+        "SELECT id, name, password, pin, pic, login_state, last_login, banned, accepted_tos \
+        FROM accounts \
+        WHERE name = $1",
+    )
+    .bind(name)
+    .fetch_one(db)
+    .await?;
 
-        // 0 => logged out, 1 => transitioning, 2 => logged in
-        if account.get::<i16, _>("login_state") != 0 {
-            return Some(LoginError::InUse);
-        }
-
-        if !account.get::<bool, _>("accepted_tos") {
-            return Some(LoginError::AcceptTOS);
-        }
-
-        // password entered in the client
-        let password = self.password.as_bytes();
-        // parse the hash stored in db
-        let hash: String = account.get("password");
-        let hash = PasswordHash::new(&hash).unwrap();
-
-        // check the entered password against the hash
-        if Pbkdf2.verify_password(password, &hash).is_err() {
-            return Some(LoginError::InvalidPassword);
-        }
-
-        None
-    }
+    Ok(account)
 }

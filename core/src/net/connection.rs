@@ -8,7 +8,7 @@ use tokio_util::codec::{Decoder, Framed};
 
 pub struct Connection {
     stream: Framed<TcpStream, MapleCodec>,
-    session_id: usize,
+    pub session_id: usize,
 }
 
 impl Connection {

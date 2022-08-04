@@ -1,10 +1,14 @@
 use oxide_core::net::{Connection, Packet};
 use oxide_core::{Db, Redis, Result};
 
+mod login;
+use self::login::Login;
+
 mod unknown;
 use self::unknown::Unknown;
 
 pub enum LoginServerPacketHandler {
+    Login(Login),
     Unknown(Unknown),
 }
 
@@ -13,6 +17,7 @@ impl LoginServerPacketHandler {
         let op_code = packet.read_short();
 
         match op_code {
+            0x01 => Self::Login(Login::new(packet)),
             _ => Self::Unknown(Unknown::new(op_code)),
         }
     }
@@ -21,6 +26,7 @@ impl LoginServerPacketHandler {
         use LoginServerPacketHandler::*;
 
         match self {
+            Login(handler) => handler.handle(connection, db, redis).await,
             Unknown(handler) => handler.handle(),
         }
     }
