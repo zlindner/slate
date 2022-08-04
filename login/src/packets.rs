@@ -51,7 +51,6 @@ pub fn login_success(id: i32, name: &String) -> Packet {
 
 pub fn login_failed(reason: i32) -> Packet {
     let mut packet = Packet::new(0x00);
-    // reason code
     packet.write_int(reason);
     packet.write_short(0);
     packet

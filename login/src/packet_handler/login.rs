@@ -60,7 +60,12 @@ impl Login {
 
         // TODO need to handle case where key doesn't exist yet?
         let key = format!("login/login_attempts/{}", connection.session_id);
-        let mut login_attempts: i32 = cmd("GET").arg(&key).query_async(&mut r).await?;
+        let key_exists = cmd("EXISTS").arg(&key).query_async(&mut r).await?;
+
+        let mut login_attempts = match key_exists {
+            true => cmd("GET").arg(&key).query_async(&mut r).await?,
+            false => 0,
+        };
 
         if login_attempts >= 5 {
             let packet = packets::login_failed(LoginError::TooManyAttempts as i32);
