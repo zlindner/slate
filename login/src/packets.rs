@@ -1,5 +1,13 @@
 use oxide_core::net::{cipher::Cipher, Packet};
 
+pub enum PinOperation {
+    Accepted,
+    Register,
+    RequestAfterFailure,
+    ConnectionFailed,
+    Request,
+}
+
 // handshake packet sent immediately after a client establishes a connection with the login server
 // sets up client <-> server encryption via the passed initialization vectors and maple version
 pub fn handshake(send: &Cipher, recv: &Cipher) -> Packet {
@@ -57,5 +65,25 @@ pub fn login_failed(reason: i32) -> Packet {
     packet.write_short(0x00);
     packet.write_int(reason);
     packet.write_short(0);
+    packet
+}
+
+// packet for various PIN operations
+// 0 => PIN was accepted
+// 1 => register a new PIN
+// 2 => invalid PIN / re-enter
+// 3 => connection failed due to system error
+// 4 => enter pin
+pub fn pin_operation(op: PinOperation) -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x06);
+    packet.write_byte(op as u8);
+    packet
+}
+
+pub fn pin_registered() -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x07);
+    packet.write_byte(0);
     packet
 }

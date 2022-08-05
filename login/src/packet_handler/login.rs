@@ -1,7 +1,4 @@
-use crate::{
-    packets, queries,
-    state::{Session, State},
-};
+use crate::{packets, queries, state::State};
 use bytes::Bytes;
 use oxide_core::{
     net::{Connection, Packet},
@@ -61,14 +58,8 @@ impl Login {
         db: &Db,
         state: Arc<State>,
     ) -> Result<()> {
-        if !state.sessions.contains_key(&connection.session_id) {
-            state
-                .sessions
-                .insert(connection.session_id, Session::new(connection.session_id));
-        }
-
         let mut session = state.sessions.get_mut(&connection.session_id).unwrap();
-        log::info!("session {}: {:?}", connection.session_id, session.value());
+        session.login_attempts += 1;
 
         if session.login_attempts >= 5 {
             let packet = packets::login_failed(LoginError::TooManyAttempts as i32);
@@ -76,8 +67,6 @@ impl Login {
             connection.close().await?;
             return Ok(());
         }
-
-        session.login_attempts += 1;
 
         let account = match get_account(&self.name, db).await {
             Ok(account) => account,
@@ -114,8 +103,8 @@ impl Login {
             connection.write_packet(packet).await?;
         } else {
             session.account_id = account.id;
-            session.pin = account.pin;
-            session.pic = account.pic;
+            session.pin = Some(account.pin);
+            session.pic = Some(account.pic);
 
             queries::update_login_state(session.account_id, 2, db).await?;
 

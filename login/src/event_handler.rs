@@ -1,4 +1,8 @@
-use crate::{packet_handler::LoginServerPacketHandler, packets, queries, state::State};
+use crate::{
+    packet_handler::LoginServerPacketHandler,
+    packets, queries,
+    state::{Session, State},
+};
 use async_trait::async_trait;
 use oxide_core::{
     net::{Connection, Events, Packet},
@@ -28,6 +32,15 @@ impl Events for LoginServerEventHandler {
             "Client connected to login server (session {})",
             connection.session_id
         );
+
+        let state = self.state.clone();
+
+        // create a new session for the current connection
+        if !state.sessions.contains_key(&connection.session_id) {
+            state
+                .sessions
+                .insert(connection.session_id, Session::new(connection.session_id));
+        }
 
         let codec = connection.codec();
         let handshake = packets::handshake(&codec.send, &codec.recv);

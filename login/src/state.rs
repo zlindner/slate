@@ -16,8 +16,9 @@ impl State {
 pub struct Session {
     pub id: usize,
     pub account_id: i32,
-    pub pin: String,
-    pub pic: String,
+    pub pin: Option<String>,
+    pub pin_attempts: i32,
+    pub pic: Option<String>,
     pub login_attempts: i32,
 }
 
@@ -26,9 +27,10 @@ impl Session {
         Self {
             id,
             account_id: -1,
-            pin: "".to_string(),
-            pic: "".to_string(),
-            login_attempts: 1,
+            pin: None,
+            pin_attempts: 0,
+            pic: None,
+            login_attempts: 0,
         }
     }
 }

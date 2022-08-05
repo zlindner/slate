@@ -1,16 +1,17 @@
-use crate::login::{
+use crate::{
     packets::{self, PinOperation},
-    queries,
+    state::State,
 };
 use oxide_core::{
     net::{Connection, Packet},
-    Result,
+    Db, Result,
 };
+use std::sync::Arc;
 
 pub struct AfterLogin {
     a: u8,
     b: u8,
-    packet: Packet,
+    pin: Option<String>,
 }
 
 impl AfterLogin {
@@ -22,64 +23,48 @@ impl AfterLogin {
             _ => packet.read_byte(),
         };
 
-        Self { a, b, packet }
+        let pin = match b {
+            0 => Some(packet.read_string()),
+            _ => None,
+        };
+
+        Self { a, b, pin }
     }
 
-    pub async fn handle(mut self, client: &mut Connection) -> Result<()> {
-        let db = &client.db;
+    pub async fn handle(self, connection: &mut Connection, state: Arc<State>) -> Result<()> {
+        let mut session = state.sessions.get_mut(&connection.session_id).unwrap();
 
         let op = match (self.a, self.b) {
-            (1, 1) => match client.pin {
-                None => Some(PinOperation::Register),
-                Some(_) => Some(PinOperation::Request),
+            (1, 1) => match session.pin {
+                None => PinOperation::Register,
+                Some(_) => PinOperation::Request,
             },
-            (1, 0) => {
-                let pin = self.packet.read_string();
-                Self::validate_pin(client, pin, 1).await?
-            }
-            (2, 0) => {
-                let pin = self.packet.read_string();
-                Self::validate_pin(client, pin, 2).await?
+            (1, 0) | (2, 0) => {
+                if session.pin_attempts >= 6 {
+                    connection.close().await?;
+                    return Ok(());
+                }
+
+                session.pin_attempts += 1;
+
+                if session.pin.is_some() && self.pin == session.pin {
+                    session.pin_attempts = 0;
+
+                    if self.a == 1 {
+                        PinOperation::Accepted
+                    } else {
+                        PinOperation::Register
+                    };
+                }
+
+                PinOperation::RequestAfterFailure
             }
             _ => {
-                // TODO can possibly send PinOperation::ConnectionFailed here?
-                queries::update_login_state(client.id.unwrap(), 0, db).await?;
-                None
+                connection.close().await?;
+                return Ok(());
             }
         };
 
-        if op.is_some() {
-            client
-                .connection
-                .write_packet(packets::pin_operation(op.unwrap()))
-                .await?;
-        }
-
-        Ok(())
-    }
-
-    async fn validate_pin(
-        client: &mut Connection,
-        pin: String,
-        flag: u8,
-    ) -> Result<Option<PinOperation>> {
-        client.pin_attempts += 1;
-
-        if client.pin_attempts >= 6 {
-            client.disconnect().await?;
-            return Ok(None);
-        }
-
-        if client.pin.is_some() && &pin == client.pin.as_ref().unwrap() {
-            client.pin_attempts = 0;
-
-            if flag == 1 {
-                return Ok(Some(PinOperation::Accepted));
-            } else {
-                return Ok(Some(PinOperation::Register));
-            }
-        }
-
-        Ok(Some(PinOperation::RequestAfterFailure))
+        connection.write_packet(packets::pin_operation(op)).await
     }
 }

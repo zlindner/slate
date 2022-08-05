@@ -1,18 +1,20 @@
+use crate::state::State;
 use oxide_core::net::{Connection, Packet};
 use oxide_core::{Db, Result};
 use std::sync::Arc;
 
 mod login;
-
-use crate::state::State;
-
 use self::login::Login;
+
+mod after_login;
+use self::after_login::AfterLogin;
 
 mod unknown;
 use self::unknown::Unknown;
 
 pub enum LoginServerPacketHandler {
     Login(Login),
+    AfterLogin(AfterLogin),
     Unknown(Unknown),
 }
 
@@ -22,6 +24,7 @@ impl LoginServerPacketHandler {
 
         match op_code {
             0x01 => Self::Login(Login::new(packet)),
+            0x09 => Self::AfterLogin(AfterLogin::new(packet)),
             _ => Self::Unknown(Unknown::new(op_code)),
         }
     }
@@ -36,6 +39,7 @@ impl LoginServerPacketHandler {
 
         match self {
             Login(handler) => handler.handle(connection, db, state).await,
+            AfterLogin(handler) => handler.handle(connection, state).await,
             Unknown(handler) => handler.handle(),
         }
     }
