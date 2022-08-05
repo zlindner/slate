@@ -35,6 +35,10 @@ impl Connection {
         self.stream.flush().await
     }
 
+    pub async fn close(&mut self) -> Result<()> {
+        self.stream.close().await
+    }
+
     pub fn codec(&self) -> &MapleCodec {
         self.stream.codec()
     }

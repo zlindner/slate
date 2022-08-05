@@ -1,18 +1,20 @@
-use crate::{packet_handler::LoginServerPacketHandler, packets};
+use std::sync::Arc;
+
+use crate::{packet_handler::LoginServerPacketHandler, packets, state::State};
 use async_trait::async_trait;
 use oxide_core::{
     net::{Connection, Events, Packet},
-    Db, Redis,
+    Db,
 };
 
 pub struct LoginServerEventHandler {
     db: Db,
-    redis: Redis,
+    state: Arc<State>,
 }
 
 impl LoginServerEventHandler {
-    pub fn new(db: Db, redis: Redis) -> Self {
-        Self { db, redis }
+    pub fn new(db: Db, state: Arc<State>) -> Self {
+        Self { db, state }
     }
 }
 
@@ -23,7 +25,10 @@ impl Events for LoginServerEventHandler {
     }
 
     async fn on_connect(&self, connection: &mut Connection) {
-        log::info!("Client connected to login server");
+        log::info!(
+            "Client connected to login server (session {})",
+            connection.session_id
+        );
 
         let codec = connection.codec();
         let handshake = packets::handshake(&codec.send, &codec.recv);
@@ -37,7 +42,7 @@ impl Events for LoginServerEventHandler {
         log::debug!("Received packet: {}", packet);
 
         if let Err(e) = LoginServerPacketHandler::get(packet)
-            .handle(connection, &self.db.clone(), &self.redis.clone())
+            .handle(connection, &self.db.clone(), self.state.clone())
             .await
         {
             log::error!("Handle packet error: {}", e);
@@ -45,6 +50,12 @@ impl Events for LoginServerEventHandler {
     }
 
     async fn on_disconnect(&self, connection: &mut Connection) {
-        log::info!("Client disconnected from login server");
+        log::info!(
+            "Client disconnected from login server (session {})",
+            connection.session_id
+        );
+
+        let state = self.state.clone();
+        state.sessions.remove(&connection.session_id);
     }
 }

@@ -1,7 +1,11 @@
 use oxide_core::net::{Connection, Packet};
-use oxide_core::{Db, Redis, Result};
+use oxide_core::{Db, Result};
+use std::sync::Arc;
 
 mod login;
+
+use crate::state::State;
+
 use self::login::Login;
 
 mod unknown;
@@ -22,11 +26,16 @@ impl LoginServerPacketHandler {
         }
     }
 
-    pub async fn handle(self, connection: &mut Connection, db: &Db, redis: &Redis) -> Result<()> {
+    pub async fn handle(
+        self,
+        connection: &mut Connection,
+        db: &Db,
+        state: Arc<State>,
+    ) -> Result<()> {
         use LoginServerPacketHandler::*;
 
         match self {
-            Login(handler) => handler.handle(connection, db, redis).await,
+            Login(handler) => handler.handle(connection, db, state).await,
             Unknown(handler) => handler.handle(),
         }
     }

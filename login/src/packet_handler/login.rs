@@ -1,9 +1,13 @@
-use crate::packets;
+use std::sync::Arc;
+
+use crate::{
+    packets,
+    state::{Session, State},
+};
 use bytes::Bytes;
-use deadpool_redis::redis::cmd;
 use oxide_core::{
     net::{Connection, Packet},
-    Db, Redis, Result,
+    Db, Result,
 };
 use pbkdf2::{
     password_hash::{PasswordHash, PasswordVerifier},
@@ -11,6 +15,7 @@ use pbkdf2::{
 };
 use sqlx::FromRow;
 
+#[derive(Debug)]
 enum LoginError {
     InvalidPassword = 0,
     Banned = 3,
@@ -52,41 +57,33 @@ impl Login {
         }
     }
 
-    // TODO look into using a hashmap for each session / user
-    // can probably save us from a bunch of db calls?
-    // https://redis.io/commands/?group=hash
-    pub async fn handle(self, connection: &mut Connection, db: &Db, redis: &Redis) -> Result<()> {
-        let mut r = redis.get().await?;
+    pub async fn handle(
+        self,
+        connection: &mut Connection,
+        db: &Db,
+        state: Arc<State>,
+    ) -> Result<()> {
+        if !state.sessions.contains_key(&connection.session_id) {
+            state
+                .sessions
+                .insert(connection.session_id, Session::new(connection.session_id));
+        }
 
-        // TODO need to handle case where key doesn't exist yet?
-        let key = format!("login/login_attempts/{}", connection.session_id);
-        let key_exists = cmd("EXISTS").arg(&key).query_async(&mut r).await?;
+        let mut session = state.sessions.get_mut(&connection.session_id).unwrap();
+        log::info!("session {}: {:?}", connection.session_id, session.value());
 
-        let mut login_attempts = match key_exists {
-            true => cmd("GET").arg(&key).query_async(&mut r).await?,
-            false => 0,
-        };
-
-        if login_attempts >= 5 {
+        if session.login_attempts >= 5 {
             let packet = packets::login_failed(LoginError::TooManyAttempts as i32);
             connection.write_packet(packet).await?;
-            // TODO move to on_disconnect or something
-            cmd("DEL").arg(key).query_async(&mut r).await?;
-            // TODO disconnect client
+            connection.close().await?;
             return Ok(());
         }
 
-        login_attempts += 1;
-
-        cmd("SET")
-            .arg(&[key, login_attempts.to_string()])
-            .query_async(&mut r)
-            .await?;
+        session.login_attempts += 1;
 
         let account = match get_account(&self.name, db).await {
             Ok(account) => account,
-            Err(err) => {
-                log::error!("get_account error: {}", err);
+            Err(_) => {
                 connection
                     .write_packet(packets::login_failed(LoginError::NotFound as i32))
                     .await?;
@@ -115,9 +112,15 @@ impl Login {
         };
 
         if error.is_some() {
+            log::debug!("login failed: {:?}", error.as_ref().unwrap());
             let packet = packets::login_failed(error.unwrap() as i32);
             connection.write_packet(packet).await?;
         } else {
+            log::debug!("login success");
+            session.account_id = account.id;
+            session.pin = account.pin;
+            session.pic = account.pic;
+
             let packet = packets::login_success(account.id, &self.name);
             connection.write_packet(packet).await?;
         }

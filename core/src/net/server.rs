@@ -75,20 +75,21 @@ impl Server {
                     let maybe_packet = tokio::select! {
                         res = connection.read_packet() => res?,
                         _ = shutdown.recv() => {
-                            return Ok::<(), Error>(());
+                            break;
                         }
                     };
 
                     // None => client disconnected
                     let packet = match maybe_packet {
                         Some(packet) => packet,
-                        None => return Ok(()),
+                        None => break,
                     };
 
                     events.on_packet(&mut connection, packet).await;
                 }
 
-                Ok(())
+                events.on_disconnect(&mut connection).await;
+                return Ok::<(), Error>(());
             });
         }
     }

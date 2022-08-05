@@ -6,17 +6,14 @@ pub struct Packet {
 }
 
 impl Packet {
-    pub fn new(op_code: i16) -> Self {
+    pub fn new() -> Self {
         // 1024 bytes should be fine for now, can increase to 2048 if there are some
         // larger packets. I believe the max maplestory packet size is 1460 bytes?
         // "It is important to note that this function does not specify the length of the
         // returned BytesMut, but only the capacity"
-        let mut packet = Self {
+        Self {
             bytes: BytesMut::with_capacity(1024),
-        };
-
-        packet.write_short(op_code);
-        packet
+        }
     }
 
     pub fn wrap(bytes: BytesMut) -> Self {

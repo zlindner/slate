@@ -3,7 +3,8 @@ use oxide_core::net::{cipher::Cipher, Packet};
 // handshake packet sent immediately after a client establishes a connection with the login server
 // sets up client <-> server encryption via the passed initialization vectors and maple version
 pub fn handshake(send: &Cipher, recv: &Cipher) -> Packet {
-    let mut packet = Packet::new(0x0E);
+    let mut packet = Packet::new();
+    packet.write_short(0x0E);
     // maple version
     packet.write_short(83);
     // maple patch version
@@ -18,7 +19,8 @@ pub fn handshake(send: &Cipher, recv: &Cipher) -> Packet {
 }
 
 pub fn login_success(id: i32, name: &String) -> Packet {
-    let mut packet = Packet::new(0x00);
+    let mut packet = Packet::new();
+    packet.write_short(0x00);
     packet.write_int(0);
     packet.write_short(0);
     // account id
@@ -42,6 +44,7 @@ pub fn login_success(id: i32, name: &String) -> Packet {
     // remove the "select the world you want to play in"
     packet.write_int(1);
     // 0 => pin enabled, 1 => pin disabled
+    packet.write_byte(0);
     //packet.write_byte(CONFIG.enable_pin);
     // 0 => register PIC, 1 => ask for PIC, 2 => disabled
     packet.write_byte(2);
@@ -50,7 +53,8 @@ pub fn login_success(id: i32, name: &String) -> Packet {
 }
 
 pub fn login_failed(reason: i32) -> Packet {
-    let mut packet = Packet::new(0x00);
+    let mut packet = Packet::new();
+    packet.write_short(0x00);
     packet.write_int(reason);
     packet.write_short(0);
     packet
