@@ -1,37 +1,44 @@
-use crate::{
-    client::Client,
-    login::{packets, queries},
+use crate::{packets, queries, State};
+use oxide_core::{
+    net::{Connection, Packet},
+    Db, Result,
 };
-use oxide_core::{net::Packet, Result};
+use std::sync::Arc;
 
 pub struct RegisterPin {
     flag: u8,
-    packet: Packet,
+    pin: Option<String>,
 }
 
 impl RegisterPin {
     pub fn new(mut packet: Packet) -> Self {
         let flag = packet.read_byte();
+        let pin = match flag {
+            0 => None,
+            _ => Some(packet.read_string()),
+        };
 
-        Self { flag, packet }
+        Self { flag, pin }
     }
 
-    pub async fn handle(mut self, client: &mut Client) -> Result<()> {
-        let db = &client.db;
-        let connection = &mut client.connection;
-
+    pub async fn handle(
+        self,
+        connection: &mut Connection,
+        db: &Db,
+        state: Arc<State>,
+    ) -> Result<()> {
         if self.flag == 0 {
-            queries::update_login_state(client.id.unwrap(), 0, db).await?;
+            connection.close().await?;
             return Ok(());
         }
 
-        let pin = self.packet.read_string();
-        client.pin = Some(pin.clone());
-        queries::update_pin(client.id.unwrap(), &pin, db).await?;
+        let mut session = state.sessions.get_mut(&connection.session_id).unwrap();
+
+        session.pin = self.pin.clone();
+        queries::update_pin(session.account_id, &self.pin.unwrap(), db).await?;
 
         connection.write_packet(packets::pin_registered()).await?;
-        queries::update_login_state(client.id.unwrap(), 0, db).await?;
-
+        queries::update_login_state(session.account_id, 0, db).await?;
         Ok(())
     }
 }

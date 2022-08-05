@@ -65,6 +65,7 @@ impl AfterLogin {
             }
         };
 
-        connection.write_packet(packets::pin_operation(op)).await
+        connection.write_packet(packets::pin_operation(op)).await?;
+        Ok(())
     }
 }
