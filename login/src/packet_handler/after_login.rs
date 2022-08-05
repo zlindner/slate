@@ -47,7 +47,7 @@ impl AfterLogin {
 
                 session.pin_attempts += 1;
 
-                if session.pin.is_some() && self.pin == session.pin {
+                if session.pin.is_some() && &self.pin.unwrap() == session.pin.as_ref().unwrap() {
                     session.pin_attempts = 0;
 
                     if self.a == 1 {
