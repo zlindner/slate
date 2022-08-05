@@ -15,11 +15,11 @@ use sqlx::FromRow;
 use std::sync::Arc;
 
 enum LoginError {
-    InvalidPassword = 0,
     Banned = 3,
+    InvalidPassword = 4,
     NotFound = 5,
     TooManyAttempts = 6,
-    InUse = 7,
+    AlreadyLoggedIn = 7,
     AcceptTOS = 23,
 }
 
@@ -91,7 +91,7 @@ impl Login {
 
         let error = match account {
             Account { login_state: 1, .. } | Account { login_state: 2, .. } => {
-                Some(LoginError::InUse)
+                Some(LoginError::AlreadyLoggedIn)
             }
             Account { banned: true, .. } => Some(LoginError::Banned),
             Account {
