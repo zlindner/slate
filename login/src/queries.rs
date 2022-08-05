@@ -1,7 +1,7 @@
 use oxide_core::{Db, Result};
 use sqlx::postgres::PgRow;
 
-pub async fn update_login_state(id: i32, login_state: i16, db: &Db) -> Result<()> {
+pub async fn update_login_state(id: i32, login_state: i32, db: &Db) -> Result<()> {
     sqlx::query(
         "UPDATE accounts \
         SET login_state = $1, last_login = CURRENT_TIMESTAMP \

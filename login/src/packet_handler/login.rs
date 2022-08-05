@@ -1,7 +1,5 @@
-use std::sync::Arc;
-
 use crate::{
-    packets,
+    packets, queries,
     state::{Session, State},
 };
 use bytes::Bytes;
@@ -14,8 +12,8 @@ use pbkdf2::{
     Pbkdf2,
 };
 use sqlx::FromRow;
+use std::sync::Arc;
 
-#[derive(Debug)]
 enum LoginError {
     InvalidPassword = 0,
     Banned = 3,
@@ -112,14 +110,14 @@ impl Login {
         };
 
         if error.is_some() {
-            log::debug!("login failed: {:?}", error.as_ref().unwrap());
             let packet = packets::login_failed(error.unwrap() as i32);
             connection.write_packet(packet).await?;
         } else {
-            log::debug!("login success");
             session.account_id = account.id;
             session.pin = account.pin;
             session.pic = account.pic;
+
+            queries::update_login_state(session.account_id, 2, db).await?;
 
             let packet = packets::login_success(account.id, &self.name);
             connection.write_packet(packet).await?;

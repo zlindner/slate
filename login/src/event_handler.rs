@@ -1,11 +1,10 @@
-use std::sync::Arc;
-
-use crate::{packet_handler::LoginServerPacketHandler, packets, state::State};
+use crate::{packet_handler::LoginServerPacketHandler, packets, queries, state::State};
 use async_trait::async_trait;
 use oxide_core::{
     net::{Connection, Events, Packet},
     Db,
 };
+use std::sync::Arc;
 
 pub struct LoginServerEventHandler {
     db: Db,
@@ -56,6 +55,17 @@ impl Events for LoginServerEventHandler {
         );
 
         let state = self.state.clone();
+
+        if !state.sessions.contains_key(&connection.session_id) {
+            return;
+        }
+
+        let session = state.sessions.get(&connection.session_id).unwrap();
+
+        if let Err(e) = queries::update_login_state(session.account_id, 0, &self.db).await {
+            log::error!("On disconnect error: {}", e);
+        }
+
         state.sessions.remove(&connection.session_id);
     }
 }
