@@ -19,6 +19,7 @@ pub struct Session {
     pub pin: Option<String>,
     pub pin_attempts: i32,
     pub pic: Option<String>,
+    pub pic_attempts: i32,
     pub login_attempts: i32,
 }
 
@@ -30,6 +31,7 @@ impl Session {
             pin: None,
             pin_attempts: 0,
             pic: None,
+            pic_attempts: 0,
             login_attempts: 0,
         }
     }

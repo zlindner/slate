@@ -28,21 +28,6 @@ pub async fn update_pin(id: i32, pin: &String, db: &Db) -> Result<()> {
 
     Ok(())
 }
-
-pub async fn get_characters(client_id: i32, world_id: i32, db: &Db) -> Result<Vec<PgRow>> {
-    let res = sqlx::query(
-        "SELECT * \
-        FROM characters \
-        WHERE account_id = $1 AND world_id = $2",
-    )
-    .bind(client_id)
-    .bind(world_id)
-    .fetch_all(db)
-    .await?;
-
-    Ok(res)
-}
-
 pub async fn logout_all(db: &Db) -> Result<()> {
     sqlx::query(
         "UPDATE accounts \
@@ -51,70 +36,6 @@ pub async fn logout_all(db: &Db) -> Result<()> {
     )
     .execute(db)
     .await?;
-
-    Ok(())
-}
-
-/*
-pub async fn create_character(character: &Character, db: &Db) -> Result<()> {
-    sqlx::query(
-        "INSERT INTO characters \
-        (account_id, world_id, name, level, str, dex, luk, int, hp, mp, max_hp, max_mp, mesos, job, skin_colour, gender, hair, face, ap, sp, map, spawn_point, gm) \
-        VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)",
-    )
-    .bind(character.account_id)
-    .bind(character.world_id)
-    .bind(character.name.clone())
-    .bind(character.stats.level)
-    .bind(character.stats.str)
-    .bind(character.stats.dex)
-    .bind(character.stats.luk)
-    .bind(character.stats.int)
-    .bind(character.stats.hp)
-    .bind(character.stats.mp)
-    .bind(character.stats.max_hp)
-    .bind(character.stats.max_mp)
-    .bind(character.stats.mesos)
-    .bind(character.job)
-    .bind(character.style.skin_colour)
-    .bind(character.style.gender as i16)
-    .bind(character.style.hair)
-    .bind(character.style.face)
-    .bind(character.stats.ap)
-    .bind(character.stats.sp.clone())
-    .bind(character.map)
-    .bind(character.spawn_point)
-    .bind(character.gm as i16)
-    .execute(db)
-    .await?;
-
-    Ok(())
-}
-*/
-
-pub async fn get_character_id_by_name(name: &String, db: &Db) -> Result<Option<PgRow>> {
-    let res = sqlx::query(
-        "SELECT id \
-        FROM characters \
-        WHERE name = $1",
-    )
-    .bind(name)
-    .fetch_optional(db)
-    .await?;
-
-    Ok(res)
-}
-
-pub async fn delete_character(character_id: i32, db: &Db) -> Result<()> {
-    sqlx::query(
-        "DELETE FROM characters \
-        WHERE id = $1",
-    )
-    .bind(character_id)
-    .execute(db)
-    .await?;
-
-    // TODO need to delete reference to this character in like 10 other tables (buddies, bbs_threads, bbs_replies, wishlists, etc.)
 
     Ok(())
 }

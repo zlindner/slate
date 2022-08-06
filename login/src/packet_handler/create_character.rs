@@ -1,12 +1,13 @@
-use crate::{
-    character::{Character, Rank, Stats, Style},
-    client::Client,
-    login::{packets, queries},
-};
-use dashmap::DashMap;
+use crate::{packets, State};
 use once_cell::sync::Lazy;
-use oxide_core::{net::Packet, Result};
-use std::collections::HashSet;
+use oxide_core::{
+    net::{Connection, Packet},
+    Character, Db, Result,
+};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 static STARTER_WEAPONS: Lazy<HashSet<i32>> = Lazy::new(|| {
     [
@@ -121,7 +122,12 @@ impl CreateCharacter {
         }
     }
 
-    pub async fn handle(&self, client: &mut Client) -> Result<()> {
+    pub async fn handle(
+        &self,
+        connection: &mut Connection,
+        db: &Db,
+        state: Arc<State>,
+    ) -> Result<()> {
         // character has invalid equipment (via packet editing), disconnect them
         if !STARTER_WEAPONS.contains(&self.weapon)
             || !STARTER_TOPS.contains(&self.top)
@@ -130,7 +136,7 @@ impl CreateCharacter {
             || !STARTER_HAIR.contains(&self.hair)
             || !STARTER_FACE.contains(&self.face)
         {
-            client.disconnect().await?;
+            connection.close().await?;
             return Ok(());
         }
 
@@ -144,42 +150,51 @@ impl CreateCharacter {
         // TODO check to make sure client has available character slots
         // TODO check if character name is valid
 
-        let style = Style {
-            skin_colour: self.skin_colour,
-            gender: self.gender,
-            hair: self.hair,
-            face: self.face,
-        };
+        let session = state.sessions.get(&connection.session_id).unwrap();
 
-        let inventory = DashMap::new();
+        let character: Character = sqlx::query_as(
+            "INSERT INTO characters \
+            (account_id, world_id, name, level, str, dex, luk, int, hp, mp, max_hp, max_mp, mesos, job, skin_colour, gender, hair, face, ap, sp, map, spawn_point, gm) \
+            VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)",
+        )
+        .bind(session.account_id)
+        .bind(0) // world_id
+        .bind(&self.name)
+        .bind(1) // level
+        .bind(12) // str
+        .bind(5) // dex
+        .bind(4) // luk
+        .bind(4) // int
+        .bind(50) // hp
+        .bind(50) // mp
+        .bind(50) // max_hp
+        .bind(50) // max_mp
+        .bind(0) // mesos
+        .bind(self.job)
+        .bind(self.skin_colour)
+        .bind(self.gender as i16)
+        .bind(self.hair)
+        .bind(self.face)
+        .bind(0) // sp
+        .bind("0,0,0,0,0,0,0,0,0,0") // sp
+        .bind(10000) // map
+        .bind(10000) // spawn_point
+        .bind(0) // gm
+        .fetch_one(db)
+        .await?;
+
+        // TODO should character have inventory field?
+        let mut inventory = HashMap::new();
         inventory.insert(-5, self.top);
         inventory.insert(-6, self.bottom);
         inventory.insert(-7, self.shoes);
         inventory.insert(-11, self.weapon);
 
-        let character = Character {
-            id: 0,
-            account_id: client.id.unwrap(),
-            world_id: client.world_id.unwrap(),
-            name: self.name.clone(),
-            stats: Stats::default(),
-            job: self.job,
-            style: style,
-            map: 10000,
-            spawn_point: 10000,
-            gm: 0,
-            rank: Rank::default(),
-            pets: Vec::new(),
-            inventory: inventory,
-        };
-
-        queries::create_character(&character, &client.db).await?;
         // TODO update keymap table
         // TODO update inventoryitems, inventoryequipment table
         // TODO update skills table
 
-        client
-            .connection
+        connection
             .write_packet(packets::new_character(&character))
             .await?;
 

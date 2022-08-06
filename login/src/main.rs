@@ -2,7 +2,6 @@ use event_handler::LoginServerEventHandler;
 use log::LevelFilter;
 use oxide_core::{db, net::Server, Result};
 use simple_logger::SimpleLogger;
-use state::State;
 use std::{env, sync::Arc};
 
 mod event_handler;
@@ -10,6 +9,7 @@ mod packet_handler;
 mod packets;
 mod queries;
 mod state;
+pub use self::state::State;
 
 #[tokio::main]
 async fn main() -> Result<()> {

@@ -1,10 +1,9 @@
-use crate::{
-    character::Character,
-    client::Client,
-    login::{packets, queries},
-    world::CapacityStatus,
+use crate::{packets, State};
+use oxide_core::{
+    net::{Connection, Packet},
+    Character, Db, Result,
 };
-use oxide_core::{net::Packet, Result};
+use std::sync::Arc;
 
 pub struct CharacterList {
     world_id: u8,
@@ -24,12 +23,13 @@ impl CharacterList {
         }
     }
 
-    pub async fn handle(self, client: &mut Client) -> Result<()> {
-        let shared = &client.shared;
-        let db = &client.db;
-        let connection = &mut client.connection;
-
-        let world = match shared.worlds.get(self.world_id as usize) {
+    pub async fn handle(
+        self,
+        connection: &mut Connection,
+        db: &Db,
+        state: Arc<State>,
+    ) -> Result<()> {
+        /*let world = match shared.worlds.get(self.world_id as usize) {
             Some(world) => world,
             None => {
                 connection
@@ -57,18 +57,20 @@ impl CharacterList {
         };
 
         client.world_id = Some(world.config.id);
-        client.channel_id = Some(channel.id);
+        client.channel_id = Some(channel.id);*/
 
-        let rows = match queries::get_characters(client.id.unwrap(), world.config.id, db).await {
-            Ok(characters) => characters,
-            Err(_) => Vec::new(),
-        };
+        let session = state.sessions.get(&connection.session_id).unwrap();
 
-        let mut characters: Vec<Character> = Vec::new();
-
-        for row in rows.iter() {
-            characters.push(Character::from_row(row));
-        }
+        // TODO pass world id in
+        let characters: Vec<Character> = sqlx::query_as(
+            "SELECT * \
+            FROM characters \
+            WHERE account_id = $1 AND world_id = $2",
+        )
+        .bind(session.account_id)
+        .bind(0) // FIXME pass in world id, can we just use self.world_id here?
+        .fetch_all(db)
+        .await?;
 
         connection
             .write_packet(packets::character_list(&characters))

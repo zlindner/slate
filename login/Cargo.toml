@@ -17,7 +17,7 @@ async-trait = "0.1.56"
 deadpool-redis = "0.10.2"
 
 # database
-sqlx = { version = "0.6.0", features = [ "runtime-tokio-native-tls" , "postgres" ] }
+sqlx = { version = "0.6.1", features = [ "runtime-tokio-native-tls" , "postgres" ] }
 
 # crypto
 aes = "0.8.1"
