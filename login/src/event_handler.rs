@@ -1,6 +1,5 @@
 use crate::{packet_handler::LoginServerPacketHandler, packets, queries, Session};
 use async_trait::async_trait;
-use deadpool_redis::redis::AsyncCommands;
 use oxide_core::{
     net::{Connection, Events, Packet},
     Db, Redis,
@@ -58,24 +57,20 @@ impl Events for LoginServerEventHandler {
             connection.session_id
         );
 
-        let mut state = self.redis.get().await.unwrap();
-        let key = format!("session:{}", connection.session_id);
-        let session_exists: i32 = state.exists(&key).await.unwrap();
+        let session = match Session::load(connection.session_id, &self.redis).await {
+            Ok(session) => session,
+            Err(e) => {
+                log::error!("Error loading session {}: {}", connection.session_id, e);
+                return;
+            }
+        };
 
-        if session_exists < 1 {
-            return;
-        }
-
-        let session_account_id = state.hget(&key, "account_id").await.unwrap();
-
-        if let Err(e) = queries::update_login_state(session_account_id, 0, &self.db).await {
+        if let Err(e) = queries::update_login_state(session.account_id, 0, &self.db).await {
             log::error!("On disconnect error: {}", e);
         }
 
-        let res: i32 = state.del(&key).await.unwrap();
-
-        if res >= 1 {
-            log::debug!("Successfully deleted: {}", key);
+        if let Err(e) = Session::delete(connection.session_id, &self.redis).await {
+            log::error!("Error deleting session {}: {}", connection.session_id, e);
         }
     }
 }

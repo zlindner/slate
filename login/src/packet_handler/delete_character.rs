@@ -28,7 +28,7 @@ impl DeleteCharacter {
             return Ok(());
         }
 
-        let mut session = Session::get(connection.session_id, redis).await?;
+        let mut session = Session::load(connection.session_id, &redis).await?;
 
         if session.pic_attempts >= 6 {
             connection.close().await?;

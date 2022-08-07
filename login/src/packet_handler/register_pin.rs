@@ -26,7 +26,7 @@ impl RegisterPin {
             return Ok(());
         }
 
-        let mut session = Session::get(connection.session_id, redis).await?;
+        let mut session = Session::load(connection.session_id, &redis).await?;
 
         session.pin = self.pin.clone();
         queries::update_pin(session.account_id, &self.pin.unwrap(), &db).await?;

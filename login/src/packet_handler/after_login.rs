@@ -31,7 +31,7 @@ impl AfterLogin {
     }
 
     pub async fn handle(self, connection: &mut Connection, redis: Redis) -> Result<()> {
-        let mut session = Session::get(connection.session_id, redis).await?;
+        let mut session = Session::load(connection.session_id, &redis).await?;
 
         let op = match (self.a, self.b) {
             (1, 1) => match session.pin {

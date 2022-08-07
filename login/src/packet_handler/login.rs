@@ -52,7 +52,7 @@ impl Login {
     }
 
     pub async fn handle(self, connection: &mut Connection, db: Db, redis: Redis) -> Result<()> {
-        let mut session = Session::get(connection.session_id, redis).await?;
+        let mut session = Session::load(connection.session_id, &redis).await?;
         session.login_attempts += 1;
 
         if session.login_attempts >= 5 {
@@ -68,6 +68,8 @@ impl Login {
                 connection
                     .write_packet(packets::login_failed(LoginError::NotFound as i32))
                     .await?;
+
+                session.save(&redis).await?;
                 return Ok(());
             }
         };
@@ -106,6 +108,7 @@ impl Login {
             connection.write_packet(packet).await?;
         }
 
+        session.save(&redis).await?;
         Ok(())
     }
 }

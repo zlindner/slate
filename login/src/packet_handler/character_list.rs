@@ -53,7 +53,7 @@ impl CharacterList {
         client.world_id = Some(world.config.id);
         client.channel_id = Some(channel.id);*/
 
-        let session = Session::get(connection.session_id, redis).await?;
+        let session = Session::load(connection.session_id, &redis).await?;
 
         // TODO pass world id in
         let characters: Vec<Character> = sqlx::query_as(

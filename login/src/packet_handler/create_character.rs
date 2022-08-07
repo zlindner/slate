@@ -142,7 +142,7 @@ impl CreateCharacter {
         // TODO check to make sure client has available character slots
         // TODO check if character name is valid
 
-        let session = Session::get(connection.session_id, redis).await?;
+        let session = Session::load(connection.session_id, &redis).await?;
 
         let character: Character = sqlx::query_as(
             "INSERT INTO characters \
