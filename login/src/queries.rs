@@ -27,11 +27,12 @@ pub async fn update_pin(id: i32, pin: &String, db: &Db) -> Result<()> {
 
     Ok(())
 }
+
 pub async fn logout_all(db: &Db) -> Result<()> {
     sqlx::query(
         "UPDATE accounts \
         SET login_state = 0, last_login = CURRENT_TIMESTAMP \
-        where login_state = 1",
+        WHERE login_state != 0",
     )
     .execute(db)
     .await?;
