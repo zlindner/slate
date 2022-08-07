@@ -38,9 +38,7 @@ impl Server {
                     log::error!("Server listen error: {}", e);
                 }
             }
-            _ = signal::ctrl_c() => {
-                log::info!("Server shutting down");
-            }
+            _ = signal::ctrl_c() => {}
         }
 
         // send the shutdown signal to all subscribed tasks
@@ -52,6 +50,7 @@ impl Server {
         // wait for all active connections to finish processing
         let _ = shutdown_complete_rx.recv().await;
 
+        self.events.on_shutdown().await;
         Ok(())
     }
 

@@ -1,5 +1,6 @@
 use crate::{packet_handler::LoginServerPacketHandler, packets, queries, Session};
 use async_trait::async_trait;
+use deadpool_redis::redis::{cmd, RedisResult};
 use oxide_core::{
     net::{Connection, Events, Packet},
     Db, Redis,
@@ -20,6 +21,18 @@ impl LoginServerEventHandler {
 impl Events for LoginServerEventHandler {
     async fn on_start(&self, addr: &str) {
         log::info!("Login server started @ {}", addr);
+    }
+
+    async fn on_shutdown(&self) {
+        log::info!("Login server shutting down...");
+
+        if let Err(e) = queries::logout_all(&self.db).await {
+            log::error!("Error executing logout_all: {}", e);
+        }
+
+        // clear redis cache
+        let mut state = self.redis.get().await.unwrap();
+        let _: RedisResult<()> = cmd("FLUSHDB").query_async(&mut state).await;
     }
 
     async fn on_connect(&self, connection: &mut Connection) {
