@@ -1,7 +1,5 @@
-use crate::state::State;
 use oxide_core::net::{Connection, Packet};
-use oxide_core::{Db, Result};
-use std::sync::Arc;
+use oxide_core::{Db, Redis, Result};
 
 mod login;
 use self::login::Login;
@@ -65,24 +63,19 @@ impl LoginServerPacketHandler {
         }
     }
 
-    pub async fn handle(
-        self,
-        connection: &mut Connection,
-        db: &Db,
-        state: Arc<State>,
-    ) -> Result<()> {
+    pub async fn handle(self, connection: &mut Connection, db: Db, redis: Redis) -> Result<()> {
         use LoginServerPacketHandler::*;
 
         match self {
-            Login(handler) => handler.handle(connection, db, state).await,
-            CharacterList(handler) => handler.handle(connection, db, state).await,
-            WorldStatus(handler) => handler.handle(connection, state).await,
-            AfterLogin(handler) => handler.handle(connection, state).await,
-            RegisterPin(handler) => handler.handle(connection, db, state).await,
-            WorldList(handler) => handler.handle(connection, state).await,
-            CharacterName(handler) => handler.handle(connection, db, state).await,
-            CreateCharacter(handler) => handler.handle(connection, db, state).await,
-            DeleteCharacter(handler) => handler.handle(connection, db, state).await,
+            Login(handler) => handler.handle(connection, db, redis).await,
+            CharacterList(handler) => handler.handle(connection, db, redis).await,
+            WorldStatus(handler) => handler.handle(connection).await,
+            AfterLogin(handler) => handler.handle(connection, redis).await,
+            RegisterPin(handler) => handler.handle(connection, db, redis).await,
+            WorldList(handler) => handler.handle(connection).await,
+            CharacterName(handler) => handler.handle(connection, db).await,
+            CreateCharacter(handler) => handler.handle(connection, db, redis).await,
+            DeleteCharacter(handler) => handler.handle(connection, db, redis).await,
             Unknown(handler) => handler.handle(),
         }
     }

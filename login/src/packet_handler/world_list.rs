@@ -1,6 +1,5 @@
-use crate::{packets, state::State};
+use crate::packets;
 use oxide_core::{net::Connection, Result};
-use std::sync::Arc;
 
 pub struct WorldList;
 
@@ -9,7 +8,7 @@ impl WorldList {
         Self
     }
 
-    pub async fn handle(self, connection: &mut Connection, state: Arc<State>) -> Result<()> {
+    pub async fn handle(self, connection: &mut Connection) -> Result<()> {
         /*for world in shared.worlds.iter() {
             connection
                 .write_packet(packets::world_details(&world))

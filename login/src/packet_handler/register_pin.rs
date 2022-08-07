@@ -1,9 +1,8 @@
-use crate::{packets, queries, State};
+use crate::{packets, queries, Session};
 use oxide_core::{
     net::{Connection, Packet},
-    Db, Result,
+    Db, Redis, Result,
 };
-use std::sync::Arc;
 
 pub struct RegisterPin {
     flag: u8,
@@ -21,24 +20,19 @@ impl RegisterPin {
         Self { flag, pin }
     }
 
-    pub async fn handle(
-        self,
-        connection: &mut Connection,
-        db: &Db,
-        state: Arc<State>,
-    ) -> Result<()> {
+    pub async fn handle(self, connection: &mut Connection, db: Db, redis: Redis) -> Result<()> {
         if self.flag == 0 {
             connection.close().await?;
             return Ok(());
         }
 
-        let mut session = state.sessions.get_mut(&connection.session_id).unwrap();
+        let mut session = Session::get(connection.session_id, redis).await?;
 
         session.pin = self.pin.clone();
-        queries::update_pin(session.account_id, &self.pin.unwrap(), db).await?;
+        queries::update_pin(session.account_id, &self.pin.unwrap(), &db).await?;
 
         connection.write_packet(packets::pin_registered()).await?;
-        queries::update_login_state(session.account_id, 0, db).await?;
+        queries::update_login_state(session.account_id, 0, &db).await?;
         Ok(())
     }
 }

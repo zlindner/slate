@@ -1,23 +1,19 @@
-use crate::{
-    packet_handler::LoginServerPacketHandler,
-    packets, queries,
-    state::{Session, State},
-};
+use crate::{packet_handler::LoginServerPacketHandler, packets, queries, Session};
 use async_trait::async_trait;
+use deadpool_redis::redis::AsyncCommands;
 use oxide_core::{
     net::{Connection, Events, Packet},
-    Db,
+    Db, Redis,
 };
-use std::sync::Arc;
 
 pub struct LoginServerEventHandler {
     db: Db,
-    state: Arc<State>,
+    redis: Redis,
 }
 
 impl LoginServerEventHandler {
-    pub fn new(db: Db, state: Arc<State>) -> Self {
-        Self { db, state }
+    pub fn new(db: Db, redis: Redis) -> Self {
+        Self { db, redis }
     }
 }
 
@@ -33,13 +29,8 @@ impl Events for LoginServerEventHandler {
             connection.session_id
         );
 
-        let state = self.state.clone();
-
-        // create a new session for the current connection
-        if !state.sessions.contains_key(&connection.session_id) {
-            state
-                .sessions
-                .insert(connection.session_id, Session::new(connection.session_id));
+        if let Err(e) = Session::create(connection.session_id, &self.redis).await {
+            log::error!("Error creating session {}: {}", connection.session_id, e);
         }
 
         let codec = connection.codec();
@@ -54,7 +45,7 @@ impl Events for LoginServerEventHandler {
         log::debug!("Received packet: {}", packet);
 
         if let Err(e) = LoginServerPacketHandler::get(packet)
-            .handle(connection, &self.db.clone(), self.state.clone())
+            .handle(connection, self.db.clone(), self.redis.clone())
             .await
         {
             log::error!("Handle packet error: {}", e);
@@ -67,19 +58,24 @@ impl Events for LoginServerEventHandler {
             connection.session_id
         );
 
-        let state = self.state.clone();
+        let mut state = self.redis.get().await.unwrap();
+        let key = format!("session:{}", connection.session_id);
+        let session_exists: i32 = state.exists(&key).await.unwrap();
 
-        if !state.sessions.contains_key(&connection.session_id) {
+        if session_exists < 1 {
             return;
         }
 
-        // FIXME holding ref to dashmap across an await point causes deadlocks...
-        let session = state.sessions.get(&connection.session_id).unwrap();
+        let session_account_id = state.hget(&key, "account_id").await.unwrap();
 
-        if let Err(e) = queries::update_login_state(session.account_id, 0, &self.db).await {
+        if let Err(e) = queries::update_login_state(session_account_id, 0, &self.db).await {
             log::error!("On disconnect error: {}", e);
         }
 
-        state.sessions.remove(&connection.session_id);
+        let res: i32 = state.del(&key).await.unwrap();
+
+        if res >= 1 {
+            log::debug!("Successfully deleted: {}", key);
+        }
     }
 }

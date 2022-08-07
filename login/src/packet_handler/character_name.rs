@@ -1,11 +1,10 @@
-use crate::{packets, State};
+use crate::packets;
 use once_cell::sync::Lazy;
 use oxide_core::{
     net::{Connection, Packet},
     Db, Result,
 };
 use regex::Regex;
-use std::sync::Arc;
 
 static VALID_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"[a-zA-Z0-9]{3,12}").unwrap());
 
@@ -20,13 +19,8 @@ impl CharacterName {
         }
     }
 
-    pub async fn handle(
-        self,
-        connection: &mut Connection,
-        db: &Db,
-        state: Arc<State>,
-    ) -> Result<()> {
-        let is_valid = Self::is_valid_name(&self.name, db).await?;
+    pub async fn handle(self, connection: &mut Connection, db: Db) -> Result<()> {
+        let is_valid = Self::is_valid_name(&self.name, &db).await?;
 
         connection
             .write_packet(packets::character_name(&self.name, is_valid))

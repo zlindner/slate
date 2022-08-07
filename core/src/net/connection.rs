@@ -8,11 +8,11 @@ use tokio_util::codec::{Decoder, Framed};
 
 pub struct Connection {
     stream: Framed<TcpStream, MapleCodec>,
-    pub session_id: usize,
+    pub session_id: i32,
 }
 
 impl Connection {
-    pub fn new(stream: TcpStream, session_id: usize) -> Self {
+    pub fn new(stream: TcpStream, session_id: i32) -> Self {
         Self {
             stream: MapleCodec::new().framed(stream),
             session_id,

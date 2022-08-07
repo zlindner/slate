@@ -1,15 +1,14 @@
-use crate::{packets, queries, state::State};
+use crate::{packets, queries, Session};
 use bytes::Bytes;
 use oxide_core::{
     net::{Connection, Packet},
-    Db, Result,
+    Db, Redis, Result,
 };
 use pbkdf2::{
     password_hash::{PasswordHash, PasswordVerifier},
     Pbkdf2,
 };
 use sqlx::FromRow;
-use std::sync::Arc;
 
 enum LoginError {
     Banned = 3,
@@ -52,13 +51,8 @@ impl Login {
         }
     }
 
-    pub async fn handle(
-        self,
-        connection: &mut Connection,
-        db: &Db,
-        state: Arc<State>,
-    ) -> Result<()> {
-        let mut session = state.sessions.get_mut(&connection.session_id).unwrap();
+    pub async fn handle(self, connection: &mut Connection, db: Db, redis: Redis) -> Result<()> {
+        let mut session = Session::get(connection.session_id, redis).await?;
         session.login_attempts += 1;
 
         if session.login_attempts >= 5 {
@@ -68,7 +62,7 @@ impl Login {
             return Ok(());
         }
 
-        let account = match get_account(&self.name, db).await {
+        let account = match get_account(&self.name, &db).await {
             Ok(account) => account,
             Err(_) => {
                 connection
@@ -106,7 +100,7 @@ impl Login {
             session.pin = Some(account.pin);
             session.pic = Some(account.pic);
 
-            queries::update_login_state(session.account_id, 2, db).await?;
+            queries::update_login_state(session.account_id, 2, &db).await?;
 
             let packet = packets::login_success(account.id, &self.name);
             connection.write_packet(packet).await?;

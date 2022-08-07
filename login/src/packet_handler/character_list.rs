@@ -1,9 +1,8 @@
-use crate::{packets, State};
+use crate::{packets, Session};
 use oxide_core::{
     net::{Connection, Packet},
-    Character, Db, Result,
+    Character, Db, Redis, Result,
 };
-use std::sync::Arc;
 
 pub struct CharacterList {
     world_id: u8,
@@ -23,12 +22,7 @@ impl CharacterList {
         }
     }
 
-    pub async fn handle(
-        self,
-        connection: &mut Connection,
-        db: &Db,
-        state: Arc<State>,
-    ) -> Result<()> {
+    pub async fn handle(self, connection: &mut Connection, db: Db, redis: Redis) -> Result<()> {
         /*let world = match shared.worlds.get(self.world_id as usize) {
             Some(world) => world,
             None => {
@@ -59,7 +53,7 @@ impl CharacterList {
         client.world_id = Some(world.config.id);
         client.channel_id = Some(channel.id);*/
 
-        let session = state.sessions.get(&connection.session_id).unwrap();
+        let session = Session::get(connection.session_id, redis).await?;
 
         // TODO pass world id in
         let characters: Vec<Character> = sqlx::query_as(
@@ -69,7 +63,7 @@ impl CharacterList {
         )
         .bind(session.account_id)
         .bind(0) // FIXME pass in world id, can we just use self.world_id here?
-        .fetch_all(db)
+        .fetch_all(&db)
         .await?;
 
         connection

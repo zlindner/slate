@@ -1,12 +1,11 @@
 use crate::{
     packets::{self, PicOperation},
-    State,
+    Session,
 };
 use oxide_core::{
     net::{Connection, Packet},
-    Db, Result,
+    Db, Redis, Result,
 };
-use std::sync::Arc;
 
 pub struct DeleteCharacter {
     pic: String,
@@ -21,12 +20,7 @@ impl DeleteCharacter {
         }
     }
 
-    pub async fn handle(
-        self,
-        connection: &mut Connection,
-        db: &Db,
-        state: Arc<State>,
-    ) -> Result<()> {
+    pub async fn handle(self, connection: &mut Connection, db: Db, redis: Redis) -> Result<()> {
         let bypass_pic = false;
 
         if bypass_pic {
@@ -34,7 +28,7 @@ impl DeleteCharacter {
             return Ok(());
         }
 
-        let mut session = state.sessions.get_mut(&connection.session_id).unwrap();
+        let mut session = Session::get(connection.session_id, redis).await?;
 
         if session.pic_attempts >= 6 {
             connection.close().await?;
@@ -70,7 +64,7 @@ impl DeleteCharacter {
             WHERE id = $1",
         )
         .bind(self.character_id)
-        .execute(db)
+        .execute(&db)
         .await?;
 
         // TODO need to delete reference to this character in like 10 other tables (buddies, bbs_threads, bbs_replies, wishlists, etc.)

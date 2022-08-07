@@ -1,9 +1,8 @@
-use crate::{packets, state::State};
+use crate::packets;
 use oxide_core::{
     net::{Connection, Packet},
     Result,
 };
-use std::sync::Arc;
 
 pub struct WorldStatus {
     world_id: i16,
@@ -16,7 +15,7 @@ impl WorldStatus {
         Self { world_id }
     }
 
-    pub async fn handle(self, connection: &mut Connection, state: Arc<State>) -> Result<()> {
+    pub async fn handle(self, connection: &mut Connection) -> Result<()> {
         /*let world = shared.worlds.get(self.world_id as usize);
 
         let capacity_status = match world {

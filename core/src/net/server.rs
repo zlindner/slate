@@ -1,7 +1,7 @@
 use super::{Connection, Events};
 use crate::{util::Shutdown, Error, Result};
 use std::sync::{
-    atomic::{AtomicUsize, Ordering},
+    atomic::{AtomicI32, Ordering},
     Arc,
 };
 use tokio::{
@@ -57,7 +57,7 @@ impl Server {
 
     async fn listen(&self, notify_shutdown: &broadcast::Sender<()>) -> Result<()> {
         let listener = TcpListener::bind(&self.addr).await?;
-        let session_id = AtomicUsize::new(0);
+        let session_id = AtomicI32::new(0);
 
         loop {
             let (stream, _) = listener.accept().await?;

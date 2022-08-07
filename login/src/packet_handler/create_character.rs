@@ -1,13 +1,10 @@
-use crate::{packets, State};
+use crate::{packets, Session};
 use once_cell::sync::Lazy;
 use oxide_core::{
     net::{Connection, Packet},
-    Character, Db, Result,
+    Character, Db, Redis, Result,
 };
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
+use std::collections::{HashMap, HashSet};
 
 static STARTER_WEAPONS: Lazy<HashSet<i32>> = Lazy::new(|| {
     [
@@ -122,12 +119,7 @@ impl CreateCharacter {
         }
     }
 
-    pub async fn handle(
-        &self,
-        connection: &mut Connection,
-        db: &Db,
-        state: Arc<State>,
-    ) -> Result<()> {
+    pub async fn handle(&self, connection: &mut Connection, db: Db, redis: Redis) -> Result<()> {
         // character has invalid equipment (via packet editing), disconnect them
         if !STARTER_WEAPONS.contains(&self.weapon)
             || !STARTER_TOPS.contains(&self.top)
@@ -150,7 +142,7 @@ impl CreateCharacter {
         // TODO check to make sure client has available character slots
         // TODO check if character name is valid
 
-        let session = state.sessions.get(&connection.session_id).unwrap();
+        let session = Session::get(connection.session_id, redis).await?;
 
         let character: Character = sqlx::query_as(
             "INSERT INTO characters \
@@ -180,7 +172,7 @@ impl CreateCharacter {
         .bind(10000) // map
         .bind(10000) // spawn_point
         .bind(0) // gm
-        .fetch_one(db)
+        .fetch_one(&db)
         .await?;
 
         // TODO should character have inventory field?

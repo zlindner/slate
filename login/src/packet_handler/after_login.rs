@@ -1,12 +1,11 @@
 use crate::{
     packets::{self, PinOperation},
-    state::State,
+    Session,
 };
 use oxide_core::{
     net::{Connection, Packet},
-    Db, Result,
+    Redis, Result,
 };
-use std::sync::Arc;
 
 pub struct AfterLogin {
     a: u8,
@@ -31,8 +30,8 @@ impl AfterLogin {
         Self { a, b, pin }
     }
 
-    pub async fn handle(self, connection: &mut Connection, state: Arc<State>) -> Result<()> {
-        let mut session = state.sessions.get_mut(&connection.session_id).unwrap();
+    pub async fn handle(self, connection: &mut Connection, redis: Redis) -> Result<()> {
+        let mut session = Session::get(connection.session_id, redis).await?;
 
         let op = match (self.a, self.b) {
             (1, 1) => match session.pin {
