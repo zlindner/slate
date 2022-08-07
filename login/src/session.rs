@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use deadpool_redis::redis::AsyncCommands;
 use oxide_core::{Redis, Result};
 
@@ -31,20 +33,23 @@ impl Session {
         let mut state = redis.get().await?;
         let key = format!("session:{}", id);
 
-        let hm = state.hgetall(key).await?;
-        log::debug!("hm: {:?}", hm);
+        let map: HashMap<String, String> = state.hgetall(key).await?;
+        let pin = map.get("pin").unwrap();
+        let pin = (!pin.is_empty()).then(|| pin.to_owned());
+        let pic = map.get("pic").unwrap();
+        let pic = (!pic.is_empty()).then(|| pic.to_owned());
 
-        // FIXME parse hm
         let session = Session {
             id,
-            account_id: -1,
-            pin: None,
-            pin_attempts: 0,
-            pic: None,
-            pic_attempts: 0,
-            login_attempts: 0,
+            account_id: map.get("account_id").unwrap().parse().unwrap(),
+            pin,
+            pin_attempts: map.get("pin_attempts").unwrap().parse().unwrap(),
+            pic,
+            pic_attempts: map.get("pic_attempts").unwrap().parse().unwrap(),
+            login_attempts: map.get("login_attempts").unwrap().parse().unwrap(),
         };
 
+        log::debug!("loaded session: {:?}", session);
         Ok(session)
     }
 

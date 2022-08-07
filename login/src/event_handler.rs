@@ -79,7 +79,7 @@ impl Events for LoginServerEventHandler {
         };
 
         if let Err(e) = queries::update_login_state(session.account_id, 0, &self.db).await {
-            log::error!("On disconnect error: {}", e);
+            log::error!("Error updating login state: {}", e);
         }
 
         if let Err(e) = Session::delete(connection.session_id, &self.redis).await {

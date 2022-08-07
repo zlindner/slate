@@ -53,10 +53,10 @@ impl AfterLogin {
                         PinOperation::Accepted
                     } else {
                         PinOperation::Register
-                    };
+                    }
+                } else {
+                    PinOperation::RequestAfterFailure
                 }
-
-                PinOperation::RequestAfterFailure
             }
             _ => {
                 connection.close().await?;
@@ -64,6 +64,7 @@ impl AfterLogin {
             }
         };
 
+        session.save(&redis).await?;
         connection.write_packet(packets::pin_operation(op)).await?;
         Ok(())
     }
