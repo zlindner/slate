@@ -1,16 +1,14 @@
-use super::{codec::MapleCodec, Connection, Events, Packet};
+use super::{Connection, Events};
 use crate::{util::Shutdown, Error, Result};
-use futures::TryStreamExt;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
 };
 use tokio::{
-    net::{TcpListener, TcpStream},
+    net::TcpListener,
     signal,
     sync::{broadcast, mpsc},
 };
-use tokio_util::codec::{Decoder, Framed};
 
 pub struct Server {
     addr: String,

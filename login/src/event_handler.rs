@@ -73,6 +73,7 @@ impl Events for LoginServerEventHandler {
             return;
         }
 
+        // FIXME holding ref to dashmap across an await point causes deadlocks...
         let session = state.sessions.get(&connection.session_id).unwrap();
 
         if let Err(e) = queries::update_login_state(session.account_id, 0, &self.db).await {
