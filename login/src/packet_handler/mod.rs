@@ -19,6 +19,9 @@ use self::register_pin::RegisterPin;
 mod world_list;
 use self::world_list::WorldList;
 
+mod select_character;
+use self::select_character::SelectCharacter;
+
 mod character_name;
 use self::character_name::CharacterName;
 
@@ -38,6 +41,7 @@ pub enum LoginServerPacketHandler {
     AfterLogin(AfterLogin),
     RegisterPin(RegisterPin),
     WorldList(WorldList),
+    SelectCharacter(SelectCharacter),
     CharacterName(CharacterName),
     CreateCharacter(CreateCharacter),
     DeleteCharacter(DeleteCharacter),
@@ -56,6 +60,7 @@ impl LoginServerPacketHandler {
             0x09 => Self::AfterLogin(AfterLogin::new(packet)),
             0x0A => Self::RegisterPin(RegisterPin::new(packet)),
             0x0B => Self::WorldList(WorldList::new()),
+            0x13 => Self::SelectCharacter(SelectCharacter::new(packet)),
             0x15 => Self::CharacterName(CharacterName::new(packet)),
             0x16 => Self::CreateCharacter(CreateCharacter::new(packet)),
             0x17 => Self::DeleteCharacter(DeleteCharacter::new(packet)),
@@ -73,6 +78,7 @@ impl LoginServerPacketHandler {
             AfterLogin(handler) => handler.handle(connection, redis).await,
             RegisterPin(handler) => handler.handle(connection, db, redis).await,
             WorldList(handler) => handler.handle(connection).await,
+            SelectCharacter(handler) => handler.handle(connection, db, redis).await,
             CharacterName(handler) => handler.handle(connection, db).await,
             CreateCharacter(handler) => handler.handle(connection, db, redis).await,
             DeleteCharacter(handler) => handler.handle(connection, db, redis).await,

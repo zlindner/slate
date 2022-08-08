@@ -381,3 +381,16 @@ pub fn delete_character(character_id: i32, op: PicOperation) -> Packet {
     packet.write_byte(op as u8);
     packet
 }
+
+pub fn channel_server_ip(character_id: i32) -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x0C);
+    packet.write_short(0);
+    // FIXME correct ip for selected world (without port)
+    packet.write_bytes(&[0xC0, 0xA8, 0x0, 0x25]);
+    // FIXME correct port for selected channel
+    packet.write_short(10000);
+    packet.write_int(character_id);
+    packet.write_bytes(&[0, 0, 0, 0, 0]);
+    packet
+}
