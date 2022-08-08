@@ -833,6 +833,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "oxide-world"
+version = "0.1.0"
+dependencies = [
+ "aes",
+ "async-trait",
+ "bytes",
+ "deadpool-redis",
+ "dotenv",
+ "futures",
+ "log",
+ "once_cell",
+ "oxide-core",
+ "pbkdf2",
+ "rand",
+ "regex",
+ "serde",
+ "simple_logger",
+ "sqlx",
+ "tokio",
+ "tokio-stream",
+ "tokio-util 0.7.3",
+ "toml",
+]
+
+[[package]]
 name = "parking_lot"
 version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
