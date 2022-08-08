@@ -1,4 +1,4 @@
-use crate::{packet_handler::LoginServerPacketHandler, packets, queries, Session};
+use crate::{packet_handler::LoginServerPacketHandler, queries, Session};
 use async_trait::async_trait;
 use deadpool_redis::redis::{cmd, RedisResult};
 use oxide_core::{
@@ -43,13 +43,6 @@ impl Events for LoginServerEventHandler {
 
         if let Err(e) = Session::create(connection.session_id, &self.redis).await {
             log::error!("Error creating session {}: {}", connection.session_id, e);
-        }
-
-        let codec = connection.codec();
-        let handshake = packets::handshake(&codec.send, &codec.recv);
-
-        if let Err(e) = connection.write_raw_packet(handshake).await {
-            log::error!("Error writing handshake packet: {}", e);
         }
     }
 

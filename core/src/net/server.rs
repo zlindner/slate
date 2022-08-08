@@ -66,6 +66,8 @@ impl Server {
 
             tokio::spawn(async move {
                 let mut connection = Connection::new(stream, session_id);
+                connection.handshake().await?;
+
                 events.on_connect(&mut connection).await;
 
                 while !shutdown.is_shutdown() {
