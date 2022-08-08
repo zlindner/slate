@@ -64,7 +64,7 @@ pub fn login_success(id: i32, name: &String) -> Packet {
     // remove the "select the world you want to play in"
     packet.write_int(1);
     // 0 => pin enabled, 1 => pin disabled
-    packet.write_byte(0);
+    packet.write_byte(1);
     //packet.write_byte(CONFIG.enable_pin);
     // 0 => register PIC, 1 => ask for PIC, 2 => disabled
     packet.write_byte(2);
@@ -200,7 +200,7 @@ pub fn view_recommended_temp() -> Packet {
 pub fn world_status_temp() -> Packet {
     let mut packet = Packet::new();
     packet.write_short(0x03);
-    packet.write_short(100);
+    packet.write_short(0);
     packet
 }
 

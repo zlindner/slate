@@ -1,7 +1,6 @@
-use std::collections::HashMap;
-
 use deadpool_redis::redis::AsyncCommands;
 use oxide_core::{Redis, Result};
+use std::collections::HashMap;
 
 #[derive(Debug, Default)]
 pub struct Session {
@@ -53,19 +52,20 @@ impl Session {
         Ok(session)
     }
 
-    pub async fn save(self, redis: &Redis) -> Result<()> {
+    pub async fn save(&self, redis: &Redis) -> Result<()> {
         let mut state = redis.get().await?;
         let key = format!("session:{}", self.id);
 
+        // TODO look into creating macro? struct -> hashmap?
         state
             .hset_multiple(
                 key,
                 &[
                     ("id", self.id.to_string()),
                     ("account_id", self.account_id.to_string()),
-                    ("pin", self.pin.unwrap_or(String::new())),
+                    ("pin", self.pin.to_owned().unwrap_or_default()),
                     ("pin_attempts", self.pin_attempts.to_string()),
-                    ("pic", self.pic.unwrap_or(String::new())),
+                    ("pic", self.pic.to_owned().unwrap_or_default()),
                     ("pic_attempts", self.pic_attempts.to_string()),
                     ("login_attempts", self.login_attempts.to_string()),
                 ],

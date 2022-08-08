@@ -27,8 +27,9 @@ impl RegisterPin {
         }
 
         let mut session = Session::load(connection.session_id, &redis).await?;
-
         session.pin = self.pin.clone();
+        session.save(&redis).await?;
+
         queries::update_pin(session.account_id, &self.pin.unwrap(), &db).await?;
 
         connection.write_packet(packets::pin_registered()).await?;
