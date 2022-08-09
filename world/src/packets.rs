@@ -45,7 +45,7 @@ fn write_character(character: Character, packet: &mut Packet) {
 
     packet.write_int(character.mesos);
     // inventory info
-    // skill info
+    write_character_skills(character, packet);
     // quest info
     // minigame info
     // ring info
@@ -54,4 +54,22 @@ fn write_character(character: Character, packet: &mut Packet) {
     // new year info
     // area info
     packet.write_short(0);
+}
+
+fn write_character_skills(character: Character, packet: &mut Packet) {
+    packet.write_byte(0);
+
+    // TODO skip "hidden" skills
+
+    packet.write_short(character.skills.len() as i16);
+
+    for skill in character.skills.iter() {
+        packet.write_int(skill.skill_id);
+        packet.write_int(skill.level);
+        packet.write_long(skill.expiration); // FIXME cosmic uses some really weird normalization here
+
+        if skill.is_fourth_job() {
+            packet.write_int(skill.mastery_level);
+        }
+    }
 }

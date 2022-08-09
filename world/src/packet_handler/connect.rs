@@ -1,5 +1,6 @@
 use crate::packets;
 use oxide_core::{
+    character::Skill,
     net::{Connection, Packet},
     state::Session,
     Character, Db, Redis, Result,
@@ -19,7 +20,7 @@ impl Connect {
     pub async fn handle(self, connection: &mut Connection, db: Db, redis: Redis) -> Result<()> {
         let session = Session::load(connection.session_id, &redis).await?;
 
-        let character: Character = sqlx::query_as(
+        let mut character: Character = sqlx::query_as(
             "SELECT * \
             FROM characters \
             WHERE account_id = $1 AND world_id = $2",
@@ -28,6 +29,20 @@ impl Connect {
         .bind(0) // FIXME pass in world id
         .fetch_one(&db)
         .await?;
+
+        // TODO these are essentially "skill entries", we need to match these up with data loaded
+        // from wz files... or do we
+        let skills: Vec<Skill> = sqlx::query_as(
+            "SELECT * \
+            FROM skills \
+            WHERE character_id = $1",
+        )
+        .bind(self.character_id)
+        .fetch_all(&db)
+        .await?;
+
+        // set character skills
+        character.skills = skills;
 
         connection
             .write_packet(packets::character_info(character))

@@ -3,6 +3,9 @@ use sqlx::FromRow;
 pub(crate) mod pet;
 pub use self::pet::Pet;
 
+pub(crate) mod skill;
+pub use self::skill::Skill;
+
 #[derive(FromRow)]
 pub struct Character {
     pub id: i32,
@@ -39,4 +42,7 @@ pub struct Character {
 
     #[sqlx(default)]
     pub pets: Vec<Pet>,
+
+    #[sqlx(default)]
+    pub skills: Vec<Skill>,
 }

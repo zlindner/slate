@@ -2,7 +2,7 @@ pub mod net;
 pub mod state;
 pub mod util;
 
-pub(crate) mod character;
+pub mod character;
 pub use self::character::Character;
 
 pub mod db;
