@@ -1,4 +1,7 @@
-use oxide_core::{net::Packet, Character};
+use oxide_core::{
+    net::{packets::write_character_stats, Packet},
+    Character,
+};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn character_info(character: Character) -> Packet {
@@ -26,7 +29,7 @@ pub fn character_info(character: Character) -> Packet {
 fn write_character(character: Character, packet: &mut Packet) {
     packet.write_long(-1);
     packet.write_byte(0);
-    // write_stats
+    write_character_stats(&character, packet);
     packet.write_byte(10); // FIXME characters buddy list capacity
 
     // TODO blessing of the fairy stuff?
