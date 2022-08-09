@@ -1,7 +1,8 @@
-use crate::{packets, Session};
+use crate::packets;
 use once_cell::sync::Lazy;
 use oxide_core::{
     net::{Connection, Packet},
+    state::Session,
     Character, Db, Redis, Result,
 };
 use std::collections::{HashMap, HashSet};

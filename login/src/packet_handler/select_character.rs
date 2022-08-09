@@ -20,6 +20,8 @@ impl SelectCharacter {
     }
 
     pub async fn handle(self, connection: &mut Connection, db: Db, redis: Redis) -> Result<()> {
+        log::debug!("character_id: {}", self.character_id);
+
         connection
             .write_packet(packets::channel_server_ip(self.character_id))
             .await?;

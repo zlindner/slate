@@ -1,8 +1,9 @@
-use crate::{packet_handler::LoginServerPacketHandler, queries, Session};
+use crate::{packet_handler::LoginServerPacketHandler, queries};
 use async_trait::async_trait;
 use deadpool_redis::redis::{cmd, RedisResult};
 use oxide_core::{
     net::{Connection, Events, Packet},
+    state::Session,
     Db, Redis,
 };
 

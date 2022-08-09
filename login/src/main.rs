@@ -9,9 +9,6 @@ mod packet_handler;
 mod packets;
 mod queries;
 
-pub mod session;
-pub use self::session::Session;
-
 #[tokio::main]
 async fn main() -> Result<()> {
     dotenv::dotenv().ok();

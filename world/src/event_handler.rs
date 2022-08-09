@@ -1,3 +1,4 @@
+use crate::packet_handler::WorldServerPacketHandler;
 use async_trait::async_trait;
 use oxide_core::{
     net::{Connection, Events, Packet},
@@ -34,6 +35,13 @@ impl Events for WorldServerEventHandler {
 
     async fn on_packet(&self, connection: &mut Connection, packet: Packet) {
         log::debug!("Received packet: {}", packet);
+
+        if let Err(e) = WorldServerPacketHandler::get(packet)
+            .handle(connection, self.db.clone(), self.redis.clone())
+            .await
+        {
+            log::error!("Handle packet error: {}", e);
+        }
     }
 
     async fn on_disconnect(&self, connection: &mut Connection) {
