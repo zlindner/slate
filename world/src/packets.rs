@@ -13,16 +13,8 @@ pub fn character_info(character: Character) -> Packet {
     packet.write_int(rand::random());
     packet.write_int(rand::random());
     packet.write_int(rand::random());
-
     write_character(character, &mut packet);
-
-    packet.write_long(
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_millis() as i64,
-    );
-
+    packet.write_long(current_time());
     packet
 }
 
@@ -72,4 +64,20 @@ fn write_character_skills(character: Character, packet: &mut Packet) {
             packet.write_int(skill.mastery_level);
         }
     }
+
+    packet.write_short(character.cooldowns.len() as i16);
+
+    for cooldown in character.cooldowns.iter() {
+        packet.write_int(cooldown.skill_id);
+
+        let remaining = cooldown.start_time + cooldown.length - current_time();
+        packet.write_short((remaining / 1000) as i16);
+    }
+}
+
+fn current_time() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as i64
 }

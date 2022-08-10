@@ -4,6 +4,7 @@ pub(crate) mod pet;
 pub use self::pet::Pet;
 
 pub(crate) mod skill;
+use self::skill::Cooldown;
 pub use self::skill::Skill;
 
 #[derive(FromRow)]
@@ -45,4 +46,7 @@ pub struct Character {
 
     #[sqlx(default)]
     pub skills: Vec<Skill>,
+
+    #[sqlx(default)]
+    pub cooldowns: Vec<Cooldown>,
 }
