@@ -1,9 +1,7 @@
+pub mod maple;
 pub mod net;
 pub mod state;
 pub mod util;
-
-pub mod character;
-pub use self::character::Character;
 
 pub mod db;
 pub use self::db::Db;

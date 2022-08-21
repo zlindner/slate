@@ -1,9 +1,9 @@
 use crate::packets;
 use oxide_core::{
-    character::Skill,
+    maple::{Character, Skill},
     net::{Connection, Packet},
     state::Session,
-    Character, Db, Redis, Result,
+    Db, Redis, Result,
 };
 
 pub struct Connect {
@@ -41,7 +41,6 @@ impl Connect {
         .fetch_all(&db)
         .await?;
 
-        // set character skills
         character.skills = skills;
 
         connection

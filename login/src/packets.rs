@@ -1,6 +1,6 @@
 use oxide_core::{
-    net::{cipher::Cipher, packets::write_character_stats, Packet},
-    Character,
+    maple::Character,
+    net::{packets::write_character_stats, Packet},
 };
 
 pub enum PinOperation {

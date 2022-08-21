@@ -1,6 +1,5 @@
-use crate::Character;
-
 use super::Packet;
+use crate::maple::Character;
 
 pub fn write_character_stats(character: &Character, packet: &mut Packet) {
     packet.write_int(character.id);

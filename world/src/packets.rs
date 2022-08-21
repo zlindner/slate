@@ -1,8 +1,8 @@
 use oxide_core::{
+    maple::Character,
     net::{packets::write_character_stats, Packet},
-    Character,
+    util::time::current_time_millis,
 };
-use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn character_info(character: Character) -> Packet {
     let mut packet = Packet::new();
@@ -14,7 +14,7 @@ pub fn character_info(character: Character) -> Packet {
     packet.write_int(rand::random());
     packet.write_int(rand::random());
     write_character(character, &mut packet);
-    packet.write_long(current_time());
+    packet.write_long(current_time_millis());
     packet
 }
 
@@ -36,19 +36,30 @@ fn write_character(character: Character, packet: &mut Packet) {
     */
 
     packet.write_int(character.mesos);
-    // inventory info
-    write_character_skills(character, packet);
-    // quest info
-    // minigame info
-    // ring info
-    // teleport info
-    // monster book info
-    // new year info
-    // area info
+    write_character_inventory(&character, packet);
+    write_character_skills(&character, packet);
+    write_character_quests(&character, packet);
+    packet.write_short(0); // TODO minigame info?
+    write_character_rings(&character, packet);
+    write_character_teleport_rock_maps(&character, packet);
+    write_character_monster_book(&character, packet);
+    packet.write_short(0); // TODO new year card info
+
+    packet.write_short(0); // TODO area info (not sure this is)
     packet.write_short(0);
 }
 
-fn write_character_skills(character: Character, packet: &mut Packet) {
+fn write_character_inventory(character: &Character, packet: &mut Packet) {
+    for _ in 0..5 {
+        // TODO get slot limit for each inventory type
+        packet.write_byte(10);
+    }
+
+    // UTC zero-timestamp
+    packet.write_long(94354848000000000);
+}
+
+fn write_character_skills(character: &Character, packet: &mut Packet) {
     packet.write_byte(0);
 
     // TODO skip "hidden" skills
@@ -70,14 +81,36 @@ fn write_character_skills(character: Character, packet: &mut Packet) {
     for cooldown in character.cooldowns.iter() {
         packet.write_int(cooldown.skill_id);
 
-        let remaining = cooldown.start_time + cooldown.length - current_time();
+        let remaining = cooldown.start_time + cooldown.length - current_time_millis();
         packet.write_short((remaining / 1000) as i16);
     }
 }
 
-fn current_time() -> i64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_millis() as i64
+fn write_character_quests(character: &Character, packet: &mut Packet) {
+    // TODO in progress quests
+    packet.write_short(0);
+    // TODO completed quests
+    packet.write_short(0);
+}
+
+fn write_character_rings(character: &Character, packet: &mut Packet) {
+    // TODO crush rings
+    packet.write_short(0);
+    // TODO friendship rings
+    packet.write_short(0);
+    // TODO marriage rings
+    packet.write_short(0);
+}
+
+fn write_character_teleport_rock_maps(character: &Character, packet: &mut Packet) {
+    // TODO teleport rock maps
+    // TODO vip teleport rock maps
+}
+
+fn write_character_monster_book(character: &Character, packet: &mut Packet) {
+    packet.write_int(character.monster_book_cover);
+    packet.write_byte(0);
+    // FIXME cards.len()
+    packet.write_short(0);
+    // TODO write each monster card
 }

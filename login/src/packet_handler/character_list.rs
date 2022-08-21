@@ -1,8 +1,9 @@
 use crate::packets;
 use oxide_core::{
+    maple::Character,
     net::{Connection, Packet},
     state::Session,
-    Character, Db, Redis, Result,
+    Db, Redis, Result,
 };
 
 pub struct CharacterList {

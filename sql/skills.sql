@@ -2,11 +2,11 @@
 
 CREATE TABLE skills (
     id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    skill_id integer NOT NULL DEFAULT 0,
-    character_id integer NOT NULL DEFAULT 0,
-    level integer NOT NULL DEFAULT 0,
-    mastery_level integer NOT NULL DEFAULT 0,
-    expiration bigint NOT NULL DEFAULT '-1'::bigint
+    skill_id integer NOT NULL,
+    character_id integer NOT NULL ,
+    level integer NOT NULL,
+    mastery_level integer NOT NULL,
+    expiration bigint NOT NULL
 );
 
 -- Indices -------------------------------------------------------

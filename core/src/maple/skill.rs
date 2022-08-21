@@ -1,9 +1,3 @@
-use sqlx::{
-    postgres::{PgHasArrayType, PgTypeInfo},
-    FromRow, Type,
-};
-
-#[derive(FromRow, Type)]
 pub struct Skill {
     pub skill_id: i32,
     pub level: i32,
@@ -23,21 +17,8 @@ impl Skill {
     }
 }
 
-impl PgHasArrayType for Skill {
-    fn array_type_info() -> sqlx::postgres::PgTypeInfo {
-        PgTypeInfo::with_name("simple")
-    }
-}
-
-#[derive(FromRow, Type)]
 pub struct Cooldown {
     pub skill_id: i32,
     pub start_time: i64,
     pub length: i64,
-}
-
-impl PgHasArrayType for Cooldown {
-    fn array_type_info() -> sqlx::postgres::PgTypeInfo {
-        PgTypeInfo::with_name("simple")
-    }
 }
