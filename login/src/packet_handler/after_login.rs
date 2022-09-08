@@ -1,9 +1,7 @@
-use crate::{
-    packets::{self, PinOperation},
-    Session,
-};
+use crate::packets::{self, PinOperation};
 use oxide_core::{
     net::{Connection, Packet},
+    state::Session,
     Redis, Result,
 };
 

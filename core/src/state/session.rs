@@ -1,5 +1,5 @@
+use crate::{Redis, Result};
 use deadpool_redis::redis::AsyncCommands;
-use oxide_core::{Redis, Result};
 use std::collections::HashMap;
 
 #[derive(Debug, Default)]

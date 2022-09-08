@@ -1,6 +1,7 @@
-use crate::{packets, queries, Session};
+use crate::{packets, queries};
 use oxide_core::{
     net::{Connection, Packet},
+    state::Session,
     Db, Redis, Result,
 };
 

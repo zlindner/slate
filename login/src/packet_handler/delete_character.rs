@@ -1,9 +1,7 @@
-use crate::{
-    packets::{self, PicOperation},
-    Session,
-};
+use crate::packets::{self, PicOperation};
 use oxide_core::{
     net::{Connection, Packet},
+    state::Session,
     Db, Redis, Result,
 };
 

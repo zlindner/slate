@@ -1,7 +1,8 @@
-use crate::{packets, queries, Session};
+use crate::{packets, queries};
 use bytes::Bytes;
 use oxide_core::{
     net::{Connection, Packet},
+    state::Session,
     Db, Redis, Result,
 };
 use pbkdf2::{

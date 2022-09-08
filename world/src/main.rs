@@ -1,4 +1,4 @@
-use event_handler::LoginServerEventHandler;
+use event_handler::WorldServerEventHandler;
 use log::LevelFilter;
 use oxide_core::{db, net::Server, redis, Result};
 use simple_logger::SimpleLogger;
@@ -7,7 +7,6 @@ use std::env;
 mod event_handler;
 mod packet_handler;
 mod packets;
-mod queries;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -24,8 +23,8 @@ async fn main() -> Result<()> {
     let redis = redis::new()?;
 
     Server::new(
-        env::var("LOGIN_SERVER_ADDR").unwrap(),
-        LoginServerEventHandler::new(db, redis),
+        env::var("WORLD_SERVER_ADDR").unwrap(),
+        WorldServerEventHandler::new(db, redis),
     )
     .start()
     .await?;

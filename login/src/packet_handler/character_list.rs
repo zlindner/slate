@@ -1,7 +1,9 @@
-use crate::{packets, Session};
+use crate::packets;
 use oxide_core::{
+    maple::Character,
     net::{Connection, Packet},
-    Character, Db, Redis, Result,
+    state::Session,
+    Db, Redis, Result,
 };
 
 pub struct CharacterList {
