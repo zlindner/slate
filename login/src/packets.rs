@@ -316,7 +316,7 @@ pub fn delete_character(character_id: i32, op: PicOperation) -> Packet {
     packet
 }
 
-pub fn channel_server_ip(character_id: i32) -> Packet {
+pub fn channel_server_ip(session_id: i32) -> Packet {
     let mut packet = Packet::new();
     packet.write_short(0x0C);
     packet.write_short(0);
@@ -324,7 +324,11 @@ pub fn channel_server_ip(character_id: i32) -> Packet {
     packet.write_bytes(&[0xC0, 0xA8, 0x0, 0x25]);
     // FIXME correct port for selected channel
     packet.write_short(10000);
-    packet.write_int(character_id);
+
+    // NOTE: this is technically supposed to be the character id, but we need
+    // some way to tell the world server the current redis session id. We can
+    // pass the session id here, and it will be picked up in the connect packet
+    packet.write_int(session_id);
     packet.write_bytes(&[0, 0, 0, 0, 0]);
     packet
 }

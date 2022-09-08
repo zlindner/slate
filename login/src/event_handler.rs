@@ -76,8 +76,8 @@ impl Events for LoginServerEventHandler {
             log::error!("Error updating login state: {}", e);
         }
 
-        if let Err(e) = Session::delete(connection.session_id, &self.redis).await {
+        /*if let Err(e) = Session::delete(connection.session_id, &self.redis).await {
             log::error!("Error deleting session {}: {}", connection.session_id, e);
-        }
+        }*/
     }
 }

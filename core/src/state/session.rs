@@ -11,6 +11,7 @@ pub struct Session {
     pub pic: Option<String>,
     pub pic_attempts: i32,
     pub login_attempts: i32,
+    pub character_id: i32,
 }
 
 impl Session {
@@ -31,8 +32,10 @@ impl Session {
     pub async fn load(id: i32, redis: &Redis) -> Result<Self> {
         let mut state = redis.get().await?;
         let key = format!("session:{}", id);
+        log::info!("{}", key);
 
         let map: HashMap<String, String> = state.hgetall(key).await?;
+        log::info!("map: {:?}", map);
         let pin = map.get("pin").unwrap();
         let pin = (!pin.is_empty()).then(|| pin.to_owned());
         let pic = map.get("pic").unwrap();
@@ -46,6 +49,7 @@ impl Session {
             pic,
             pic_attempts: map.get("pic_attempts").unwrap().parse().unwrap(),
             login_attempts: map.get("login_attempts").unwrap().parse().unwrap(),
+            character_id: map.get("character_id").unwrap().parse().unwrap(),
         };
 
         log::debug!("loaded session: {:?}", session);
@@ -68,6 +72,7 @@ impl Session {
                     ("pic", self.pic.to_owned().unwrap_or_default()),
                     ("pic_attempts", self.pic_attempts.to_string()),
                     ("login_attempts", self.login_attempts.to_string()),
+                    ("character_id", self.character_id.to_string()),
                 ],
             )
             .await?;

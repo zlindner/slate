@@ -1,6 +1,7 @@
 use crate::packets;
 use oxide_core::{
     net::{Connection, Packet},
+    state::Session,
     Db, Redis, Result,
 };
 
@@ -20,10 +21,14 @@ impl SelectCharacter {
     }
 
     pub async fn handle(self, connection: &mut Connection, db: Db, redis: Redis) -> Result<()> {
-        log::debug!("character_id: {}", self.character_id);
+        let mut session = Session::load(connection.session_id, &redis).await?;
+        log::info!("char id: {}", self.character_id);
+        session.character_id = self.character_id;
+        // TODO save mac and host addrs, validate on world server?
+        session.save(&redis).await?;
 
         connection
-            .write_packet(packets::channel_server_ip(self.character_id))
+            .write_packet(packets::channel_server_ip(connection.session_id))
             .await?;
 
         Ok(())

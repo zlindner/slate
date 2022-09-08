@@ -7,25 +7,25 @@ use oxide_core::{
 };
 
 pub struct Connect {
-    character_id: i32,
+    session_id: i32,
 }
 
 impl Connect {
     pub fn new(mut packet: Packet) -> Self {
         Self {
-            character_id: packet.read_int(),
+            session_id: packet.read_int(),
         }
     }
 
     pub async fn handle(self, connection: &mut Connection, db: Db, redis: Redis) -> Result<()> {
-        let session = Session::load(connection.session_id, &redis).await?;
+        let session = Session::load(self.session_id, &redis).await?;
 
         let mut character: Character = sqlx::query_as(
             "SELECT * \
             FROM characters \
-            WHERE id = $1, account_id = $2 AND world_id = $3",
+            WHERE id = $1 AND account_id = $2 AND world_id = $3",
         )
-        .bind(self.character_id)
+        .bind(session.character_id)
         .bind(session.account_id)
         .bind(0) // FIXME pass in world id
         .fetch_one(&db)
@@ -38,7 +38,7 @@ impl Connect {
             FROM skills \
             WHERE character_id = $1",
         )
-        .bind(self.character_id)
+        .bind(session.character_id)
         .fetch_all(&db)
         .await?;
 
