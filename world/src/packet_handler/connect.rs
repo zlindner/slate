@@ -23,8 +23,9 @@ impl Connect {
         let mut character: Character = sqlx::query_as(
             "SELECT * \
             FROM characters \
-            WHERE account_id = $1 AND world_id = $2",
+            WHERE id = $1, account_id = $2 AND world_id = $3",
         )
+        .bind(self.character_id)
         .bind(session.account_id)
         .bind(0) // FIXME pass in world id
         .fetch_one(&db)

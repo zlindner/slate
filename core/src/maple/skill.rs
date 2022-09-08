@@ -1,3 +1,6 @@
+use sqlx::FromRow;
+
+#[derive(FromRow)]
 pub struct Skill {
     pub skill_id: i32,
     pub level: i32,

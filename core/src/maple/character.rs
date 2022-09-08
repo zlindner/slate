@@ -43,6 +43,7 @@ pub struct Character {
     pub use_inventory: HashMap<i16, Item>,
     pub setup_inventory: HashMap<i16, Item>,
     pub etc_inventory: HashMap<i16, Item>,
+    pub cash_inventory: HashMap<i16, Item>,
 }
 
 impl FromRow<'_, PgRow> for Character {
@@ -87,6 +88,7 @@ impl FromRow<'_, PgRow> for Character {
             use_inventory: HashMap::new(),
             setup_inventory: HashMap::new(),
             etc_inventory: HashMap::new(),
+            cash_inventory: HashMap::new(),
         })
     }
 }
