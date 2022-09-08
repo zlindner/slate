@@ -1,3 +1,4 @@
+use chrono::{Local, Utc};
 use oxide_core::{
     maple::{Character, Item},
     net::{packets::write_character_stats, Packet},
@@ -6,6 +7,7 @@ use oxide_core::{
 
 pub fn character_info(character: Character) -> Packet {
     let mut packet = Packet::new();
+    packet.write_short(0x7D);
     packet.write_int(0); // FIXME channel
     packet.write_byte(1);
     packet.write_byte(1);
@@ -14,7 +16,12 @@ pub fn character_info(character: Character) -> Packet {
     packet.write_int(rand::random());
     packet.write_int(rand::random());
     write_character(character, &mut packet);
-    packet.write_long(current_time_ms());
+
+    let current_time = Utc::now().timestamp_millis() * 10000;
+    let offset: i64 =
+        116444736010800000 + (10000000 * i64::from(Local::now().offset().local_minus_utc()));
+
+    packet.write_long(current_time + offset);
     packet
 }
 
@@ -136,7 +143,14 @@ fn write_character_rings(character: &Character, packet: &mut Packet) {
 
 fn write_character_teleport_rock_maps(character: &Character, packet: &mut Packet) {
     // TODO teleport rock maps
+    for _ in 0..5 {
+        packet.write_int(999999999);
+    }
+
     // TODO vip teleport rock maps
+    for _ in 0..10 {
+        packet.write_int(999999999);
+    }
 }
 
 fn write_character_monster_book(character: &Character, packet: &mut Packet) {
@@ -180,5 +194,4 @@ fn write_item(item: &Item, packet: &mut Packet) {
     // TODO expiration time
 
     // TODO if item.is_pet()
-    
 }
