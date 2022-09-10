@@ -1,8 +1,8 @@
 use crate::{packets, queries};
 use bytes::Bytes;
+use deadpool_redis::redis::AsyncCommands;
 use oxide_core::{
     net::{Connection, Packet},
-    state::Session,
     Db, Redis, Result,
 };
 use pbkdf2::{
@@ -53,10 +53,12 @@ impl Login {
     }
 
     pub async fn handle(self, connection: &mut Connection, db: Db, redis: Redis) -> Result<()> {
-        let mut session = Session::load(connection.session_id, &redis).await?;
-        session.login_attempts += 1;
+        let mut redis = redis.get().await?;
+        let key = format!("login_session:{}", connection.session_id);
+        let mut login_attempts: u8 = redis.hget(&key, "login_attempts").await?;
+        login_attempts += 1;
 
-        if session.login_attempts >= 5 {
+        if login_attempts >= 5 {
             let packet = packets::login_failed(LoginError::TooManyAttempts as i32);
             connection.write_packet(packet).await?;
             connection.close().await?;
@@ -66,11 +68,11 @@ impl Login {
         let account = match get_account(&self.name, &db).await {
             Ok(account) => account,
             Err(_) => {
+                redis.hset(&key, "login_attempts", login_attempts).await?;
                 connection
                     .write_packet(packets::login_failed(LoginError::NotFound as i32))
                     .await?;
 
-                session.save(&redis).await?;
                 return Ok(());
             }
         };
@@ -97,19 +99,26 @@ impl Login {
 
         if error.is_some() {
             let packet = packets::login_failed(error.unwrap() as i32);
+            redis.hset(&key, "login_attempts", login_attempts).await?;
             connection.write_packet(packet).await?;
         } else {
-            session.account_id = account.id;
-            session.pin = Some(account.pin);
-            session.pic = Some(account.pic);
+            redis
+                .hset_multiple(
+                    key,
+                    &[
+                        ("account_id", account.id.to_string()),
+                        ("pin", account.pin),
+                        ("pic", account.pic),
+                    ],
+                )
+                .await?;
 
-            queries::update_login_state(session.account_id, 2, &db).await?;
+            queries::update_login_state(account.id, 2, &db).await?;
 
             let packet = packets::login_success(account.id, &self.name);
             connection.write_packet(packet).await?;
         }
 
-        session.save(&redis).await?;
         Ok(())
     }
 }

@@ -1,9 +1,8 @@
 use crate::{packet_handler::LoginServerPacketHandler, queries};
 use async_trait::async_trait;
-use deadpool_redis::redis::{cmd, RedisResult};
+use deadpool_redis::redis::{cmd, AsyncCommands, RedisResult};
 use oxide_core::{
     net::{Connection, Events, Packet},
-    state::Session,
     Db, Redis,
 };
 
@@ -41,10 +40,6 @@ impl Events for LoginServerEventHandler {
             "Client connected to login server (session {})",
             connection.session_id
         );
-
-        if let Err(e) = Session::create(connection.session_id, &self.redis).await {
-            log::error!("Error creating session {}: {}", connection.session_id, e);
-        }
     }
 
     async fn on_packet(&self, connection: &mut Connection, packet: Packet) {
@@ -64,20 +59,16 @@ impl Events for LoginServerEventHandler {
             connection.session_id
         );
 
-        let session = match Session::load(connection.session_id, &self.redis).await {
-            Ok(session) => session,
-            Err(e) => {
-                log::error!("Error loading session {}: {}", connection.session_id, e);
-                return;
-            }
-        };
+        // TODO error handle
+        let mut redis = self.redis.get().await.unwrap();
+        let key = format!("login_session:{}", connection.session_id);
+        let account_id: i32 = redis.hget(&key, "account_id").await.unwrap();
 
-        if let Err(e) = queries::update_login_state(session.account_id, 0, &self.db).await {
+        if let Err(e) = queries::update_login_state(account_id, 0, &self.db).await {
             log::error!("Error updating login state: {}", e);
         }
 
-        /*if let Err(e) = Session::delete(connection.session_id, &self.redis).await {
-            log::error!("Error deleting session {}: {}", connection.session_id, e);
-        }*/
+        // type is needed for some reason here? rust pls
+        let _: String = redis.del(&key).await.unwrap();
     }
 }

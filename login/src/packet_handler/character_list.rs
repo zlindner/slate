@@ -1,8 +1,8 @@
 use crate::packets;
+use deadpool_redis::redis::AsyncCommands;
 use oxide_core::{
     maple::Character,
     net::{Connection, Packet},
-    state::Session,
     Db, Redis, Result,
 };
 
@@ -55,7 +55,9 @@ impl CharacterList {
         client.world_id = Some(world.config.id);
         client.channel_id = Some(channel.id);*/
 
-        let session = Session::load(connection.session_id, &redis).await?;
+        let mut redis = redis.get().await?;
+        let key = format!("login_session:{}", connection.session_id);
+        let account_id: i32 = redis.hget(&key, "account_id").await?;
 
         // TODO pass world id in
         let characters: Vec<Character> = sqlx::query_as(
@@ -63,8 +65,8 @@ impl CharacterList {
             FROM characters \
             WHERE account_id = $1 AND world_id = $2",
         )
-        .bind(session.account_id)
-        .bind(0) // FIXME pass in world id, can we just use self.world_id here?
+        .bind(account_id)
+        .bind(self.world_id as i32)
         .fetch_all(&db)
         .await?;
 

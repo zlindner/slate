@@ -1,7 +1,7 @@
 use crate::packets::{self, PicOperation};
+use deadpool_redis::redis::AsyncCommands;
 use oxide_core::{
     net::{Connection, Packet},
-    state::Session,
     Db, Redis, Result,
 };
 
@@ -26,16 +26,20 @@ impl DeleteCharacter {
             return Ok(());
         }
 
-        let mut session = Session::load(connection.session_id, &redis).await?;
+        let mut redis = redis.get().await?;
+        let key = format!("login_session:{}", connection.session_id);
+        let pic_attempts: u8 = redis.hget(&key, "pic_attempts").await?;
 
-        if session.pic_attempts >= 6 {
+        if pic_attempts >= 6 {
             connection.close().await?;
             return Ok(());
         }
 
-        session.pic_attempts += 1;
+        let pic: String = redis.hget(&key, "pic").await?;
 
-        if session.pic.is_none() || session.pic.as_ref().unwrap() != &self.pic {
+        if self.pic != pic {
+            redis.hset(&key, "pic_attempts", pic_attempts + 1).await?;
+
             connection
                 .write_packet(packets::delete_character(
                     self.character_id,
@@ -45,7 +49,7 @@ impl DeleteCharacter {
             return Ok(());
         }
 
-        session.pic_attempts = 0;
+        redis.hset(&key, "pic_attempts", 0).await?;
 
         // TODO check if character is a guild leader
         // TODO check if character has a pending world transfer

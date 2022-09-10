@@ -1,9 +1,9 @@
 use crate::packets;
+use deadpool_redis::redis::AsyncCommands;
 use once_cell::sync::Lazy;
 use oxide_core::{
     maple::Character,
     net::{Connection, Packet},
-    state::Session,
     Db, Redis, Result,
 };
 use std::collections::{HashMap, HashSet};
@@ -144,14 +144,16 @@ impl CreateCharacter {
         // TODO check to make sure client has available character slots
         // TODO check if character name is valid
 
-        let session = Session::load(connection.session_id, &redis).await?;
+        let mut redis = redis.get().await?;
+        let key = format!("login_session:{}", connection.session_id);
+        let account_id: i32 = redis.hget(&key, "account_id").await?;
 
         let character: Character = sqlx::query_as(
             "INSERT INTO characters \
             (account_id, world_id, name, level, str, dex, luk, int, hp, mp, max_hp, max_mp, mesos, job, skin_colour, gender, hair, face, ap, sp, map, spawn_point, gm) \
             VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)",
         )
-        .bind(session.account_id)
+        .bind(account_id)
         .bind(0) // world_id
         .bind(&self.name)
         .bind(1) // level

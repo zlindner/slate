@@ -1,21 +1,21 @@
 use crate::{packets, queries};
+use deadpool_redis::redis::AsyncCommands;
 use oxide_core::{
     net::{Connection, Packet},
-    state::Session,
     Db, Redis, Result,
 };
 
 pub struct RegisterPin {
     flag: u8,
-    pin: Option<String>,
+    pin: String,
 }
 
 impl RegisterPin {
     pub fn new(mut packet: Packet) -> Self {
         let flag = packet.read_byte();
         let pin = match flag {
-            0 => None,
-            _ => Some(packet.read_string()),
+            0 => "".to_string(),
+            _ => packet.read_string(),
         };
 
         Self { flag, pin }
@@ -27,14 +27,15 @@ impl RegisterPin {
             return Ok(());
         }
 
-        let mut session = Session::load(connection.session_id, &redis).await?;
-        session.pin = self.pin.clone();
-        session.save(&redis).await?;
+        let mut redis = redis.get().await?;
+        let key = format!("login_session:{}", connection.session_id);
+        let account_id: i32 = redis.hget(&key, "account_id").await?;
+        redis.hset(&key, "pin", &self.pin).await?;
 
-        queries::update_pin(session.account_id, &self.pin.unwrap(), &db).await?;
-
+        queries::update_pin(account_id, &self.pin, &db).await?;
+        queries::update_login_state(account_id, 0, &db).await?;
         connection.write_packet(packets::pin_registered()).await?;
-        queries::update_login_state(session.account_id, 0, &db).await?;
+
         Ok(())
     }
 }

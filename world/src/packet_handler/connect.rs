@@ -1,8 +1,8 @@
 use crate::packets;
+use deadpool_redis::redis::AsyncCommands;
 use oxide_core::{
     maple::{Character, Skill},
     net::{Connection, Packet},
-    state::Session,
     Db, Redis, Result,
 };
 
@@ -18,15 +18,18 @@ impl Connect {
     }
 
     pub async fn handle(self, connection: &mut Connection, db: Db, redis: Redis) -> Result<()> {
-        let session = Session::load(self.session_id, &redis).await?;
+        let mut redis = redis.get().await?;
+        let key = format!("login_session:{}", self.session_id);
+        let character_id: i32 = redis.hget(&key, "character_id").await?;
+        let account_id: i32 = redis.hget(&key, "account_id").await?;
 
         let mut character: Character = sqlx::query_as(
             "SELECT * \
             FROM characters \
             WHERE id = $1 AND account_id = $2 AND world_id = $3",
         )
-        .bind(session.character_id)
-        .bind(session.account_id)
+        .bind(character_id)
+        .bind(account_id)
         .bind(0) // FIXME pass in world id
         .fetch_one(&db)
         .await?;
@@ -38,7 +41,7 @@ impl Connect {
             FROM skills \
             WHERE character_id = $1",
         )
-        .bind(session.character_id)
+        .bind(character_id)
         .fetch_all(&db)
         .await?;
 

@@ -1,7 +1,7 @@
 use crate::packets::{self, PinOperation};
+use deadpool_redis::redis::AsyncCommands;
 use oxide_core::{
     net::{Connection, Packet},
-    state::Session,
     Redis, Result,
 };
 
@@ -29,23 +29,25 @@ impl AfterLogin {
     }
 
     pub async fn handle(self, connection: &mut Connection, redis: Redis) -> Result<()> {
-        let mut session = Session::load(connection.session_id, &redis).await?;
+        let mut redis = redis.get().await?;
+        let key = format!("login_session:{}", connection.session_id);
+        let pin: String = redis.hget(&key, "pin").await?;
 
         let op = match (self.a, self.b) {
-            (1, 1) => match session.pin {
-                None => PinOperation::Register,
-                Some(_) => PinOperation::Request,
+            (1, 1) => match pin.is_empty() {
+                true => PinOperation::Register,
+                false => PinOperation::Request,
             },
             (1, 0) | (2, 0) => {
-                if session.pin_attempts >= 6 {
+                let pin_attempts: u8 = redis.hget(&key, "pin_attempts").await?;
+
+                if pin_attempts >= 6 {
                     connection.close().await?;
                     return Ok(());
                 }
 
-                session.pin_attempts += 1;
-
-                if session.pin.is_some() && &self.pin.unwrap() == session.pin.as_ref().unwrap() {
-                    session.pin_attempts = 0;
+                if !pin.is_empty() && self.pin.unwrap() == pin {
+                    redis.hset(&key, "pin_attempts", 0).await?;
 
                     if self.a == 1 {
                         PinOperation::Accepted
@@ -53,6 +55,7 @@ impl AfterLogin {
                         PinOperation::Register
                     }
                 } else {
+                    redis.hset(&key, "pin_attempts", pin_attempts + 1).await?;
                     PinOperation::RequestAfterFailure
                 }
             }
@@ -62,7 +65,6 @@ impl AfterLogin {
             }
         };
 
-        session.save(&redis).await?;
         connection.write_packet(packets::pin_operation(op)).await?;
         Ok(())
     }
