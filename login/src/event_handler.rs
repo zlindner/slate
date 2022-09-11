@@ -2,7 +2,7 @@ use crate::{packet_handler::LoginServerPacketHandler, queries};
 use async_trait::async_trait;
 use deadpool_redis::redis::{cmd, AsyncCommands, RedisResult};
 use oxide_core::{
-    net::{Connection, Events, Packet},
+    net::{Connection, Packet},
     Db, Redis,
 };
 
@@ -40,6 +40,21 @@ impl Events for LoginServerEventHandler {
             "Client connected to login server (session {})",
             connection.session_id
         );
+
+        let mut redis = self.redis.get().await.unwrap();
+        let key = format!("login_session:{}", connection.session_id);
+
+        let _: () = redis
+            .hset_multiple(
+                key,
+                &[
+                    ("login_attempts", "0"),
+                    ("pin_attempts", "0"),
+                    ("pic_attempts", "0"),
+                ],
+            )
+            .await
+            .unwrap();
     }
 
     async fn on_packet(&self, connection: &mut Connection, packet: Packet) {
@@ -62,13 +77,17 @@ impl Events for LoginServerEventHandler {
         // TODO error handle
         let mut redis = self.redis.get().await.unwrap();
         let key = format!("login_session:{}", connection.session_id);
+
+        if !redis.exists::<_, bool>(&key).await.unwrap() {
+            return;
+        }
+
         let account_id: i32 = redis.hget(&key, "account_id").await.unwrap();
 
         if let Err(e) = queries::update_login_state(account_id, 0, &self.db).await {
             log::error!("Error updating login state: {}", e);
         }
 
-        // type is needed for some reason here? rust pls
-        let _: String = redis.del(&key).await.unwrap();
+        let _: () = redis.del(&key).await.unwrap();
     }
 }

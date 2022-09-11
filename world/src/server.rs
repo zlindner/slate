@@ -1,30 +1,34 @@
-use super::{Connection, Events};
-use crate::{util::Shutdown, Error, Result};
+use crate::{client::Client, event_handler::EventHandler, Result};
+use oxide_core::{net::codec::MapleCodec, util::Shutdown, Db, Error};
 use std::sync::{
     atomic::{AtomicI32, Ordering},
     Arc,
 };
 use tokio::{
+    io::AsyncWriteExt,
     net::TcpListener,
     signal,
     sync::{broadcast, mpsc},
 };
+use tokio_util::codec::Decoder;
 
-pub struct Server {
-    addr: String,
-    events: Arc<Box<dyn Events>>,
+pub struct ServerConfig {
+    pub addr: String,
 }
 
-impl Server {
-    pub fn new<E: Events + 'static>(addr: String, events: E) -> Self {
-        Self {
-            addr,
-            events: Arc::new(Box::new(events)),
-        }
-    }
+pub struct WorldServer {
+    config: ServerConfig,
+    events: Arc<EventHandler>,
+}
 
-    pub async fn start(&self) -> Result<()> {
-        self.events.on_start(&self.addr).await;
+impl WorldServer {
+    pub async fn start(config: ServerConfig, db: Db) -> Result<()> {
+        let server = WorldServer {
+            config,
+            events: Arc::new(EventHandler::new(db)),
+        };
+
+        server.events.on_start(&server.config.addr).await;
 
         let notify_shutdown: broadcast::Sender<()> = broadcast::channel(1).0;
         let (shutdown_complete_tx, mut shutdown_complete_rx): (
@@ -33,9 +37,9 @@ impl Server {
         ) = mpsc::channel(1);
 
         tokio::select! {
-            res = self.listen(&notify_shutdown) => {
+            res = server.listen(&notify_shutdown) => {
                 if let Err(e) = res {
-                    log::error!("Server listen error: {}", e);
+                    log::error!("World server listen error: {}", e);
                 }
             }
             _ = signal::ctrl_c() => {}
@@ -50,29 +54,35 @@ impl Server {
         // wait for all active connections to finish processing
         let _ = shutdown_complete_rx.recv().await;
 
-        self.events.on_shutdown().await;
+        server.events.on_shutdown().await;
         Ok(())
     }
 
     async fn listen(&self, notify_shutdown: &broadcast::Sender<()>) -> Result<()> {
-        let listener = TcpListener::bind(&self.addr).await?;
+        let listener = TcpListener::bind(&self.config.addr).await?;
         let session_id = AtomicI32::new(0);
 
         loop {
-            let (stream, _) = listener.accept().await?;
+            let (mut stream, _) = listener.accept().await?;
             let mut shutdown = Shutdown::new(notify_shutdown.subscribe());
             let events = self.events.clone();
             let session_id = session_id.fetch_add(1, Ordering::SeqCst);
 
             tokio::spawn(async move {
-                let mut connection = Connection::new(stream, session_id);
-                connection.handshake().await?;
+                let codec = MapleCodec::new();
+                stream.write_all(&codec.handshake().bytes).await?;
 
-                events.on_connect(&mut connection).await;
+                let mut client = Client {
+                    session_id,
+                    stream: codec.framed(stream),
+                    character: None,
+                };
+
+                events.on_connect(&mut client).await;
 
                 while !shutdown.is_shutdown() {
                     let maybe_packet = tokio::select! {
-                        res = connection.read_packet() => res?,
+                        res = client.read() => res?,
                         _ = shutdown.recv() => {
                             break;
                         }
@@ -84,10 +94,10 @@ impl Server {
                         None => break,
                     };
 
-                    events.on_packet(&mut connection, packet).await;
+                    events.on_packet(&mut client, packet).await;
                 }
 
-                events.on_disconnect(&mut connection).await;
+                events.on_disconnect(&mut client).await;
                 return Ok::<(), Error>(());
             });
         }

@@ -5,7 +5,7 @@ use oxide_core::{
     util::time::current_time_ms,
 };
 
-pub fn character_info(character: Character) -> Packet {
+pub fn character_info(character: &Character) -> Packet {
     let mut packet = Packet::new();
     packet.write_short(0x7D);
     packet.write_int(0); // FIXME channel
@@ -25,7 +25,7 @@ pub fn character_info(character: Character) -> Packet {
     packet
 }
 
-fn write_character(character: Character, packet: &mut Packet) {
+fn write_character(character: &Character, packet: &mut Packet) {
     packet.write_long(-1);
     packet.write_byte(0);
     write_character_stats(&character, packet);

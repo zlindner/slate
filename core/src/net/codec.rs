@@ -36,6 +36,22 @@ impl MapleCodec {
         ((header[0] ^ self.recv.iv[2]) & 0xff) == ((self.recv.version >> 8) as u8 & 0xff)
             && (((header[1] ^ self.recv.iv[3]) & 0xff) == (self.recv.version & 0xff) as u8)
     }
+
+    pub fn handshake(&self) -> Packet {
+        let mut handshake = Packet::new();
+        handshake.write_short(0x0E);
+        // maple version
+        handshake.write_short(83);
+        // maple patch version
+        handshake.write_string("1");
+        // initialization vector for receive cipher
+        handshake.write_bytes(&self.recv.iv);
+        // initialization vector for send cipher
+        handshake.write_bytes(&self.send.iv);
+        // locale
+        handshake.write_byte(8);
+        handshake
+    }
 }
 
 impl Encoder<Packet> for MapleCodec {

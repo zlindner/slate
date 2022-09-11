@@ -1,12 +1,14 @@
-use event_handler::WorldServerEventHandler;
 use log::LevelFilter;
-use oxide_core::{db, net::Server, redis, Result};
+use oxide_core::{db, redis, Result};
+use server::{ServerConfig, WorldServer};
 use simple_logger::SimpleLogger;
 use std::env;
 
+mod client;
 mod event_handler;
 mod packet_handler;
 mod packets;
+mod server;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -22,12 +24,11 @@ async fn main() -> Result<()> {
     let db = db::new(10).await?;
     let redis = redis::new()?;
 
-    Server::new(
-        env::var("WORLD_SERVER_ADDR").unwrap(),
-        WorldServerEventHandler::new(db, redis),
-    )
-    .start()
-    .await?;
+    let server_config = ServerConfig {
+        addr: env::var("WORLD_SERVER_ADDR").unwrap(),
+    };
+
+    WorldServer::start(server_config, db).await?;
 
     Ok(())
 }

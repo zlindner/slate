@@ -70,6 +70,13 @@ impl CharacterList {
         .fetch_all(&db)
         .await?;
 
+        redis
+            .hset_multiple(
+                key,
+                &[("world_id", self.world_id), ("channel_id", self.channel_id)],
+            )
+            .await?;
+
         connection
             .write_packet(packets::character_list(&characters))
             .await?;

@@ -4,21 +4,13 @@ use bytes::BufMut;
 use futures::SinkExt;
 use tokio::net::TcpStream;
 use tokio_stream::StreamExt;
-use tokio_util::codec::{Decoder, Framed};
+use tokio_util::codec::Framed;
 
 pub struct Connection {
-    stream: Framed<TcpStream, MapleCodec>,
-    pub session_id: i32,
+    pub stream: Framed<TcpStream, MapleCodec>,
 }
 
 impl Connection {
-    pub fn new(stream: TcpStream, session_id: i32) -> Self {
-        Self {
-            stream: MapleCodec::new().framed(stream),
-            session_id,
-        }
-    }
-
     /// handshake packet sent immediately after a client establishes a connection with the server
     /// sets up client <-> server encryption via the passed initialization vectors and maple version
     pub async fn handshake(&mut self) -> Result<()> {
