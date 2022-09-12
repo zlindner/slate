@@ -1,8 +1,5 @@
-use crate::packets;
-use oxide_core::{
-    net::{Connection, Packet},
-    Result,
-};
+use crate::{client::Client, packets};
+use oxide_core::{net::Packet, Result};
 
 pub struct WorldStatus {
     world_id: i16,
@@ -15,7 +12,7 @@ impl WorldStatus {
         Self { world_id }
     }
 
-    pub async fn handle(self, connection: &mut Connection) -> Result<()> {
+    pub async fn handle(self, client: &mut Client) -> Result<()> {
         /*let world = shared.worlds.get(self.world_id as usize);
 
         let capacity_status = match world {
@@ -23,10 +20,8 @@ impl WorldStatus {
             None => CapacityStatus::Full,
         };*/
 
-        connection
-            .write_packet(packets::world_status_temp())
-            .await?;
-
+        let packet = packets::world_status_temp();
+        client.send(packet).await?;
         Ok(())
     }
 }

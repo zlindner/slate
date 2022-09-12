@@ -1,9 +1,8 @@
-use crate::packets::{self, PicOperation};
-use deadpool_redis::redis::AsyncCommands;
-use oxide_core::{
-    net::{Connection, Packet},
-    Db, Redis, Result,
+use crate::{
+    client::Client,
+    packets::{self, PicOperation},
 };
+use oxide_core::{net::Packet, Db, Result};
 
 pub struct DeleteCharacter {
     pic: String,
@@ -18,38 +17,23 @@ impl DeleteCharacter {
         }
     }
 
-    pub async fn handle(self, connection: &mut Connection, db: Db, redis: Redis) -> Result<()> {
-        let bypass_pic = false;
+    pub async fn handle(self, client: &mut Client, db: Db) -> Result<()> {
+        let bypass_pic = false; // TODO config option
 
-        if bypass_pic {
-            connection.close().await?;
+        if bypass_pic || client.session.pic_attempts >= 6 {
+            client.disconnect().await?;
             return Ok(());
         }
 
-        let mut redis = redis.get().await?;
-        let key = format!("login_session:{}", connection.session_id);
-        let pic_attempts: u8 = redis.hget(&key, "pic_attempts").await?;
+        client.session.pic_attempts += 1;
 
-        if pic_attempts >= 6 {
-            connection.close().await?;
+        if self.pic != client.session.pic {
+            let packet = packets::delete_character(self.character_id, PicOperation::InvalidPic);
+            client.send(packet).await?;
             return Ok(());
         }
 
-        let pic: String = redis.hget(&key, "pic").await?;
-
-        if self.pic != pic {
-            redis.hset(&key, "pic_attempts", pic_attempts + 1).await?;
-
-            connection
-                .write_packet(packets::delete_character(
-                    self.character_id,
-                    PicOperation::InvalidPic,
-                ))
-                .await?;
-            return Ok(());
-        }
-
-        redis.hset(&key, "pic_attempts", 0).await?;
+        client.session.pic_attempts = 0;
 
         // TODO check if character is a guild leader
         // TODO check if character has a pending world transfer
@@ -71,13 +55,8 @@ impl DeleteCharacter {
 
         // TODO need to delete reference to this character in like 10 other tables (buddies, bbs_threads, bbs_replies, wishlists, etc.)
 
-        connection
-            .write_packet(packets::delete_character(
-                self.character_id,
-                PicOperation::Success,
-            ))
-            .await?;
-
+        let packet = packets::delete_character(self.character_id, PicOperation::Success);
+        client.send(packet).await?;
         Ok(())
     }
 }

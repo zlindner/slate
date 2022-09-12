@@ -1,9 +1,8 @@
-use crate::packets::{self, PinOperation};
-use deadpool_redis::redis::AsyncCommands;
-use oxide_core::{
-    net::{Connection, Packet},
-    Redis, Result,
+use crate::{
+    client::Client,
+    packets::{self, PinOperation},
 };
+use oxide_core::{net::Packet, Result};
 
 pub struct AfterLogin {
     a: u8,
@@ -28,26 +27,22 @@ impl AfterLogin {
         Self { a, b, pin }
     }
 
-    pub async fn handle(self, connection: &mut Connection, redis: Redis) -> Result<()> {
-        let mut redis = redis.get().await?;
-        let key = format!("login_session:{}", connection.session_id);
-        let pin: String = redis.hget(&key, "pin").await?;
-
+    pub async fn handle(self, client: &mut Client) -> Result<()> {
         let op = match (self.a, self.b) {
-            (1, 1) => match pin.is_empty() {
+            (1, 1) => match client.session.pin.is_empty() {
                 true => PinOperation::Register,
                 false => PinOperation::Request,
             },
             (1, 0) | (2, 0) => {
-                let pin_attempts: u8 = redis.hget(&key, "pin_attempts").await?;
-
-                if pin_attempts >= 6 {
-                    connection.close().await?;
+                if client.session.pin_attempts >= 6 {
+                    client.disconnect().await?;
                     return Ok(());
                 }
 
-                if !pin.is_empty() && self.pin.unwrap() == pin {
-                    redis.hset(&key, "pin_attempts", 0).await?;
+                client.session.pin_attempts += 1;
+
+                if !client.session.pin.is_empty() && self.pin.unwrap() == client.session.pin {
+                    client.session.pin_attempts = 0;
 
                     if self.a == 1 {
                         PinOperation::Accepted
@@ -55,17 +50,17 @@ impl AfterLogin {
                         PinOperation::Register
                     }
                 } else {
-                    redis.hset(&key, "pin_attempts", pin_attempts + 1).await?;
                     PinOperation::RequestAfterFailure
                 }
             }
             _ => {
-                connection.close().await?;
+                client.disconnect().await?;
                 return Ok(());
             }
         };
 
-        connection.write_packet(packets::pin_operation(op)).await?;
+        let packet = packets::pin_operation(op);
+        client.send(packet).await?;
         Ok(())
     }
 }

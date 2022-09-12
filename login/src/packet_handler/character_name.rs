@@ -1,9 +1,6 @@
-use crate::packets;
+use crate::{client::Client, packets};
 use once_cell::sync::Lazy;
-use oxide_core::{
-    net::{Connection, Packet},
-    Db, Result,
-};
+use oxide_core::{net::Packet, Db, Result};
 use regex::Regex;
 
 static VALID_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"[a-zA-Z0-9]{3,12}").unwrap());
@@ -19,13 +16,10 @@ impl CharacterName {
         }
     }
 
-    pub async fn handle(self, connection: &mut Connection, db: Db) -> Result<()> {
+    pub async fn handle(self, client: &mut Client, db: Db) -> Result<()> {
         let is_valid = Self::is_valid_name(&self.name, &db).await?;
-
-        connection
-            .write_packet(packets::character_name(&self.name, is_valid))
-            .await?;
-
+        let packet = packets::character_name(&self.name, is_valid);
+        client.send(packet).await?;
         Ok(())
     }
 

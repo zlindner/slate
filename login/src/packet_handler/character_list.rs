@@ -1,10 +1,5 @@
-use crate::packets;
-use deadpool_redis::redis::AsyncCommands;
-use oxide_core::{
-    maple::Character,
-    net::{Connection, Packet},
-    Db, Redis, Result,
-};
+use crate::{client::Client, packets};
+use oxide_core::{maple::Character, net::Packet, Db, Result};
 
 pub struct CharacterList {
     world_id: u8,
@@ -24,7 +19,7 @@ impl CharacterList {
         }
     }
 
-    pub async fn handle(self, connection: &mut Connection, db: Db, redis: Redis) -> Result<()> {
+    pub async fn handle(self, client: &mut Client, db: Db) -> Result<()> {
         /*let world = match shared.worlds.get(self.world_id as usize) {
             Some(world) => world,
             None => {
@@ -55,32 +50,22 @@ impl CharacterList {
         client.world_id = Some(world.config.id);
         client.channel_id = Some(channel.id);*/
 
-        let mut redis = redis.get().await?;
-        let key = format!("login_session:{}", connection.session_id);
-        let account_id: i32 = redis.hget(&key, "account_id").await?;
-
         // TODO pass world id in
         let characters: Vec<Character> = sqlx::query_as(
             "SELECT * \
             FROM characters \
             WHERE account_id = $1 AND world_id = $2",
         )
-        .bind(account_id)
+        .bind(client.session.account_id)
         .bind(self.world_id as i32)
         .fetch_all(&db)
         .await?;
 
-        redis
-            .hset_multiple(
-                key,
-                &[("world_id", self.world_id), ("channel_id", self.channel_id)],
-            )
-            .await?;
+        client.session.world_id = self.world_id as i16;
+        client.session.channel_id = self.channel_id as i16;
 
-        connection
-            .write_packet(packets::character_list(&characters))
-            .await?;
-
+        let packet = packets::character_list(&characters);
+        client.send(packet).await?;
         Ok(())
     }
 }

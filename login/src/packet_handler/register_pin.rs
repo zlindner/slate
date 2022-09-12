@@ -1,9 +1,5 @@
-use crate::{packets, queries};
-use deadpool_redis::redis::AsyncCommands;
-use oxide_core::{
-    net::{Connection, Packet},
-    Db, Redis, Result,
-};
+use crate::{client::Client, packets, queries};
+use oxide_core::{net::Packet, Db, Result};
 
 pub struct RegisterPin {
     flag: u8,
@@ -21,21 +17,18 @@ impl RegisterPin {
         Self { flag, pin }
     }
 
-    pub async fn handle(self, connection: &mut Connection, db: Db, redis: Redis) -> Result<()> {
+    pub async fn handle(self, client: &mut Client, db: Db) -> Result<()> {
         if self.flag == 0 {
-            connection.close().await?;
+            client.disconnect().await?;
             return Ok(());
         }
 
-        let mut redis = redis.get().await?;
-        let key = format!("login_session:{}", connection.session_id);
-        let account_id: i32 = redis.hget(&key, "account_id").await?;
-        redis.hset(&key, "pin", &self.pin).await?;
+        client.session.pin = self.pin.clone();
 
-        queries::update_pin(account_id, &self.pin, &db).await?;
-        queries::update_login_state(account_id, 0, &db).await?;
-        connection.write_packet(packets::pin_registered()).await?;
-
+        queries::update_pin(client.session.account_id, &self.pin, &db).await?;
+        queries::update_login_state(client.session.account_id, 0, &db).await?;
+        let packet = packets::pin_registered();
+        client.send(packet).await?;
         Ok(())
     }
 }

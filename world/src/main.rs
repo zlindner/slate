@@ -1,5 +1,5 @@
 use log::LevelFilter;
-use oxide_core::{db, redis, Result};
+use oxide_core::{db, Result};
 use server::{ServerConfig, WorldServer};
 use simple_logger::SimpleLogger;
 use std::env;
@@ -22,7 +22,6 @@ async fn main() -> Result<()> {
         .unwrap();
 
     let db = db::new(10).await?;
-    let redis = redis::new()?;
 
     let server_config = ServerConfig {
         addr: env::var("WORLD_SERVER_ADDR").unwrap(),

@@ -1,12 +1,15 @@
 use log::LevelFilter;
-use oxide_core::{db, redis, Result};
+use oxide_core::{db, Result};
+use server::{LoginServer, ServerConfig};
 use simple_logger::SimpleLogger;
 use std::env;
 
-//mod event_handler;
-//mod packet_handler;
+mod client;
+mod event_handler;
+mod packet_handler;
 mod packets;
 mod queries;
+mod server;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -20,14 +23,12 @@ async fn main() -> Result<()> {
         .unwrap();
 
     let db = db::new(10).await?;
-    let redis = redis::new()?;
 
-    /*Server::new(
-        env::var("LOGIN_SERVER_ADDR").unwrap(),
-        LoginServerEventHandler::new(db, redis),
-    )
-    .start()
-    .await?;*/
+    let server_config = ServerConfig {
+        addr: env::var("LOGIN_SERVER_ADDR").unwrap(),
+    };
+
+    LoginServer::start(server_config, db).await?;
 
     Ok(())
 }

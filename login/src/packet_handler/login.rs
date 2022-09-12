@@ -1,10 +1,6 @@
-use crate::{packets, queries};
+use crate::{client::Client, packets, queries};
 use bytes::Bytes;
-use deadpool_redis::redis::AsyncCommands;
-use oxide_core::{
-    net::{Connection, Packet},
-    Db, Redis, Result,
-};
+use oxide_core::{net::Packet, Db, Result};
 use pbkdf2::{
     password_hash::{PasswordHash, PasswordVerifier},
     Pbkdf2,
@@ -52,27 +48,21 @@ impl Login {
         }
     }
 
-    pub async fn handle(self, connection: &mut Connection, db: Db, redis: Redis) -> Result<()> {
-        let mut redis = redis.get().await?;
-        let key = format!("login_session:{}", connection.session_id);
-        let mut login_attempts: u8 = redis.hget(&key, "login_attempts").await?;
-        login_attempts += 1;
-
-        if login_attempts >= 5 {
+    pub async fn handle(self, client: &mut Client, db: Db) -> Result<()> {
+        if client.session.login_attempts >= 5 {
             let packet = packets::login_failed(LoginError::TooManyAttempts as i32);
-            connection.write_packet(packet).await?;
-            connection.close().await?;
+            client.send(packet).await?;
+            client.disconnect().await?;
             return Ok(());
         }
+
+        client.session.login_attempts += 1;
 
         let account = match get_account(&self.name, &db).await {
             Ok(account) => account,
             Err(_) => {
-                redis.hset(&key, "login_attempts", login_attempts).await?;
-                connection
-                    .write_packet(packets::login_failed(LoginError::NotFound as i32))
-                    .await?;
-
+                let packet = packets::login_failed(LoginError::NotFound as i32);
+                client.send(packet).await?;
                 return Ok(());
             }
         };
@@ -99,24 +89,16 @@ impl Login {
 
         if error.is_some() {
             let packet = packets::login_failed(error.unwrap() as i32);
-            redis.hset(&key, "login_attempts", login_attempts).await?;
-            connection.write_packet(packet).await?;
+            client.send(packet).await?;
         } else {
-            redis
-                .hset_multiple(
-                    key,
-                    &[
-                        ("account_id", account.id.to_string()),
-                        ("pin", account.pin),
-                        ("pic", account.pic),
-                    ],
-                )
-                .await?;
+            client.session.account_id = account.id;
+            client.session.pin = account.pin;
+            client.session.pic = account.pic;
 
             queries::update_login_state(account.id, 2, &db).await?;
 
             let packet = packets::login_success(account.id, &self.name);
-            connection.write_packet(packet).await?;
+            client.send(packet).await?;
         }
 
         Ok(())
