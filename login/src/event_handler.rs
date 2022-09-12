@@ -21,7 +21,9 @@ impl EventHandler {
             log::error!("Error executing logout_all: {}", e);
         }
 
-        // TODO delete all sessions
+        if let Err(e) = queries::clear_sessions(&self.db).await {
+            log::error!("Error executing clear_sessions: {}", e);
+        }
     }
 
     pub async fn on_connect(&self, client: &mut Client) {
