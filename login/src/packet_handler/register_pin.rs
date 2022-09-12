@@ -1,40 +1,34 @@
-use crate::{packets, queries};
-use oxide_core::{
-    net::{Connection, Packet},
-    state::Session,
-    Db, Redis, Result,
-};
+use crate::{client::Client, packets, queries};
+use oxide_core::{net::Packet, Db, Result};
 
 pub struct RegisterPin {
     flag: u8,
-    pin: Option<String>,
+    pin: String,
 }
 
 impl RegisterPin {
     pub fn new(mut packet: Packet) -> Self {
         let flag = packet.read_byte();
         let pin = match flag {
-            0 => None,
-            _ => Some(packet.read_string()),
+            0 => "".to_string(),
+            _ => packet.read_string(),
         };
 
         Self { flag, pin }
     }
 
-    pub async fn handle(self, connection: &mut Connection, db: Db, redis: Redis) -> Result<()> {
+    pub async fn handle(self, client: &mut Client, db: Db) -> Result<()> {
         if self.flag == 0 {
-            connection.close().await?;
+            client.disconnect().await?;
             return Ok(());
         }
 
-        let mut session = Session::load(connection.session_id, &redis).await?;
-        session.pin = self.pin.clone();
-        session.save(&redis).await?;
+        client.session.pin = self.pin.clone();
 
-        queries::update_pin(session.account_id, &self.pin.unwrap(), &db).await?;
-
-        connection.write_packet(packets::pin_registered()).await?;
-        queries::update_login_state(session.account_id, 0, &db).await?;
+        queries::update_pin(client.session.account_id, &self.pin, &db).await?;
+        queries::update_login_state(client.session.account_id, 0, &db).await?;
+        let packet = packets::pin_registered();
+        client.send(packet).await?;
         Ok(())
     }
 }

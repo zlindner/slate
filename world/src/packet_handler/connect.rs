@@ -1,9 +1,9 @@
-use crate::packets;
+use crate::{client::Client, packets};
 use oxide_core::{
     maple::{Character, Skill},
-    net::{Connection, Packet},
-    state::Session,
-    Db, Redis, Result,
+    net::Packet,
+    pg::Session,
+    Db, Result,
 };
 
 pub struct Connect {
@@ -17,35 +17,33 @@ impl Connect {
         }
     }
 
-    pub async fn handle(self, connection: &mut Connection, db: Db, redis: Redis) -> Result<()> {
-        let session = Session::load(self.session_id, &redis).await?;
+    pub async fn handle(self, client: &mut Client, db: Db) -> Result<()> {
+        let session: Session = sqlx::query_as("SELECT * FROM sessions WHERE id = $1")
+            .bind(self.session_id)
+            .fetch_one(&db)
+            .await?;
 
         let mut character: Character = sqlx::query_as(
-            "SELECT * \
-            FROM characters \
-            WHERE id = $1 AND account_id = $2 AND world_id = $3",
+            "SELECT * FROM characters WHERE id = $1 AND account_id = $2 AND world_id = $3",
         )
         .bind(session.character_id)
         .bind(session.account_id)
-        .bind(0) // FIXME pass in world id
+        .bind(session.world_id)
         .fetch_one(&db)
         .await?;
 
         // TODO these are essentially "skill entries", we need to match these up with data loaded
         // from wz files... or do we
-        let skills: Vec<Skill> = sqlx::query_as(
-            "SELECT * \
-            FROM skills \
-            WHERE character_id = $1",
-        )
-        .bind(session.character_id)
-        .fetch_all(&db)
-        .await?;
+        let skills: Vec<Skill> = sqlx::query_as("SELECT * FROM skills WHERE character_id = $1")
+            .bind(session.character_id)
+            .fetch_all(&db)
+            .await?;
 
         character.skills = skills;
+        client.character = Some(character);
 
-        connection
-            .write_packet(packets::character_info(character))
+        client
+            .send(packets::character_info(&client.character.as_ref().unwrap()))
             .await?;
 
         Ok(())

@@ -1,5 +1,5 @@
-use oxide_core::net::{Connection, Packet};
-use oxide_core::{Db, Redis, Result};
+use crate::client::Client;
+use oxide_core::{net::Packet, Db, Result};
 
 mod login;
 use self::login::Login;
@@ -68,20 +68,20 @@ impl LoginServerPacketHandler {
         }
     }
 
-    pub async fn handle(self, connection: &mut Connection, db: Db, redis: Redis) -> Result<()> {
+    pub async fn handle(self, client: &mut Client, db: Db) -> Result<()> {
         use LoginServerPacketHandler::*;
 
         match self {
-            Login(handler) => handler.handle(connection, db, redis).await,
-            CharacterList(handler) => handler.handle(connection, db, redis).await,
-            WorldStatus(handler) => handler.handle(connection).await,
-            AfterLogin(handler) => handler.handle(connection, redis).await,
-            RegisterPin(handler) => handler.handle(connection, db, redis).await,
-            WorldList(handler) => handler.handle(connection).await,
-            SelectCharacter(handler) => handler.handle(connection, db, redis).await,
-            CharacterName(handler) => handler.handle(connection, db).await,
-            CreateCharacter(handler) => handler.handle(connection, db, redis).await,
-            DeleteCharacter(handler) => handler.handle(connection, db, redis).await,
+            Login(handler) => handler.handle(client, db).await,
+            CharacterList(handler) => handler.handle(client, db).await,
+            WorldStatus(handler) => handler.handle(client).await,
+            AfterLogin(handler) => handler.handle(client).await,
+            RegisterPin(handler) => handler.handle(client, db).await,
+            WorldList(handler) => handler.handle(client).await,
+            SelectCharacter(handler) => handler.handle(client, db).await,
+            CharacterName(handler) => handler.handle(client, db).await,
+            CreateCharacter(handler) => handler.handle(client, db).await,
+            DeleteCharacter(handler) => handler.handle(client, db).await,
             Unknown(handler) => handler.handle(),
         }
     }

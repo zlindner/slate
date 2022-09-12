@@ -9,17 +9,9 @@ tokio-util = { version = "0.7.3", features = ["full"] }
 tokio-stream = "0.1.9"
 futures = "0.3.21"
 bytes = "1.2.0"
-async-trait = "0.1.56"
 sqlx = { version = "0.6.1", features = [ "runtime-tokio-native-tls" , "postgres" ] }
-deadpool-redis = "0.10.2"
-
-# crypto
 aes = "0.8.1"
 rand = "0.8.5"
-
-# logging
 log = "0.4.17"
 simple_logger = "2.2.0"
-
-# misc
 chrono = "0.4.22"

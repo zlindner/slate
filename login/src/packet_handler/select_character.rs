@@ -1,9 +1,5 @@
-use crate::packets;
-use oxide_core::{
-    net::{Connection, Packet},
-    state::Session,
-    Db, Redis, Result,
-};
+use crate::{client::Client, packets};
+use oxide_core::{net::Packet, Db, Result};
 
 pub struct SelectCharacter {
     character_id: i32,
@@ -20,17 +16,24 @@ impl SelectCharacter {
         }
     }
 
-    pub async fn handle(self, connection: &mut Connection, db: Db, redis: Redis) -> Result<()> {
-        let mut session = Session::load(connection.session_id, &redis).await?;
-        log::info!("char id: {}", self.character_id);
-        session.character_id = self.character_id;
+    pub async fn handle(self, client: &mut Client, db: Db) -> Result<()> {
+        client.session.character_id = self.character_id;
+
         // TODO save mac and host addrs, validate on world server?
-        session.save(&redis).await?;
+        sqlx::query(
+            "INSERT INTO sessions (id, account_id, character_id, world_id, channel_id) \
+            VALUES ($1, $2, $3, $4, $5)",
+        )
+        .bind(client.session.id)
+        .bind(client.session.account_id)
+        .bind(client.session.character_id)
+        .bind(client.session.world_id)
+        .bind(client.session.channel_id)
+        .execute(&db)
+        .await?;
 
-        connection
-            .write_packet(packets::channel_server_ip(connection.session_id))
-            .await?;
-
+        let packet = packets::channel_server_ip(client.session.id);
+        client.send(packet).await?;
         Ok(())
     }
 }

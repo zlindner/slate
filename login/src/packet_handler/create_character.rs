@@ -1,11 +1,6 @@
-use crate::packets;
+use crate::{client::Client, packets};
 use once_cell::sync::Lazy;
-use oxide_core::{
-    maple::Character,
-    net::{Connection, Packet},
-    state::Session,
-    Db, Redis, Result,
-};
+use oxide_core::{maple::Character, net::Packet, Db, Result};
 use std::collections::{HashMap, HashSet};
 
 static STARTER_WEAPONS: Lazy<HashSet<i32>> = Lazy::new(|| {
@@ -121,7 +116,7 @@ impl CreateCharacter {
         }
     }
 
-    pub async fn handle(&self, connection: &mut Connection, db: Db, redis: Redis) -> Result<()> {
+    pub async fn handle(&self, client: &mut Client, db: Db) -> Result<()> {
         // character has invalid equipment (via packet editing), disconnect them
         if !STARTER_WEAPONS.contains(&self.weapon)
             || !STARTER_TOPS.contains(&self.top)
@@ -130,7 +125,7 @@ impl CreateCharacter {
             || !STARTER_HAIR.contains(&self.hair)
             || !STARTER_FACE.contains(&self.face)
         {
-            connection.close().await?;
+            client.disconnect().await?;
             return Ok(());
         }
 
@@ -144,14 +139,12 @@ impl CreateCharacter {
         // TODO check to make sure client has available character slots
         // TODO check if character name is valid
 
-        let session = Session::load(connection.session_id, &redis).await?;
-
         let character: Character = sqlx::query_as(
             "INSERT INTO characters \
             (account_id, world_id, name, level, str, dex, luk, int, hp, mp, max_hp, max_mp, mesos, job, skin_colour, gender, hair, face, ap, sp, map, spawn_point, gm) \
             VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)",
         )
-        .bind(session.account_id)
+        .bind(client.session.account_id)
         .bind(0) // world_id
         .bind(&self.name)
         .bind(1) // level
@@ -188,10 +181,8 @@ impl CreateCharacter {
         // TODO update inventoryitems, inventoryequipment table
         // TODO update skills table
 
-        connection
-            .write_packet(packets::new_character(&character))
-            .await?;
-
+        let packet = packets::new_character(&character);
+        client.send(packet).await?;
         Ok(())
     }
 }

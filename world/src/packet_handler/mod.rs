@@ -1,5 +1,6 @@
-use oxide_core::net::{Connection, Packet};
-use oxide_core::{Db, Redis, Result};
+use crate::client::Client;
+use oxide_core::net::Packet;
+use oxide_core::{Db, Result};
 
 mod connect;
 use self::connect::Connect;
@@ -22,11 +23,11 @@ impl WorldServerPacketHandler {
         }
     }
 
-    pub async fn handle(self, connection: &mut Connection, db: Db, redis: Redis) -> Result<()> {
+    pub async fn handle(self, client: &mut Client, db: Db) -> Result<()> {
         use WorldServerPacketHandler::*;
 
         match self {
-            Connect(handler) => handler.handle(connection, db, redis).await,
+            Connect(handler) => handler.handle(client, db).await,
             Unknown(handler) => handler.handle(),
         }
     }

@@ -1,5 +1,8 @@
-use super::{cipher::Cipher, packet::Packet, shanda};
-use crate::{Error, Result};
+use super::packet::Packet;
+use crate::{
+    crypt::{shanda, Cipher},
+    Error, Result,
+};
 use bytes::{BufMut, BytesMut};
 use tokio_util::codec::{Decoder, Encoder};
 
@@ -35,6 +38,22 @@ impl MapleCodec {
     fn is_valid_header(&self, header: &BytesMut) -> bool {
         ((header[0] ^ self.recv.iv[2]) & 0xff) == ((self.recv.version >> 8) as u8 & 0xff)
             && (((header[1] ^ self.recv.iv[3]) & 0xff) == (self.recv.version & 0xff) as u8)
+    }
+
+    pub fn handshake(&self) -> Packet {
+        let mut handshake = Packet::new();
+        handshake.write_short(0x0E);
+        // maple version
+        handshake.write_short(83);
+        // maple patch version
+        handshake.write_string("1");
+        // initialization vector for receive cipher
+        handshake.write_bytes(&self.recv.iv);
+        // initialization vector for send cipher
+        handshake.write_bytes(&self.send.iv);
+        // locale
+        handshake.write_byte(8);
+        handshake
     }
 }
 
