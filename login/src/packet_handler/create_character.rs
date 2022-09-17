@@ -1,6 +1,6 @@
 use crate::{client::Client, packets};
 use once_cell::sync::Lazy;
-use oxide_core::{maple::Character, net::Packet, Db, Result};
+use oxide_core::{maple::Character, net::Packet, pg::PgCharacter, Db, Result};
 use std::collections::{HashMap, HashSet};
 
 static STARTER_WEAPONS: Lazy<HashSet<i32>> = Lazy::new(|| {
@@ -139,7 +139,7 @@ impl CreateCharacter {
         // TODO check to make sure client has available character slots
         // TODO check if character name is valid
 
-        let character: Character = sqlx::query_as(
+        let pg_character: PgCharacter = sqlx::query_as(
             "INSERT INTO characters \
             (account_id, world_id, name, level, str, dex, luk, int, hp, mp, max_hp, max_mp, mesos, job, skin_colour, gender, hair, face, ap, sp, map, spawn_point, gm) \
             VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)",
@@ -180,6 +180,9 @@ impl CreateCharacter {
         // TODO update keymap table
         // TODO update inventoryitems, inventoryequipment table
         // TODO update skills table
+
+        let mut character = Character::new();
+        character.pg = pg_character;
 
         let packet = packets::new_character(&character);
         client.send(packet).await?;

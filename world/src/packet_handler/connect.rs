@@ -2,7 +2,7 @@ use crate::{client::Client, packets};
 use oxide_core::{
     maple::{Character, Skill},
     net::Packet,
-    pg::Session,
+    pg::{PgCharacter, Session},
     Db, Result,
 };
 
@@ -23,7 +23,7 @@ impl Connect {
             .fetch_one(&db)
             .await?;
 
-        let mut character: Character = sqlx::query_as(
+        let pg_character: PgCharacter = sqlx::query_as(
             "SELECT * FROM characters WHERE id = $1 AND account_id = $2 AND world_id = $3",
         )
         .bind(session.character_id)
@@ -39,12 +39,16 @@ impl Connect {
             .fetch_all(&db)
             .await?;
 
+        let mut character = Character::new();
+        character.pg = pg_character;
         character.skills = skills;
         client.character = Some(character);
 
         client
             .send(packets::character_info(&client.character.as_ref().unwrap()))
             .await?;
+
+        // TODO should we delete the session from db here?
 
         Ok(())
     }

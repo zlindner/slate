@@ -232,7 +232,7 @@ fn write_character(character: &Character, packet: &mut Packet, view_all: bool) {
     }
 
     // TODO check for gm job as well?
-    if character.gm > 1 {
+    if character.pg.gm > 1 {
         packet.write_byte(0);
         return;
     }
@@ -242,22 +242,22 @@ fn write_character(character: &Character, packet: &mut Packet, view_all: bool) {
     packet.write_byte(enable_rankings as u8);
 
     if enable_rankings {
-        packet.write_int(character.rank);
+        packet.write_int(character.pg.rank);
         // positive/negative indicate direction of move
-        packet.write_int(character.rank_move);
-        packet.write_int(character.job_rank);
+        packet.write_int(character.pg.rank_move);
+        packet.write_int(character.pg.job_rank);
         // positive/negative indicate direction of move
-        packet.write_int(character.job_rank_move);
+        packet.write_int(character.pg.job_rank_move);
     }
 }
 
 fn write_character_style(character: &Character, packet: &mut Packet) {
-    packet.write_byte(character.gender as u8);
-    packet.write_byte(character.skin_colour as u8);
-    packet.write_int(character.face);
+    packet.write_byte(character.pg.gender as u8);
+    packet.write_byte(character.pg.skin_colour as u8);
+    packet.write_int(character.pg.face);
     // TODO add mega parameter => I think for diplaying char in megaphone message?
     packet.write_byte(1);
-    packet.write_int(character.hair);
+    packet.write_int(character.pg.hair);
 }
 
 fn write_character_equipment(character: &Character, packet: &mut Packet) {

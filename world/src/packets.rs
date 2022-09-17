@@ -42,7 +42,7 @@ fn write_character(character: &Character, packet: &mut Packet) {
     }
     */
 
-    packet.write_int(character.mesos);
+    packet.write_int(character.pg.mesos);
     write_character_inventory(&character, packet);
     write_character_skills(&character, packet);
     write_character_quests(&character, packet);
@@ -154,7 +154,7 @@ fn write_character_teleport_rock_maps(character: &Character, packet: &mut Packet
 }
 
 fn write_character_monster_book(character: &Character, packet: &mut Packet) {
-    packet.write_int(character.monster_book_cover);
+    packet.write_int(character.pg.monster_book_cover);
     packet.write_byte(0);
     // FIXME cards.len()
     packet.write_short(0);

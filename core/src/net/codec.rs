@@ -92,7 +92,7 @@ impl Decoder for MapleCodec {
 
         // validate the packet header
         if !self.is_valid_header(&bytes) {
-            log::debug!("Invalid packet header: {:?}", bytes);
+            log::debug!("Invalid packet header: {}", Packet::wrap(bytes));
             return Ok(None);
         }
 
