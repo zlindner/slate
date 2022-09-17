@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 #[derive(Default)]
 pub struct Character {
+    pub pos: (i32, i32),
     pub pg: PgCharacter,
     pub pets: Vec<Pet>,
     pub skills: Vec<Skill>,

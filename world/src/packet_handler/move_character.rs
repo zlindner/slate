@@ -20,17 +20,17 @@ impl MoveCharacter {
             return Ok(());
         }
 
-        let mut character = client.character.as_ref().unwrap();
+        let mut character = client.character.as_mut().unwrap();
         let commands = self.packet.read_byte();
 
-        for i in 0..commands {
+        for _ in 0..commands {
             let command = self.packet.read_byte();
 
             match command {
                 0 | 5 | 17 => {
                     let x = self.packet.read_short();
                     let y = self.packet.read_short();
-
+                    character.pos = (x.into(), y.into());
                     self.packet.skip(6);
                     let stance = self.packet.read_byte();
                     let duration = self.packet.read_short();
@@ -41,6 +41,7 @@ impl MoveCharacter {
             };
         }
 
+        log::debug!("Character pos: {:?}", character.pos);
         Ok(())
     }
 }

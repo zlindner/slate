@@ -43,16 +43,12 @@ impl MapleCodec {
     pub fn handshake(&self) -> Packet {
         let mut handshake = Packet::new();
         handshake.write_short(0x0E);
-        // maple version
-        handshake.write_short(83);
-        // maple patch version
-        handshake.write_string("1");
-        // initialization vector for receive cipher
+        handshake.write_short(83); // version
+        handshake.write_short(1); // patch version
+        handshake.write_byte(49);
         handshake.write_bytes(&self.recv.iv);
-        // initialization vector for send cipher
         handshake.write_bytes(&self.send.iv);
-        // locale
-        handshake.write_byte(8);
+        handshake.write_byte(8); // locale
         handshake
     }
 }
