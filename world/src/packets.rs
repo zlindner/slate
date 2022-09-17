@@ -195,3 +195,81 @@ fn write_item(item: &Item, packet: &mut Packet) {
 
     // TODO if item.is_pet()
 }
+
+pub fn keymap() -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x14F);
+    packet.write_byte(0);
+
+    for _ in 0..90 {
+        // TODO get keybinding[i]
+        // if binding exists instead write binding type and action
+        packet.write_byte(0); // binding type
+        packet.write_int(0); // binding action
+    }
+
+    packet
+}
+
+pub fn quickmap() -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x9F);
+    packet.write_byte(0);
+    packet
+}
+
+// TODO
+pub fn macros() -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x7C);
+    packet.write_byte(0);
+    packet
+}
+
+// TODO write buddies
+pub fn buddy_list() -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x3F);
+    packet.write_byte(7);
+    packet.write_byte(0); // buddylist size
+    packet
+}
+
+// TODO values are hardcoded so just writing 0 might cause issues
+pub fn family_entitlements() -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x64);
+    packet.write_int(0);
+    packet
+}
+
+// TODO currently only writes empty family
+pub fn family_info() -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x5F);
+    packet.write_int(0); // current rep left
+    packet.write_int(0); // total rep left
+    packet.write_int(0); // todays rep
+    packet.write_short(0); // juniors added
+    packet.write_short(2); // juniors allowed
+    packet.write_short(0);
+    packet.write_int(0); // leader ID
+    packet.write_string("");
+    packet.write_string(""); //family message
+    packet.write_int(0);
+    packet
+}
+
+pub fn gender(character: &Character) -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x3A);
+    packet.write_byte(character.pg.gender as u8);
+    packet
+}
+
+pub fn enable_report() -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x2F);
+    packet.write_byte(1);
+    packet
+}

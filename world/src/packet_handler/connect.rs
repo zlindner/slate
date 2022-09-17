@@ -44,9 +44,35 @@ impl Connect {
         character.skills = skills;
         client.character = Some(character);
 
-        client
-            .send(packets::character_info(&client.character.as_ref().unwrap()))
-            .await?;
+        let packet = packets::character_info(&client.character.as_ref().unwrap());
+        client.send(packet).await?;
+
+        let packet = packets::keymap();
+        client.send(packet).await?;
+
+        let packet = packets::quickmap();
+        client.send(packet).await?;
+
+        let packet = packets::macros();
+        client.send(packet).await?;
+
+        let packet = packets::buddy_list();
+        client.send(packet).await?;
+
+        let packet = packets::family_entitlements();
+        client.send(packet).await?;
+
+        let packet = packets::family_info();
+        client.send(packet).await?;
+
+        // TODO load guild
+        // TODO show notes
+
+        let packet = packets::gender(&client.character.as_ref().unwrap());
+        client.send(packet).await?;
+
+        let packet = packets::enable_report();
+        client.send(packet).await?;
 
         // TODO should we delete the session from db here?
 
