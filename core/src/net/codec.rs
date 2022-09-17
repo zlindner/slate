@@ -78,6 +78,7 @@ impl Decoder for MapleCodec {
         // we need to check if the packet is as least 4 bytes otherwise
         // split_off will panic (and packet/header is invalid)
         if buf.len() < 4 {
+            log::debug!("smol: {}", Packet::wrap(buf.split_to(buf.len())));
             return Ok(None);
         }
 

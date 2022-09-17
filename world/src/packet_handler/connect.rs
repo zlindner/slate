@@ -40,8 +40,10 @@ impl Connect {
             .await?;
 
         let mut character = Character::new();
+        character.channel_id = session.channel_id;
         character.pg = pg_character;
         character.skills = skills;
+
         client.character = Some(character);
 
         let packet = packets::character_info(&client.character.as_ref().unwrap());

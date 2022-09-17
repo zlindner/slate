@@ -8,7 +8,7 @@ use oxide_core::{
 pub fn character_info(character: &Character) -> Packet {
     let mut packet = Packet::new();
     packet.write_short(0x7D);
-    packet.write_int(0); // FIXME channel
+    packet.write_int(character.channel_id.into());
     packet.write_byte(1);
     packet.write_byte(1);
     packet.write_short(0);
@@ -29,7 +29,7 @@ fn write_character(character: &Character, packet: &mut Packet) {
     packet.write_long(-1);
     packet.write_byte(0);
     write_character_stats(&character, packet);
-    packet.write_byte(10); // FIXME characters buddy list capacity
+    packet.write_byte(character.pg.buddy_capacity as u8);
 
     // TODO blessing of the fairy stuff?
     packet.write_byte(0);
@@ -56,10 +56,11 @@ fn write_character(character: &Character, packet: &mut Packet) {
 }
 
 fn write_character_inventory(character: &Character, packet: &mut Packet) {
-    for _ in 0..5 {
-        // TODO get slot limit for each inventory type
-        packet.write_byte(10);
-    }
+    packet.write_byte(character.pg.equip_slots as u8);
+    packet.write_byte(character.pg.use_slots as u8);
+    packet.write_byte(character.pg.setup_slots as u8);
+    packet.write_byte(character.pg.etc_slots as u8);
+    packet.write_byte(96); // FIXME: cash slot limit
 
     // UTC zero-timestamp
     packet.write_long(94354848000000000);
@@ -271,5 +272,13 @@ pub fn enable_report() -> Packet {
     let mut packet = Packet::new();
     packet.write_short(0x2F);
     packet.write_byte(1);
+    packet
+}
+
+pub fn enable_actions() -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x1F);
+    packet.write_byte(1);
+    packet.write_int(0);
     packet
 }
