@@ -197,16 +197,22 @@ fn write_item(item: &Item, packet: &mut Packet) {
     // TODO if item.is_pet()
 }
 
-pub fn keymap() -> Packet {
+pub fn keymap(character: &Character) -> Packet {
     let mut packet = Packet::new();
     packet.write_short(0x14F);
     packet.write_byte(0);
 
-    for _ in 0..90 {
-        // TODO get keybinding[i]
-        // if binding exists instead write binding type and action
-        packet.write_byte(0); // binding type
-        packet.write_int(0); // binding action
+    for i in 0..90 {
+        match character.keymaps.get(i) {
+            Some(binding) => {
+                packet.write_byte(binding._type as u8);
+                packet.write_int(binding.action);
+            }
+            None => {
+                packet.write_byte(0);
+                packet.write_int(0);
+            }
+        };
     }
 
     packet

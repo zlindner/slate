@@ -2,7 +2,7 @@ use crate::{client::Client, packets};
 use oxide_core::{
     maple::{Character, Skill},
     net::Packet,
-    pg::{PgCharacter, Session},
+    pg::{PgCharacter, PgKeymap, Session},
     Db, Result,
 };
 
@@ -39,17 +39,24 @@ impl Connect {
             .fetch_all(&db)
             .await?;
 
+        let keymaps: Vec<PgKeymap> =
+            sqlx::query_as("SELECT * FROM keymaps WHERE character_id = $1")
+                .bind(session.character_id)
+                .fetch_all(&db)
+                .await?;
+
         let mut character = Character::new();
         character.channel_id = session.channel_id;
         character.pg = pg_character;
         character.skills = skills;
+        character.keymaps = keymaps;
 
         client.character = Some(character);
 
         let packet = packets::character_info(&client.character.as_ref().unwrap());
         client.send(packet).await?;
 
-        let packet = packets::keymap();
+        let packet = packets::keymap(&client.character.as_ref().unwrap());
         client.send(packet).await?;
 
         let packet = packets::quickmap();

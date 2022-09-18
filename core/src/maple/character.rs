@@ -1,5 +1,5 @@
 use super::{skill::Cooldown, Item, Pet, Skill};
-use crate::pg::PgCharacter;
+use crate::pg::{PgCharacter, PgKeymap};
 use std::collections::HashMap;
 
 #[derive(Default)]
@@ -10,6 +10,7 @@ pub struct Character {
     pub pets: Vec<Pet>,
     pub skills: Vec<Skill>,
     pub cooldowns: Vec<Cooldown>,
+    pub keymaps: Vec<PgKeymap>,
     pub equip_inventory: HashMap<i16, Item>,
     pub use_inventory: HashMap<i16, Item>,
     pub setup_inventory: HashMap<i16, Item>,

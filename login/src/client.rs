@@ -11,6 +11,7 @@ use tokio_util::codec::Framed;
 pub struct Client {
     pub stream: Framed<TcpStream, MapleCodec>,
     pub session: Session,
+    pub num_characters: u8,
 }
 
 impl Client {

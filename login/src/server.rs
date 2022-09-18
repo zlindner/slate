@@ -75,6 +75,7 @@ impl LoginServer {
                 let mut client = Client {
                     stream: codec.framed(stream),
                     session: Session::new(session_id),
+                    num_characters: 0,
                 };
 
                 events.on_connect(&mut client).await;
