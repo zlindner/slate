@@ -232,7 +232,7 @@ fn write_character(character: &Character, packet: &mut Packet, view_all: bool) {
     }
 
     // TODO check for gm job as well?
-    if character.gm > 1 {
+    if character.pg.gm > 1 {
         packet.write_byte(0);
         return;
     }
@@ -242,22 +242,22 @@ fn write_character(character: &Character, packet: &mut Packet, view_all: bool) {
     packet.write_byte(enable_rankings as u8);
 
     if enable_rankings {
-        packet.write_int(character.rank);
+        packet.write_int(character.pg.rank);
         // positive/negative indicate direction of move
-        packet.write_int(character.rank_move);
-        packet.write_int(character.job_rank);
+        packet.write_int(character.pg.rank_move);
+        packet.write_int(character.pg.job_rank);
         // positive/negative indicate direction of move
-        packet.write_int(character.job_rank_move);
+        packet.write_int(character.pg.job_rank_move);
     }
 }
 
 fn write_character_style(character: &Character, packet: &mut Packet) {
-    packet.write_byte(character.gender as u8);
-    packet.write_byte(character.skin_colour as u8);
-    packet.write_int(character.face);
+    packet.write_byte(character.pg.gender as u8);
+    packet.write_byte(character.pg.skin_colour as u8);
+    packet.write_int(character.pg.face);
     // TODO add mega parameter => I think for diplaying char in megaphone message?
     packet.write_byte(1);
-    packet.write_int(character.hair);
+    packet.write_int(character.pg.hair);
 }
 
 fn write_character_equipment(character: &Character, packet: &mut Packet) {
@@ -316,7 +316,7 @@ pub fn delete_character(character_id: i32, op: PicOperation) -> Packet {
     packet
 }
 
-pub fn channel_server_ip(character_id: i32) -> Packet {
+pub fn channel_server_ip(session_id: i32) -> Packet {
     let mut packet = Packet::new();
     packet.write_short(0x0C);
     packet.write_short(0);
@@ -324,7 +324,11 @@ pub fn channel_server_ip(character_id: i32) -> Packet {
     packet.write_bytes(&[0xC0, 0xA8, 0x0, 0x25]);
     // FIXME correct port for selected channel
     packet.write_short(10000);
-    packet.write_int(character_id);
+
+    // NOTE: this is technically supposed to be the character id, but we need
+    // some way to tell the world server the current redis session id. We can
+    // pass the session id here, and it will be picked up in the connect packet
+    packet.write_int(session_id);
     packet.write_bytes(&[0, 0, 0, 0, 0]);
     packet
 }

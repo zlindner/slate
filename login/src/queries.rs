@@ -39,3 +39,8 @@ pub async fn logout_all(db: &Db) -> Result<()> {
 
     Ok(())
 }
+
+pub async fn clear_sessions(db: &Db) -> Result<()> {
+    sqlx::query("DELETE FROM sessions").execute(db).await?;
+    Ok(())
+}

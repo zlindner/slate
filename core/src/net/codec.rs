@@ -1,5 +1,8 @@
-use super::{cipher::Cipher, packet::Packet, shanda};
-use crate::{Error, Result};
+use super::packet::Packet;
+use crate::{
+    crypt::{shanda, Cipher},
+    Error, Result,
+};
 use bytes::{BufMut, BytesMut};
 use tokio_util::codec::{Decoder, Encoder};
 
@@ -36,6 +39,18 @@ impl MapleCodec {
         ((header[0] ^ self.recv.iv[2]) & 0xff) == ((self.recv.version >> 8) as u8 & 0xff)
             && (((header[1] ^ self.recv.iv[3]) & 0xff) == (self.recv.version & 0xff) as u8)
     }
+
+    pub fn handshake(&self) -> Packet {
+        let mut handshake = Packet::new();
+        handshake.write_short(0x0E);
+        handshake.write_short(83); // version
+        handshake.write_short(1); // patch version
+        handshake.write_byte(49);
+        handshake.write_bytes(&self.recv.iv);
+        handshake.write_bytes(&self.send.iv);
+        handshake.write_byte(8); // locale
+        handshake
+    }
 }
 
 impl Encoder<Packet> for MapleCodec {
@@ -63,6 +78,7 @@ impl Decoder for MapleCodec {
         // we need to check if the packet is as least 4 bytes otherwise
         // split_off will panic (and packet/header is invalid)
         if buf.len() < 4 {
+            log::debug!("smol: {}", Packet::wrap(buf.split_to(buf.len())));
             return Ok(None);
         }
 
@@ -73,7 +89,7 @@ impl Decoder for MapleCodec {
 
         // validate the packet header
         if !self.is_valid_header(&bytes) {
-            log::debug!("Invalid packet header: {:?}", bytes);
+            log::debug!("Invalid packet header: {}", Packet::wrap(bytes));
             return Ok(None);
         }
 

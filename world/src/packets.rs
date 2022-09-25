@@ -1,12 +1,14 @@
+use chrono::{Local, Utc};
 use oxide_core::{
     maple::{Character, Item},
     net::{packets::write_character_stats, Packet},
     util::time::current_time_ms,
 };
 
-pub fn character_info(character: Character) -> Packet {
+pub fn character_info(character: &Character) -> Packet {
     let mut packet = Packet::new();
-    packet.write_int(0); // FIXME channel
+    packet.write_short(0x7D);
+    packet.write_int(character.channel_id.into());
     packet.write_byte(1);
     packet.write_byte(1);
     packet.write_short(0);
@@ -14,15 +16,20 @@ pub fn character_info(character: Character) -> Packet {
     packet.write_int(rand::random());
     packet.write_int(rand::random());
     write_character(character, &mut packet);
-    packet.write_long(current_time_ms());
+
+    let current_time = Utc::now().timestamp_millis() * 10000;
+    let offset: i64 =
+        116444736010800000 + (10000000 * i64::from(Local::now().offset().local_minus_utc()));
+
+    packet.write_long(current_time + offset);
     packet
 }
 
-fn write_character(character: Character, packet: &mut Packet) {
+fn write_character(character: &Character, packet: &mut Packet) {
     packet.write_long(-1);
     packet.write_byte(0);
     write_character_stats(&character, packet);
-    packet.write_byte(10); // FIXME characters buddy list capacity
+    packet.write_byte(character.pg.buddy_capacity as u8);
 
     // TODO blessing of the fairy stuff?
     packet.write_byte(0);
@@ -35,7 +42,7 @@ fn write_character(character: Character, packet: &mut Packet) {
     }
     */
 
-    packet.write_int(character.mesos);
+    packet.write_int(character.pg.mesos);
     write_character_inventory(&character, packet);
     write_character_skills(&character, packet);
     write_character_quests(&character, packet);
@@ -49,10 +56,11 @@ fn write_character(character: Character, packet: &mut Packet) {
 }
 
 fn write_character_inventory(character: &Character, packet: &mut Packet) {
-    for _ in 0..5 {
-        // TODO get slot limit for each inventory type
-        packet.write_byte(10);
-    }
+    packet.write_byte(character.pg.equip_slots as u8);
+    packet.write_byte(character.pg.use_slots as u8);
+    packet.write_byte(character.pg.setup_slots as u8);
+    packet.write_byte(character.pg.etc_slots as u8);
+    packet.write_byte(96); // FIXME: cash slot limit
 
     // UTC zero-timestamp
     packet.write_long(94354848000000000);
@@ -136,11 +144,18 @@ fn write_character_rings(character: &Character, packet: &mut Packet) {
 
 fn write_character_teleport_rock_maps(character: &Character, packet: &mut Packet) {
     // TODO teleport rock maps
+    for _ in 0..5 {
+        packet.write_int(999999999);
+    }
+
     // TODO vip teleport rock maps
+    for _ in 0..10 {
+        packet.write_int(999999999);
+    }
 }
 
 fn write_character_monster_book(character: &Character, packet: &mut Packet) {
-    packet.write_int(character.monster_book_cover);
+    packet.write_int(character.pg.monster_book_cover);
     packet.write_byte(0);
     // FIXME cards.len()
     packet.write_short(0);
@@ -180,5 +195,96 @@ fn write_item(item: &Item, packet: &mut Packet) {
     // TODO expiration time
 
     // TODO if item.is_pet()
-    
+}
+
+pub fn keymap(character: &Character) -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x14F);
+    packet.write_byte(0);
+
+    for i in 0..90 {
+        match character.keymaps.get(i) {
+            Some(binding) => {
+                packet.write_byte(binding._type as u8);
+                packet.write_int(binding.action);
+            }
+            None => {
+                packet.write_byte(0);
+                packet.write_int(0);
+            }
+        };
+    }
+
+    packet
+}
+
+pub fn quickmap() -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x9F);
+    packet.write_byte(0);
+    packet
+}
+
+// TODO
+pub fn macros() -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x7C);
+    packet.write_byte(0);
+    packet
+}
+
+// TODO write buddies
+pub fn buddy_list() -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x3F);
+    packet.write_byte(7);
+    packet.write_byte(0); // buddylist size
+    packet
+}
+
+// TODO values are hardcoded so just writing 0 might cause issues
+pub fn family_entitlements() -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x64);
+    packet.write_int(0);
+    packet
+}
+
+// TODO currently only writes empty family
+pub fn family_info() -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x5F);
+    packet.write_int(0); // current rep left
+    packet.write_int(0); // total rep left
+    packet.write_int(0); // todays rep
+    packet.write_short(0); // juniors added
+    packet.write_short(2); // juniors allowed
+    packet.write_short(0);
+    packet.write_int(0); // leader ID
+    packet.write_string("");
+    packet.write_string(""); //family message
+    packet.write_int(0);
+    packet
+}
+
+pub fn gender(character: &Character) -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x3A);
+    packet.write_byte(character.pg.gender as u8);
+    packet
+}
+
+pub fn enable_report() -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x2F);
+    packet.write_byte(1);
+    packet
+}
+
+pub fn enable_actions() -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x1F);
+    packet.write_byte(1);
+    packet.write_int(0);
+    packet
 }

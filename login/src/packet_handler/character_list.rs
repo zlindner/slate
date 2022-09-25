@@ -1,10 +1,5 @@
-use crate::packets;
-use oxide_core::{
-    maple::Character,
-    net::{Connection, Packet},
-    state::Session,
-    Db, Redis, Result,
-};
+use crate::{client::Client, packets};
+use oxide_core::{maple::Character, net::Packet, pg::PgCharacter, Db, Result};
 
 pub struct CharacterList {
     world_id: u8,
@@ -24,7 +19,7 @@ impl CharacterList {
         }
     }
 
-    pub async fn handle(self, connection: &mut Connection, db: Db, redis: Redis) -> Result<()> {
+    pub async fn handle(self, client: &mut Client, db: Db) -> Result<()> {
         /*let world = match shared.worlds.get(self.world_id as usize) {
             Some(world) => world,
             None => {
@@ -55,23 +50,32 @@ impl CharacterList {
         client.world_id = Some(world.config.id);
         client.channel_id = Some(channel.id);*/
 
-        let session = Session::load(connection.session_id, &redis).await?;
-
-        // TODO pass world id in
-        let characters: Vec<Character> = sqlx::query_as(
+        let pg_characters: Vec<PgCharacter> = sqlx::query_as(
             "SELECT * \
             FROM characters \
             WHERE account_id = $1 AND world_id = $2",
         )
-        .bind(session.account_id)
-        .bind(0) // FIXME pass in world id, can we just use self.world_id here?
+        .bind(client.session.account_id)
+        .bind(self.world_id as i32)
         .fetch_all(&db)
         .await?;
 
-        connection
-            .write_packet(packets::character_list(&characters))
-            .await?;
+        client.num_characters = pg_characters.len() as u8;
 
+        // TODO idk this is kinda ugly but fine for now
+        let mut characters: Vec<Character> = Vec::new();
+
+        for pg in pg_characters.into_iter() {
+            let mut character = Character::new();
+            character.pg = pg;
+            characters.push(character);
+        }
+
+        client.session.world_id = self.world_id as i16;
+        client.session.channel_id = self.channel_id as i16;
+
+        let packet = packets::character_list(&characters);
+        client.send(packet).await?;
         Ok(())
     }
 }

@@ -1,9 +1,8 @@
-use crate::packets::{self, PinOperation};
-use oxide_core::{
-    net::{Connection, Packet},
-    state::Session,
-    Redis, Result,
+use crate::{
+    client::Client,
+    packets::{self, PinOperation},
 };
+use oxide_core::{net::Packet, Result};
 
 pub struct AfterLogin {
     a: u8,
@@ -28,24 +27,22 @@ impl AfterLogin {
         Self { a, b, pin }
     }
 
-    pub async fn handle(self, connection: &mut Connection, redis: Redis) -> Result<()> {
-        let mut session = Session::load(connection.session_id, &redis).await?;
-
+    pub async fn handle(self, client: &mut Client) -> Result<()> {
         let op = match (self.a, self.b) {
-            (1, 1) => match session.pin {
-                None => PinOperation::Register,
-                Some(_) => PinOperation::Request,
+            (1, 1) => match client.session.pin.is_empty() {
+                true => PinOperation::Register,
+                false => PinOperation::Request,
             },
             (1, 0) | (2, 0) => {
-                if session.pin_attempts >= 6 {
-                    connection.close().await?;
+                if client.session.pin_attempts >= 6 {
+                    client.disconnect().await?;
                     return Ok(());
                 }
 
-                session.pin_attempts += 1;
+                client.session.pin_attempts += 1;
 
-                if session.pin.is_some() && &self.pin.unwrap() == session.pin.as_ref().unwrap() {
-                    session.pin_attempts = 0;
+                if !client.session.pin.is_empty() && self.pin.unwrap() == client.session.pin {
+                    client.session.pin_attempts = 0;
 
                     if self.a == 1 {
                         PinOperation::Accepted
@@ -57,13 +54,13 @@ impl AfterLogin {
                 }
             }
             _ => {
-                connection.close().await?;
+                client.disconnect().await?;
                 return Ok(());
             }
         };
 
-        session.save(&redis).await?;
-        connection.write_packet(packets::pin_operation(op)).await?;
+        let packet = packets::pin_operation(op);
+        client.send(packet).await?;
         Ok(())
     }
 }

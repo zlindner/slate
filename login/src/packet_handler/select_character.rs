@@ -1,8 +1,5 @@
-use crate::packets;
-use oxide_core::{
-    net::{Connection, Packet},
-    Db, Redis, Result,
-};
+use crate::{client::Client, packets};
+use oxide_core::{net::Packet, Db, Result};
 
 pub struct SelectCharacter {
     character_id: i32,
@@ -19,13 +16,24 @@ impl SelectCharacter {
         }
     }
 
-    pub async fn handle(self, connection: &mut Connection, db: Db, redis: Redis) -> Result<()> {
-        log::debug!("character_id: {}", self.character_id);
+    pub async fn handle(self, client: &mut Client, db: Db) -> Result<()> {
+        client.session.character_id = self.character_id;
 
-        connection
-            .write_packet(packets::channel_server_ip(self.character_id))
-            .await?;
+        // TODO save mac and host addrs, validate on world server?
+        sqlx::query(
+            "INSERT INTO sessions (id, account_id, character_id, world_id, channel_id) \
+            VALUES ($1, $2, $3, $4, $5)",
+        )
+        .bind(client.session.id)
+        .bind(client.session.account_id)
+        .bind(client.session.character_id)
+        .bind(client.session.world_id)
+        .bind(client.session.channel_id)
+        .execute(&db)
+        .await?;
 
+        let packet = packets::channel_server_ip(client.session.id);
+        client.send(packet).await?;
         Ok(())
     }
 }
