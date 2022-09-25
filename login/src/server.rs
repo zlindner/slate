@@ -1,5 +1,5 @@
 use crate::{client::Client, event_handler::EventHandler, Result};
-use oxide_core::{net::codec::MapleCodec, pg::Session, util::Shutdown, Db, Error};
+use oxide_core::{net::codec::MapleCodec, pg::PgSession, util::Shutdown, Db, Error};
 use std::sync::{
     atomic::{AtomicI32, Ordering},
     Arc,
@@ -74,7 +74,8 @@ impl LoginServer {
 
                 let mut client = Client {
                     stream: codec.framed(stream),
-                    session: Session::new(session_id),
+                    session: PgSession::new(session_id),
+                    num_characters: 0,
                 };
 
                 events.on_connect(&mut client).await;

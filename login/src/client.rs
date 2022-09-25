@@ -1,7 +1,7 @@
 use futures::SinkExt;
 use oxide_core::{
     net::{codec::MapleCodec, Packet},
-    pg::Session,
+    pg::PgSession,
     Result,
 };
 use tokio::net::TcpStream;
@@ -10,7 +10,8 @@ use tokio_util::codec::Framed;
 
 pub struct Client {
     pub stream: Framed<TcpStream, MapleCodec>,
-    pub session: Session,
+    pub session: PgSession,
+    pub num_characters: u8,
 }
 
 impl Client {

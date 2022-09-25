@@ -43,16 +43,12 @@ impl MapleCodec {
     pub fn handshake(&self) -> Packet {
         let mut handshake = Packet::new();
         handshake.write_short(0x0E);
-        // maple version
-        handshake.write_short(83);
-        // maple patch version
-        handshake.write_string("1");
-        // initialization vector for receive cipher
+        handshake.write_short(83); // version
+        handshake.write_short(1); // patch version
+        handshake.write_byte(49);
         handshake.write_bytes(&self.recv.iv);
-        // initialization vector for send cipher
         handshake.write_bytes(&self.send.iv);
-        // locale
-        handshake.write_byte(8);
+        handshake.write_byte(8); // locale
         handshake
     }
 }
@@ -82,6 +78,7 @@ impl Decoder for MapleCodec {
         // we need to check if the packet is as least 4 bytes otherwise
         // split_off will panic (and packet/header is invalid)
         if buf.len() < 4 {
+            log::debug!("smol: {}", Packet::wrap(buf.split_to(buf.len())));
             return Ok(None);
         }
 

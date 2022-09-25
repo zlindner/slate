@@ -50,7 +50,6 @@ impl CharacterList {
         client.world_id = Some(world.config.id);
         client.channel_id = Some(channel.id);*/
 
-        // TODO pass world id in
         let pg_characters: Vec<PgCharacter> = sqlx::query_as(
             "SELECT * \
             FROM characters \
@@ -60,6 +59,8 @@ impl CharacterList {
         .bind(self.world_id as i32)
         .fetch_all(&db)
         .await?;
+
+        client.num_characters = pg_characters.len() as u8;
 
         // TODO idk this is kinda ugly but fine for now
         let mut characters: Vec<Character> = Vec::new();

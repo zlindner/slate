@@ -53,6 +53,8 @@ impl DeleteCharacter {
         .execute(&db)
         .await?;
 
+        client.num_characters -= 1;
+
         // TODO need to delete reference to this character in like 10 other tables (buddies, bbs_threads, bbs_replies, wishlists, etc.)
 
         let packet = packets::delete_character(self.character_id, PicOperation::Success);

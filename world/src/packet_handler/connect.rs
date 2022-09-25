@@ -2,7 +2,7 @@ use crate::{client::Client, packets};
 use oxide_core::{
     maple::{Character, Skill},
     net::Packet,
-    pg::{PgCharacter, Session},
+    pg::{PgCharacter, PgKeymap, PgSession},
     Db, Result,
 };
 
@@ -18,7 +18,7 @@ impl Connect {
     }
 
     pub async fn handle(self, client: &mut Client, db: Db) -> Result<()> {
-        let session: Session = sqlx::query_as("SELECT * FROM sessions WHERE id = $1")
+        let session: PgSession = sqlx::query_as("SELECT * FROM sessions WHERE id = $1")
             .bind(self.session_id)
             .fetch_one(&db)
             .await?;
@@ -39,14 +39,49 @@ impl Connect {
             .fetch_all(&db)
             .await?;
 
+        let keymaps: Vec<PgKeymap> =
+            sqlx::query_as("SELECT * FROM keymaps WHERE character_id = $1")
+                .bind(session.character_id)
+                .fetch_all(&db)
+                .await?;
+
         let mut character = Character::new();
+        character.channel_id = session.channel_id;
         character.pg = pg_character;
         character.skills = skills;
+        character.keymaps = keymaps;
+
         client.character = Some(character);
 
-        client
-            .send(packets::character_info(&client.character.as_ref().unwrap()))
-            .await?;
+        let packet = packets::character_info(&client.character.as_ref().unwrap());
+        client.send(packet).await?;
+
+        let packet = packets::keymap(&client.character.as_ref().unwrap());
+        client.send(packet).await?;
+
+        let packet = packets::quickmap();
+        client.send(packet).await?;
+
+        let packet = packets::macros();
+        client.send(packet).await?;
+
+        let packet = packets::buddy_list();
+        client.send(packet).await?;
+
+        let packet = packets::family_entitlements();
+        client.send(packet).await?;
+
+        let packet = packets::family_info();
+        client.send(packet).await?;
+
+        // TODO load guild
+        // TODO show notes
+
+        let packet = packets::gender(&client.character.as_ref().unwrap());
+        client.send(packet).await?;
+
+        let packet = packets::enable_report();
+        client.send(packet).await?;
 
         // TODO should we delete the session from db here?
 
