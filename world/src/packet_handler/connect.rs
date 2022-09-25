@@ -2,7 +2,7 @@ use crate::{client::Client, packets};
 use oxide_core::{
     maple::{Character, Skill},
     net::Packet,
-    pg::{PgCharacter, PgKeymap, Session},
+    pg::{PgCharacter, PgKeymap, PgSession},
     Db, Result,
 };
 
@@ -18,7 +18,7 @@ impl Connect {
     }
 
     pub async fn handle(self, client: &mut Client, db: Db) -> Result<()> {
-        let session: Session = sqlx::query_as("SELECT * FROM sessions WHERE id = $1")
+        let session: PgSession = sqlx::query_as("SELECT * FROM sessions WHERE id = $1")
             .bind(self.session_id)
             .fetch_one(&db)
             .await?;

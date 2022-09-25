@@ -201,9 +201,17 @@ impl CreateCharacter {
         // TODO update inventoryitems, inventoryequipment table
         // TODO update skills table
 
+        Self::create_keymap(&db).await?;
+
         let mut character = Character::new();
         character.pg = pg_character;
 
+        let packet = packets::new_character(&character);
+        client.send(packet).await?;
+        Ok(())
+    }
+
+    async fn create_keymap(db: &Db) -> Result<()> {
         let mut query_builder: QueryBuilder<Postgres> =
             QueryBuilder::new("INSERT INTO keymaps (character_id, key, type, action) ");
 
@@ -215,10 +223,7 @@ impl CreateCharacter {
             b.push_bind(k.0).push_bind(k.1).push_bind(k.2);
         });
 
-        sqlx::query(query_builder.sql()).execute(&db).await?;
-
-        let packet = packets::new_character(&character);
-        client.send(packet).await?;
+        sqlx::query(query_builder.sql()).execute(db).await?;
         Ok(())
     }
 }

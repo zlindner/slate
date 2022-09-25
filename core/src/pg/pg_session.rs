@@ -1,7 +1,7 @@
 use sqlx::FromRow;
 
 #[derive(FromRow, Default)]
-pub struct Session {
+pub struct PgSession {
     pub id: i32,
     pub account_id: i32,
     pub character_id: i32,
@@ -19,7 +19,7 @@ pub struct Session {
     pub pic_attempts: i16,
 }
 
-impl Session {
+impl PgSession {
     pub fn new(session_id: i32) -> Self {
         let mut session = Self::default();
         session.id = session_id;
