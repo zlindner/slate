@@ -288,3 +288,22 @@ pub fn enable_actions() -> Packet {
     packet.write_int(0);
     packet
 }
+
+// TODO make type an enum
+// 0: [Notice] 1: Popup
+// * 2: Megaphone 3: Super Megaphone 4: Scrolling message at top
+// 5: Pink Text 6: Lightblue Text 7: BroadCasting NPC
+pub fn server_message(_type: u8, message: String) -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x44);
+
+    // set scrolling for server message
+    if _type == 4 {
+        packet.write_byte(1);
+    }
+
+    packet.write_string(&message);
+
+    // TODO handle other types
+    packet
+}

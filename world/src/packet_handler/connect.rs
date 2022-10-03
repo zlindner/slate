@@ -53,6 +53,9 @@ impl Connect {
 
         client.character = Some(character);
 
+        let packet = packets::server_message(4, "Pls stop breaking!".to_string());
+        client.send(packet).await?;
+
         let packet = packets::character_info(&client.character.as_ref().unwrap());
         client.send(packet).await?;
 
@@ -64,6 +67,10 @@ impl Connect {
 
         let packet = packets::macros();
         client.send(packet).await?;
+
+        // TODO autohppot
+        // TODO automppot
+        // TODO player.getMap().addPlayer has a lot of stuff...
 
         let packet = packets::buddy_list();
         client.send(packet).await?;
