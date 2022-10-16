@@ -1,6 +1,9 @@
 [workspace]
 members = [
-    "core",
-    "login",
-    "world"
+    "oxy-core",
+    "oxy-login",
+    "oxy-world",
+    "prisma-cli"
 ]
+
+resolver = "2"

@@ -1,2 +1,6 @@
 /target
+/.cargo
+/prisma-cli
+/src/prisma.rs
 .env
+.DS_Store

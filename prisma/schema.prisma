@@ -1,0 +1,30 @@
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+generator client {
+    provider      = "cargo prisma"
+    output        = "../oxy-core/src/prisma.rs"
+}
+
+model Session {
+    id      Int     @id @default(autoincrement())
+}
+
+model Account {
+    id          Int         @id @default(autoincrement())
+    name        String      @unique
+    password    String
+    pin         String
+    pic         String
+    state       LoginState  @default(LOGGED_OUT)
+    banned      Boolean
+    tos         Boolean
+}
+
+enum LoginState {
+    LOGGED_OUT
+    TRANSITIONING
+    LOGGED_IN
+}
