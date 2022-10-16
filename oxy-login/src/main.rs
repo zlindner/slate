@@ -21,7 +21,10 @@ async fn main() -> Result<()> {
         .init()?;
 
     let db: Arc<PrismaClient> = Arc::new(prisma::new_client().await?);
-    Server::start("0.0.0.0:8484", EventHandler, db).await?;
+
+    let port = std::env::var("PORT").unwrap_or("8484".to_string());
+    let addr = format!("0.0.0.0:{}", port);
+    Server::start(&addr, EventHandler, db).await?;
 
     Ok(())
 }
