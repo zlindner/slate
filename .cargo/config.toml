@@ -1,0 +1,4 @@
+[alias]
+l = "run --bin oxy-login"
+prisma = "run -p prisma-cli --"
+w = "run --bin oxy-world"

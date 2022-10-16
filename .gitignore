@@ -1,5 +1,4 @@
 /target
-/.cargo
 /oxy-core/src/prisma.rs
 .env
 .DS_Store
