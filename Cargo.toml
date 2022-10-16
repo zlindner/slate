@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "cygnus",
     "oxy-core",
     "oxy-login",
     "oxy-world",
