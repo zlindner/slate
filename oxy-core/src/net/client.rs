@@ -47,5 +47,9 @@ impl Client {
         if let Err(e) = self.stream.write_all(&handshake.bytes).await {
             log::error!("Error sending handshake: {}", e);
         }
+
+        if let Err(e) = self.stream.flush().await {
+            log::error!("Error flushing stream: {}", e);
+        }
     }
 }
