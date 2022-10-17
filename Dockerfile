@@ -8,5 +8,5 @@ FROM debian:bullseye-slim
 RUN apt-get update && apt-get -y install openssl libssl-dev
 COPY --from=builder /target/release/oxy-login /usr/local/bin/oxy-login
 
-EXPOSE PORT
+EXPOSE $PORT
 CMD ["oxy-login"]
