@@ -4,7 +4,7 @@ use oxy_core::{
     net::{Events, Packet},
     prisma::PrismaClient,
 };
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc};
 
 mod connect;
 
@@ -16,8 +16,8 @@ impl Events for EventHandler {
         log::debug!("Server started @ {}", addr);
     }
 
-    async fn on_connect(&self) {
-        log::debug!("Client connected to server");
+    async fn on_connect(&self, addr: SocketAddr) {
+        log::info!("Client connected to server from {}", addr.ip());
     }
 
     async fn on_packet(&self, packet: Packet, db: &Arc<PrismaClient>) {

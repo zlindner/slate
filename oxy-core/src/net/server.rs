@@ -2,7 +2,7 @@ use super::Packet;
 use crate::{net::Client, prisma::PrismaClient};
 use anyhow::Result;
 use async_trait::async_trait;
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc};
 use tokio::net::TcpListener;
 
 pub struct Server;
@@ -15,7 +15,9 @@ impl Server {
         events.on_start(addr).await;
 
         loop {
-            let (stream, _) = listener.accept().await?;
+            let (stream, addr) = listener.accept().await?;
+            events.on_connect(addr).await;
+
             let events = events.clone();
             let db = db.clone();
 
@@ -41,7 +43,7 @@ impl Server {
 #[async_trait]
 pub trait Events: Send + Sync + 'static {
     async fn on_start(&self, addr: &str);
-    async fn on_connect(&self);
+    async fn on_connect(&self, addr: SocketAddr);
     async fn on_packet(&self, packet: Packet, db: &Arc<PrismaClient>);
     async fn on_disconnect(&self);
 }
