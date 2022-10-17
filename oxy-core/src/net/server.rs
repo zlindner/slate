@@ -23,8 +23,12 @@ impl Server {
 
             tokio::spawn(async move {
                 let mut client = Client::new(stream);
-                log::debug!("Sending handshake...");
-                client.send_handshake().await;
+
+                if let Err(e) = client.send_handshake().await {
+                    log::error!("Error writing handshake: {}", e);
+                    events.on_disconnect().await;
+                    return;
+                }
 
                 loop {
                     let packet = match client.read().await {

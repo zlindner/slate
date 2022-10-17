@@ -20,6 +20,7 @@ impl Client {
         }
     }
 
+    /// Reads a packet from the client
     pub async fn read(&mut self) -> Result<Packet> {
         let mut header = [0u8; 4];
         self.stream.read_exact(&mut header).await?;
@@ -35,21 +36,15 @@ impl Client {
         Ok(Packet::wrap(body))
     }
 
+    /// Sends a packet to the client
     pub async fn send(&mut self, packet: Packet) -> Result<()> {
         Ok(())
     }
 
     /// Sends the handshake packet to the client to setup encryption
-    /// Note: this panics if the handshake fails and disconnects the client
-    pub async fn send_handshake(&mut self) {
+    pub async fn send_handshake(&mut self) -> Result<()> {
         let handshake = self.aes.get_handshake();
-
-        if let Err(e) = self.stream.write_all(&handshake.bytes).await {
-            log::error!("Error sending handshake: {}", e);
-        }
-
-        if let Err(e) = self.stream.flush().await {
-            log::error!("Error flushing stream: {}", e);
-        }
+        self.stream.write_all(&handshake.bytes).await?;
+        Ok(())
     }
 }
