@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ['gcc', 'rust-bin.stable.latest.default', 'openssl', 'glibc']
+nixPkgs = ['gcc', 'rust-bin.stable.latest.default', 'openssl', 'glibc-2.3.3']
 
 [phases.install]
 cmds = ['cargo prisma generate']
