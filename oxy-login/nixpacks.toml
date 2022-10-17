@@ -1,6 +1,6 @@
 [phases.setup]
 nixPkgs = ['gcc', 'rust-bin.stable.latest.default', 'openssl']
-aptPkgs = ['glibc=2.3.4']
+aptPkgs = ['libc=2.3.4']
 
 [phases.install]
 cmds = ['cargo prisma generate']
