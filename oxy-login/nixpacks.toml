@@ -1,10 +1,10 @@
-[setup]
+[phases.setup]
 nixPkgs = ['gcc', 'rust-bin.stable.latest.default', 'binutils']
 
-[install]
+[phases.install]
 cmds = ['cargo prisma generate']
 
-[build]
+[phases.build]
 cmds = ['cargo build --release --package oxy-login']
 
 [start]
