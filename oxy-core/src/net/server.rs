@@ -23,12 +23,16 @@ impl Server {
 
             tokio::spawn(async move {
                 let mut client = Client::new(stream);
+                log::debug!("Sending handshake...");
                 client.send_handshake().await;
 
                 loop {
                     let packet = match client.read().await {
                         Ok(packet) => packet,
-                        Err(_) => break,
+                        Err(e) => {
+                            log::error!("Error reading packet: {}", e);
+                            break;
+                        },
                     };
 
                     events.on_packet(packet, &db).await;
