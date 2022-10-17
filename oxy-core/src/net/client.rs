@@ -43,6 +43,9 @@ impl Client {
     /// Note: this panics if the handshake fails and disconnects the client
     pub async fn send_handshake(&mut self) {
         let handshake = self.aes.get_handshake();
-        self.stream.write_all(&handshake.bytes).await.unwrap();
+
+        if let Err(e) = self.stream.write_all(&handshake.bytes).await {
+            log::error!("Error sending handshake: {}", e);
+        }
     }
 }
