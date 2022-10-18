@@ -8,6 +8,7 @@ use tokio::net::TcpListener;
 pub struct Server;
 
 impl Server {
+    /// Start listening at the given addr and process incoming connections
     pub async fn start(
         addr: &str,
         handler: &'static impl HandlePacket,
@@ -23,32 +24,37 @@ impl Server {
             let db = db.clone();
             session_id += 1;
 
+            // Create a new task per connection/client
             tokio::spawn(async move {
-                let mut client = Client::new(stream, db, session_id);
-
-                if let Err(e) = client.on_connect().await {
-                    log::error!("Client connection error: {}", e);
-                    client.on_disconnect().await;
-                    return;
-                }
-
-                loop {
-                    let packet = match client.read().await {
-                        Ok(packet) => packet,
-                        Err(e) => {
-                            log::error!("Error reading packet: {}", e);
-                            break;
-                        }
-                    };
-
-                    if let Err(e) = handler.handle(packet, &mut client).await {
-                        log::error!("Error handling packet: {}", e);
-                    }
-                }
-
-                client.on_disconnect().await;
+                let client = Client::new(stream, db, session_id);
+                Self::process(client, handler).await;
             });
         }
+    }
+
+    /// Processes the created connection with the given client in a separate task
+    async fn process(mut client: Client, handler: &'static impl HandlePacket) {
+        if let Err(e) = client.on_connect().await {
+            log::error!("Client connection error: {}", e);
+            client.on_disconnect().await;
+            return;
+        }
+
+        loop {
+            let packet = match client.read().await {
+                Ok(packet) => packet,
+                Err(e) => {
+                    log::error!("Error reading packet: {}", e);
+                    break;
+                }
+            };
+
+            if let Err(e) = handler.handle(packet, &mut client).await {
+                log::error!("Error handling packet: {}", e);
+            }
+        }
+
+        client.on_disconnect().await;
     }
 }
 
