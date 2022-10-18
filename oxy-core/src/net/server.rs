@@ -32,7 +32,7 @@ impl Server {
         }
     }
 
-    /// Processes the created connection with the given client in a separate task
+    /// Process the connection/client: send handshake and handle incoming packets
     async fn process(mut client: Client, handler: &'static impl HandlePacket) {
         if let Err(e) = client.on_connect().await {
             log::error!("Client connection error: {}", e);
