@@ -10,13 +10,15 @@ use tokio::{
 pub struct Client {
     stream: TcpStream,
     aes: MapleAES,
+    pub session_id: i32,
 }
 
 impl Client {
-    pub fn new(stream: TcpStream) -> Self {
+    pub fn new(stream: TcpStream, session_id: i32) -> Self {
         Self {
             stream,
             aes: MapleAES::new(83),
+            session_id
         }
     }
 

@@ -1,10 +1,10 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use oxy_core::{
-    net::{Events, Packet},
+    net::{Client, Events, Packet},
     prisma::PrismaClient,
 };
-use std::{net::SocketAddr, sync::Arc};
+use std::sync::Arc;
 
 mod login;
 
@@ -16,27 +16,34 @@ impl Events for EventHandler {
         log::info!("Server started @ {}", addr);
     }
 
-    async fn on_connect(&self, addr: SocketAddr) {
-        log::info!("Client connected to server from {}", addr.ip());
+    async fn on_connect(&self, client: &Client) {
+        log::info!("Client connected to server (session {})", client.session_id);
     }
 
-    async fn on_packet(&self, packet: Packet, db: &Arc<PrismaClient>) {
+    async fn on_packet(&self, packet: Packet, client: &mut Client, db: &Arc<PrismaClient>) {
         log::debug!("Received: {}", packet);
 
-        if let Err(e) = PacketHandler::handle(packet, db).await {
+        if let Err(e) = PacketHandler::handle(packet, client, db).await {
             log::error!("Error handling packet: {}", e);
         }
     }
 
-    async fn on_disconnect(&self) {
-        log::info!("Client disconnected from server");
+    async fn on_disconnect(&self, client: &Client) {
+        log::info!(
+            "Client disconnected from server (session {})",
+            client.session_id
+        );
     }
 }
 
 struct PacketHandler;
 
 impl PacketHandler {
-    pub async fn handle(mut packet: Packet, db: &Arc<PrismaClient>) -> Result<()> {
+    pub async fn handle(
+        mut packet: Packet,
+        client: &mut Client,
+        db: &Arc<PrismaClient>,
+    ) -> Result<()> {
         let op = packet.read_short();
 
         match op {
