@@ -1,7 +1,6 @@
-use super::Packet;
+use super::HandlePacket;
 use crate::{net::Client, prisma::PrismaClient};
 use anyhow::Result;
-use async_trait::async_trait;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 
@@ -56,9 +55,4 @@ impl Server {
 
         client.on_disconnect().await;
     }
-}
-
-#[async_trait]
-pub trait HandlePacket: Send + Sync {
-    async fn handle(&self, mut packet: Packet, client: &mut Client) -> Result<()>;
 }
