@@ -1,7 +1,11 @@
 use super::Packet;
-use crate::crypt::MapleAES;
+use crate::{
+    crypt::MapleAES,
+    prisma::{session, PrismaClient},
+};
 use anyhow::{anyhow, Result};
 use bytes::BytesMut;
+use std::sync::Arc;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
@@ -10,15 +14,19 @@ use tokio::{
 pub struct Client {
     stream: TcpStream,
     aes: MapleAES,
-    pub session_id: i32,
+    pub db: Arc<PrismaClient>,
+    pub session: session::Data,
 }
 
 impl Client {
-    pub fn new(stream: TcpStream, session_id: i32) -> Self {
+    pub fn new(stream: TcpStream, db: Arc<PrismaClient>, session_id: i32) -> Self {
+        let session = session::Data { id: session_id };
+
         Self {
             stream,
+            db,
             aes: MapleAES::new(83),
-            session_id
+            session,
         }
     }
 
@@ -48,5 +56,20 @@ impl Client {
         let handshake = self.aes.get_handshake();
         self.stream.write_all(&handshake.bytes).await?;
         Ok(())
+    }
+
+    pub async fn on_connect(&mut self) -> Result<()> {
+        log::info!("Client connected to server (session {})", self.session.id);
+        self.send_handshake().await?;
+        Ok(())
+    }
+
+    pub async fn on_disconnect(&self) {
+        log::info!(
+            "Client disconnected from server (session {})",
+            self.session.id
+        );
+
+        // TODO update login state
     }
 }

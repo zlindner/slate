@@ -8,26 +8,27 @@ use tokio::net::TcpListener;
 pub struct Server;
 
 impl Server {
-    pub async fn start(addr: &str, events: impl Events, db: Arc<PrismaClient>) -> Result<()> {
+    pub async fn start(
+        addr: &str,
+        handler: &'static impl HandlePacket,
+        db: Arc<PrismaClient>,
+    ) -> Result<()> {
         let listener = TcpListener::bind(addr).await?;
-        let events = Arc::new(events);
-        events.on_start(addr).await;
+        log::info!("Server started @ {}", addr);
 
-        let mut session_id = -1;
+        let mut session_id = 0;
 
         loop {
             let (stream, _) = listener.accept().await?;
-            let events = events.clone();
             let db = db.clone();
             session_id += 1;
 
             tokio::spawn(async move {
-                let mut client = Client::new(stream, session_id);
-                events.on_connect(&client).await;
+                let mut client = Client::new(stream, db, session_id);
 
-                if let Err(e) = client.send_handshake().await {
-                    log::error!("Error writing handshake: {}", e);
-                    events.on_disconnect(&client).await;
+                if let Err(e) = client.on_connect().await {
+                    log::error!("Client connection error: {}", e);
+                    client.on_disconnect().await;
                     return;
                 }
 
@@ -40,19 +41,18 @@ impl Server {
                         }
                     };
 
-                    events.on_packet(packet, &mut client, &db).await;
+                    if let Err(e) = handler.handle(packet, &mut client).await {
+                        log::error!("Error handling packet: {}", e);
+                    }
                 }
 
-                events.on_disconnect(&client).await;
+                client.on_disconnect().await;
             });
         }
     }
 }
 
 #[async_trait]
-pub trait Events: Send + Sync + 'static {
-    async fn on_start(&self, addr: &str);
-    async fn on_connect(&self, client: &Client);
-    async fn on_packet(&self, packet: Packet, client: &mut Client, db: &Arc<PrismaClient>);
-    async fn on_disconnect(&self, client: &Client);
+pub trait HandlePacket: Send + Sync {
+    async fn handle(&self, mut packet: Packet, client: &mut Client) -> Result<()>;
 }

@@ -1,6 +1,6 @@
 use anyhow::Result;
 use dotenv::dotenv;
-use handler::EventHandler;
+use handler::PacketHandler;
 use log::LevelFilter;
 use oxy_core::{
     net::Server,
@@ -24,7 +24,13 @@ async fn main() -> Result<()> {
     let addr = format!("0.0.0.0:{}", port);
     let db: Arc<PrismaClient> = Arc::new(prisma::new_client().await?);
 
-    Server::start(&addr, EventHandler, db).await?;
+    startup(&db).await?;
+    Server::start(&addr, &PacketHandler, db).await?;
 
+    Ok(())
+}
+
+async fn startup(db: &Arc<PrismaClient>) -> Result<()> {
+    // TODO set all accounts to logged out, delete sessions, etc.
     Ok(())
 }

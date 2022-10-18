@@ -1,6 +1,6 @@
 use anyhow::Result;
 use dotenv::dotenv;
-use handler::EventHandler;
+use handler::PacketHandler;
 use log::LevelFilter;
 use oxy_core::{
     net::Server,
@@ -20,8 +20,10 @@ async fn main() -> Result<()> {
         .env()
         .init()?;
 
+    let port = std::env::var("PORT").unwrap_or("10000".to_string());
+    let addr = format!("0.0.0.0:{}", port);
     let db: Arc<PrismaClient> = Arc::new(prisma::new_client().await?);
-    Server::start("0.0.0.0:10000", EventHandler, db).await?;
+    Server::start(&addr, &PacketHandler, db).await?;
 
     Ok(())
 }
