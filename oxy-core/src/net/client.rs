@@ -1,10 +1,11 @@
 use super::Packet;
 use crate::{
     crypt::MapleAES,
-    prisma::{session, PrismaClient},
+    prisma::{account, session, LoginState, PrismaClient},
 };
 use anyhow::{anyhow, Result};
 use bytes::BytesMut;
+use prisma_client_rust::chrono::{DateTime, FixedOffset, Utc};
 use std::sync::Arc;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -20,7 +21,18 @@ pub struct Client {
 
 impl Client {
     pub fn new(stream: TcpStream, db: Arc<PrismaClient>, session_id: i32) -> Self {
-        let session = session::Data { id: session_id };
+        let session = session::Data {
+            id: session_id,
+            account_id: -1,
+            character_id: -1,
+            world_id: -1,
+            chanel_id: -1,
+            login_attempts: 0,
+            pin: "".to_string(),
+            pin_attempts: 0,
+            pic: "".to_string(),
+            pic_attempts: 0,
+        };
 
         Self {
             stream,
@@ -47,7 +59,11 @@ impl Client {
     }
 
     /// Sends a packet to the client
-    pub async fn send(&mut self, packet: Packet) -> Result<()> {
+    pub async fn send(&mut self, mut packet: Packet) -> Result<()> {
+        let header = self.aes.build_header(packet.len());
+        self.aes.encrypt(&mut packet.bytes);
+        self.stream.write_all(&header).await?;
+        self.stream.write_all(&packet.bytes).await?;
         Ok(())
     }
 
@@ -71,5 +87,28 @@ impl Client {
         );
 
         // TODO update login state
+    }
+
+    /// Update the clients login state and last login time
+    pub async fn update_state(&self, new_state: LoginState) -> Result<()> {
+        if self.session.id == -1 {
+            return Err(anyhow!("Error updating state: invalid session id"));
+        }
+
+        let now: DateTime<FixedOffset> = DateTime::from(Utc::now());
+
+        self.db
+            .account()
+            .update(
+                account::id::equals(self.session.id),
+                vec![
+                    account::state::set(new_state),
+                    account::last_login::set(Some(now)),
+                ],
+            )
+            .exec()
+            .await?;
+
+        Ok(())
     }
 }

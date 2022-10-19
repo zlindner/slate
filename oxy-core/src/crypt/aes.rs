@@ -133,6 +133,22 @@ impl MapleAES {
     }
 
     /// Generates a packet header with the given length
+    pub fn build_header(&self, len: usize) -> [u8; 4] {
+        let mut iiv: u32 = self.send_iv[3] as u32 & 0xFF;
+        iiv |= ((self.send_iv[2] as u32) << 8) & 0xFF00;
+        iiv ^= 0xFFFF - self.version as u32;
+        let mlength = (((len as u32) << 8) & 0xFF00) | ((len as u32) >> 8);
+        let xored_iv = iiv ^ mlength;
+
+        [
+            (iiv >> 8) as u8 & 0xFF,
+            iiv as u8 & 0xFF,
+            (xored_iv >> 8) as u8 & 0xFF,
+            xored_iv as u8 & 0xFF,
+        ]
+    }
+
+    /// Generates a packet header with the given length (cygnus only)
     pub fn build_header_cygnus(&self, len: usize) -> [u8; 4] {
         let a: usize = (((self.send_iv[3] as usize) << 8) | (self.send_iv[2] as usize)) ^ 83;
         let b: usize = a ^ len;
