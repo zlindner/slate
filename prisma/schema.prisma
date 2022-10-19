@@ -9,7 +9,16 @@ generator client {
 }
 
 model Session {
-    id      Int     @id @default(autoincrement())
+    id              Int     @id
+    account_id      Int
+    character_id    Int
+    world_id        Int
+    chanel_id       Int
+    login_attempts  Int
+    pin             String
+    pin_attempts    Int
+    pic             String
+    pic_attempts    Int
 }
 
 model Account {
@@ -19,8 +28,10 @@ model Account {
     pin         String
     pic         String
     state       LoginState  @default(LOGGED_OUT)
-    banned      Boolean
-    tos         Boolean
+    banned      Boolean     @default(false)
+    tos         Boolean     @default(false)
+    last_login  DateTime?
+    gender      Int
 }
 
 enum LoginState {

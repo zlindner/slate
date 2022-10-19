@@ -16,7 +16,10 @@ async fn main() -> Result<()> {
     dotenv().ok();
 
     SimpleLogger::new()
-        .with_module_level("mio", LevelFilter::Off)
+        .with_level(LevelFilter::Debug)
+        .with_module_level("quaint", LevelFilter::Off)
+        .with_module_level("mobc", LevelFilter::Off)
+        .with_module_level("tokio_postgres", LevelFilter::Error)
         .env()
         .init()?;
 
