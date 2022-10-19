@@ -4,8 +4,8 @@ datasource db {
 }
 
 generator client {
-    provider      = "cargo prisma"
-    output        = "../oxy-core/src/prisma.rs"
+    provider = env("PRISMA_CLIENT")
+    output   = env("PRISMA_OUTPUT")
 }
 
 model Session {
