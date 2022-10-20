@@ -33,8 +33,8 @@ async fn main() -> Result<()> {
     send(&mut stream, &mut aes, packet).await?;
 
     // send login
-    let name = "chopstikz9000";
-    let password = "abc123";
+    let name = "cygnus";
+    let password = "test1234";
     let packet = login(name, password);
     send(&mut stream, &mut aes, packet).await?;
 
@@ -42,7 +42,7 @@ async fn main() -> Result<()> {
         let mut header = [0u8; 4];
         stream.read_exact(&mut header).await?;
 
-        if !aes.is_valid_header(&header) {
+        if !aes.is_valid_header_cygnus(&header) {
             return Err(anyhow!("Invalid packet header: {:02X?}", header));
         }
 

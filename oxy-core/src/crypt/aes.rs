@@ -132,6 +132,16 @@ impl MapleAES {
             && (((header[1] ^ self.recv_iv[3]) & 0xFF) == (self.version & 0xFF) as u8)
     }
 
+    /// Checks if the given header is valid (cygnus only)
+    pub fn is_valid_header_cygnus(&self, header: &[u8]) -> bool {
+        if header.len() != 4 {
+            return false;
+        }
+
+        ((header[0] ^ self.recv_iv[2]) & 0xFF) == ((0xFFFF - self.version >> 8) as u8 & 0xFF)
+        && (((header[1] ^ self.recv_iv[3]) & 0xFF) == (0xFFFF - self.version & 0xFF) as u8)
+    }
+
     /// Generates a packet header with the given length
     pub fn build_header(&self, len: usize) -> [u8; 4] {
         let mut iiv: u32 = self.send_iv[3] as u32 & 0xFF;
