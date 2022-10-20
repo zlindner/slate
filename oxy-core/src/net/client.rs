@@ -32,6 +32,7 @@ impl Client {
             pin_attempts: 0,
             pic: "".to_string(),
             pic_attempts: 0,
+            tos: false,
         };
 
         Self {
@@ -75,25 +76,29 @@ impl Client {
         Ok(())
     }
 
+    /// Called when the client connects to the server
     pub async fn on_connect(&mut self) -> Result<()> {
         log::info!("Client connected to server (session {})", self.session.id);
         self.send_handshake().await?;
         Ok(())
     }
 
+    /// Called when the client disconnects from the server
     pub async fn on_disconnect(&self) {
         log::info!(
             "Client disconnected from server (session {})",
             self.session.id
         );
 
-        // TODO update login state
+        if let Err(e) = self.update_state(LoginState::LoggedOut).await {
+            log::error!("Error updating login state: {}", e);
+        }
     }
 
     /// Update the clients login state and last login time
     pub async fn update_state(&self, new_state: LoginState) -> Result<()> {
-        if self.session.id == -1 {
-            return Err(anyhow!("Error updating state: invalid session id"));
+        if self.session.account_id == -1 {
+            return Err(anyhow!("Error updating state: invalid account id"));
         }
 
         let now: DateTime<FixedOffset> = DateTime::from(Utc::now());
@@ -101,7 +106,7 @@ impl Client {
         self.db
             .account()
             .update(
-                account::id::equals(self.session.id),
+                account::id::equals(self.session.account_id),
                 vec![
                     account::state::set(new_state),
                     account::last_login::set(Some(now)),
@@ -111,5 +116,21 @@ impl Client {
             .await?;
 
         Ok(())
+    }
+
+    /// Get the client's account by account id stored in session
+    pub async fn get_account(&self) -> Result<Option<account::Data>> {
+        if self.session.account_id == -1 {
+            return Err(anyhow!("Error getting account: invalid account id"));
+        }
+
+        let account = self
+            .db
+            .account()
+            .find_unique(account::id::equals(self.session.account_id))
+            .exec()
+            .await?;
+
+        Ok(account)
     }
 }

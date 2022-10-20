@@ -52,6 +52,7 @@ pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
     // If the account hasn't accepted tos send the accept tos prompt
     if account.tos == false {
         let response = login_failed(LoginError::PromptTOS);
+        client.session.account_id = account.id;
         client.send(response).await?;
         return Ok(());
     }
@@ -74,6 +75,7 @@ pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
     client.session.account_id = account.id;
     client.session.pin = account.pin.clone();
     client.session.pic = account.pic.clone();
+    client.session.tos = account.tos;
     client.update_state(LoginState::LoggedIn).await?;
 
     let response = login_succeeded(&account);
@@ -102,7 +104,7 @@ fn login_failed(error: LoginError) -> Packet {
 }
 
 /// Packet indicating login succeeded
-fn login_succeeded(account: &account::Data) -> Packet {
+pub fn login_succeeded(account: &account::Data) -> Packet {
     let mut packet = Packet::new();
     packet.write_short(0x00);
     packet.write_int(0);

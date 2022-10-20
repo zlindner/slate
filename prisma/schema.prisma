@@ -19,6 +19,7 @@ model Session {
     pin_attempts    Int
     pic             String
     pic_attempts    Int
+    tos             Boolean
 }
 
 model Account {
