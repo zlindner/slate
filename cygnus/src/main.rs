@@ -1,10 +1,15 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use bytes::BytesMut;
+use client::CygnusClient;
+use handler::PacketHandler;
 use log::LevelFilter;
 use oxy_core::{crypt::MapleAES, net::Packet};
 use rand::random;
 use simple_logger::SimpleLogger;
-use tokio::{io::AsyncReadExt, io::AsyncWriteExt, net::TcpStream};
+use tokio::{io::AsyncReadExt, net::TcpStream};
+
+mod client;
+mod handler;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -26,42 +31,31 @@ async fn main() -> Result<()> {
     let recv_iv: [u8; 4] = (*handshake.read_bytes(4)).try_into()?;
     let send_iv: [u8; 4] = (*handshake.read_bytes(4)).try_into()?;
 
-    let mut aes = MapleAES::new_with_iv(version, recv_iv, send_iv);
+    let aes = MapleAES::new_with_iv(version, recv_iv, send_iv);
+    let mut client = CygnusClient::new(stream, aes);
 
     // send login_start
     let packet = login_start();
-    send(&mut stream, &mut aes, packet).await?;
+    client.send(packet).await?;
 
     // send login
-    let name = "cygnus";
-    let password = "test1234";
-    let packet = login(name, password);
-    send(&mut stream, &mut aes, packet).await?;
+    let packet = login("cygnus", "test1234");
+    client.send(packet).await?;
 
     loop {
-        let mut header = [0u8; 4];
-        stream.read_exact(&mut header).await?;
+        let packet = match client.read().await {
+            Ok(packet) => packet,
+            Err(e) => {
+                log::error!("Error reading packet: {}", e);
+                break;
+            }
+        };
 
-        if !aes.is_valid_header_cygnus(&header) {
-            return Err(anyhow!("Invalid packet header: {:02X?}", header));
+        if let Err(e) = PacketHandler::handle(packet, &mut client).await {
+            log::error!("Error handling packet: {}", e);
         }
-
-        let len = aes.get_packet_len(&header);
-        let mut body = BytesMut::zeroed(len as usize);
-        stream.read_exact(&mut body).await?;
-        aes.decrypt(&mut body);
-
-        let mut packet = Packet::wrap(body);
-        log::debug!("Received: {}", packet);
     }
-}
 
-async fn send(stream: &mut TcpStream, aes: &mut MapleAES, mut packet: Packet) -> Result<()> {
-    log::debug!("Sent: {}", packet);
-    let header = aes.build_header_cygnus(packet.len());
-    aes.encrypt(&mut packet.bytes);
-    stream.write_all(&header).await?;
-    stream.write_all(&packet.bytes).await?;
     Ok(())
 }
 

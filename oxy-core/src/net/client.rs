@@ -60,6 +60,7 @@ impl Client {
 
     /// Sends a packet to the client
     pub async fn send(&mut self, mut packet: Packet) -> Result<()> {
+        log::debug!("Sent: {}", packet);
         let header = self.aes.build_header(packet.len());
         self.aes.encrypt(&mut packet.bytes);
         self.stream.write_all(&header).await?;

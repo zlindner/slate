@@ -9,6 +9,7 @@ pub struct PacketHandler;
 #[async_trait]
 impl HandlePacket for PacketHandler {
     async fn handle(&self, mut packet: Packet, client: &mut Client) -> Result<()> {
+        log::debug!("Received: {}", packet);
         let op = packet.read_short();
 
         match op {

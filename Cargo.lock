@@ -482,6 +482,7 @@ name = "cygnus"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "bytes",
  "log",
  "oxy-core",

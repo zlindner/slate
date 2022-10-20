@@ -81,6 +81,7 @@ pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
     Ok(())
 }
 
+// TODO make core?
 /// Error returned to client if login fails
 enum LoginError {
     AccountBanned = 3,
@@ -95,9 +96,8 @@ enum LoginError {
 fn login_failed(error: LoginError) -> Packet {
     let mut packet = Packet::new();
     packet.write_short(0x00);
-    packet.write_byte(error as u8);
-    packet.write_byte(0);
-    packet.write_int(0);
+    packet.write_int(error as i32);
+    packet.write_short(0);
     packet
 }
 
