@@ -35,7 +35,7 @@ const hash_pw = async (password: string): Promise<string> => {
       if (err) {
         reject(err);
       } else {
-        resolve(key.toString("hex"));
+        resolve(key.toString());
       }
     });
   });
