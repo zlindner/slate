@@ -91,7 +91,7 @@ impl Client {
         );
 
         if let Err(e) = self.update_state(LoginState::LoggedOut).await {
-            log::error!("Error updating login state: {}", e);
+            log::debug!("Error updating login state: {}", e);
         }
     }
 

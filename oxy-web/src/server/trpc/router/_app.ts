@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../trpc";
-import { pbkdf2, randomBytes } from "crypto";
+import argon2 from "argon2";
 
 export const appRouter = router({
   register: publicProcedure
@@ -11,34 +11,24 @@ export const appRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const hash = await hash_pw(input.password);
+      try {
+        const hash = await argon2.hash(input.password);
 
-      const account = await ctx.prisma.account.create({
-        data: {
-          name: input.name,
-          password: hash,
-          pin: "",
-          pic: "",
-          gender: 0
-        }
-      });
+        const account = await ctx.prisma.account.create({
+          data: {
+            name: input.name,
+            password: hash,
+            pin: "",
+            pic: "",
+            gender: 0
+          }
+        });
 
-      return { success: true, account };
+        return { success: true, account };
+      } catch (err) {
+        return { success: false };
+      }
     })
 });
-
-const hash_pw = async (password: string): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const salt = randomBytes(256);
-
-    pbkdf2(password, salt, 10000, 64, "sha512", (err, key) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(key.toString());
-      }
-    });
-  });
-};
 
 export type AppRouter = typeof appRouter;

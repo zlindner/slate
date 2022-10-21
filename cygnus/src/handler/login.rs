@@ -10,6 +10,7 @@ pub async fn handle(mut packet: Packet, client: &mut CygnusClient) -> Result<()>
     match reason {
         0 => log::info!("Success"),
         3 => log::info!("Account banned"),
+        4 => log::info!("Incorrect password"),
         5 => log::info!("Account not found"),
         6 => log::info!("Too many attempts"),
         7 => log::info!("Already logged in"),

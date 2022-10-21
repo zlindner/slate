@@ -2,9 +2,10 @@ use anyhow::Result;
 use dotenv::dotenv;
 use handler::PacketHandler;
 use log::LevelFilter;
+use once_cell::sync::Lazy;
 use oxy_core::{
     net::Server,
-    prisma::{self, PrismaClient},
+    prisma::{self, account, LoginState, PrismaClient},
 };
 use simple_logger::SimpleLogger;
 use std::sync::Arc;
@@ -28,12 +29,21 @@ async fn main() -> Result<()> {
     let db: Arc<PrismaClient> = Arc::new(prisma::new_client().await?);
 
     startup(&db).await?;
-    Server::start(&addr, &PacketHandler, db).await?;
+
+    static HANDLER: Lazy<PacketHandler> = Lazy::new(|| PacketHandler::new());
+    Server::start(&addr, &*HANDLER, db).await?;
 
     Ok(())
 }
 
 async fn startup(db: &Arc<PrismaClient>) -> Result<()> {
     // TODO set all accounts to logged out, delete sessions, etc.
+
+    // Set all accounts to logged out
+    db.account()
+        .update_many(vec![], vec![account::state::set(LoginState::LoggedOut)])
+        .exec()
+        .await?;
+
     Ok(())
 }

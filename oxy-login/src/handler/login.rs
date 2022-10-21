@@ -4,10 +4,6 @@ use oxy_core::{
     prisma::account,
     prisma::LoginState,
 };
-use pbkdf2::{
-    password_hash::{PasswordHash, PasswordVerifier},
-    Pbkdf2,
-};
 
 /// Login server: login packet (0x01)
 /// Called when the client clicks login after entering name and password
@@ -37,6 +33,15 @@ pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
         }
     };
 
+    let password = packet.read_string();
+
+    // Validate the bytes of the entered password against the hash stored in db
+    if argon2::verify_encoded(&account.password, password.as_bytes()).is_err() {
+        let response = login_failed(LoginError::IncorrectPassword);
+        client.send(response).await?;
+        return Ok(());
+    }
+
     if !matches!(account.state, LoginState::LoggedOut) {
         let response = login_failed(LoginError::AlreadyLoggedIn);
         client.send(response).await?;
@@ -57,19 +62,8 @@ pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
         return Ok(());
     }
 
-    let password = packet.read_string();
-    let bytes = password.as_bytes();
-    let db_hash = PasswordHash::new(&account.password).unwrap();
-
-    // Validate the bytes of the entered password against the hash stored in db
-    if Pbkdf2.verify_password(bytes, &db_hash).is_err() {
-        let response = login_failed(LoginError::IncorrectPassword);
-        client.send(response).await?;
-        return Ok(());
-    }
-
     packet.skip(6);
-    let hwid = packet.read_bytes(4);
+    let _hwid = packet.read_bytes(4);
     // TODO do stuff with hwid?
 
     client.session.account_id = account.id;

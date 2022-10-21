@@ -25,6 +25,7 @@ impl CygnusClient {
             pin_attempts: 0,
             pic: "".to_string(),
             pic_attempts: 0,
+            tos: false,
         };
 
         Self {
