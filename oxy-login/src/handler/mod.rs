@@ -6,6 +6,7 @@ use serde::Deserialize;
 mod login;
 mod tos;
 mod world_list;
+mod world_status;
 
 pub struct PacketHandler {
     pub config: HandlerConfig,
@@ -43,6 +44,7 @@ impl HandlePacket for PacketHandler {
 
         match op {
             0x01 => login::handle(packet, client).await?,
+            0x06 => world_status::handle(packet, client, &self.config).await?,
             0x07 => tos::handle(packet, client).await?,
             0x0B => world_list::handle(packet, client, &self.config).await?,
             _ => log::debug!("Unhandled packet: {:02X?}", op),
@@ -72,4 +74,5 @@ pub struct WorldConfig {
     quest_rate: u8,
     fishing_rate: u8,
     travel_rate: u8,
+    max_players: i32,
 }

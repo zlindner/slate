@@ -40,3 +40,8 @@ enum LoginState {
     TRANSITIONING
     LOGGED_IN
 }
+
+model World {
+    id          Int         @id
+    connected   Int
+}

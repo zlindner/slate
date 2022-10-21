@@ -3,7 +3,7 @@
         {
             "id": 0,
             "name": "Scania",
-            "channels": 1,
+            "channels": 10,
             "flag": 0,
             "event_message": "Scania!",
             "recommended_message": "Welcome to Scania!",
@@ -13,12 +13,13 @@
             "boss_drop_rate": 10,
             "quest_rate": 5,
             "fishing_rate": 10,
-            "travel_rate": 10
+            "travel_rate": 10,
+            "max_players": 1000
         },
         {
             "id": 1,
             "name": "Bera",
-            "channels": 1,
+            "channels": 10,
             "flag": 0,
             "event_message": "Bera!",
             "recommended_message": "Welcome to Bera!",
@@ -28,7 +29,8 @@
             "boss_drop_rate": 10,
             "quest_rate": 5,
             "fishing_rate": 10,
-            "travel_rate": 10
+            "travel_rate": 10,
+            "max_players": 1000
         }
     ]
 }
