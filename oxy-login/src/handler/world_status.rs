@@ -39,14 +39,14 @@ pub async fn handle(mut packet: Packet, client: &mut Client, config: &HandlerCon
     Ok(())
 }
 
-enum WorldStatus {
+pub enum WorldStatus {
     Normal,
     HighlyPopulated,
     Full,
 }
 
 /// Packet containing the world's capacity status
-fn world_status(status: WorldStatus) -> Packet {
+pub fn world_status(status: WorldStatus) -> Packet {
     let mut packet = Packet::new();
     packet.write_short(0x03);
     packet.write_short(status as i16);

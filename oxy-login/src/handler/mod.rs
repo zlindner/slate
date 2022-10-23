@@ -3,6 +3,7 @@ use async_trait::async_trait;
 use oxy_core::net::{Client, HandlePacket, Packet};
 use serde::Deserialize;
 
+mod character_list;
 mod login;
 mod tos;
 mod world_list;
@@ -44,6 +45,7 @@ impl HandlePacket for PacketHandler {
 
         match op {
             0x01 => login::handle(packet, client).await?,
+            0x05 => character_list::handle(packet, client, &self.config).await?,
             0x06 => world_status::handle(packet, client, &self.config).await?,
             0x07 => tos::handle(packet, client).await?,
             0x0B => world_list::handle(packet, client, &self.config).await?,

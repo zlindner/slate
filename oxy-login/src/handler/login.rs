@@ -10,8 +10,7 @@ use oxy_core::{
 pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
     if client.session.login_attempts >= 5 {
         let response = login_failed(LoginError::TooManyAttempts);
-        client.send(response).await?;
-        return Ok(());
+        return client.send(response).await;
     }
 
     client.session.login_attempts += 1;
@@ -28,8 +27,7 @@ pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
         Some(account) => account,
         None => {
             let response = login_failed(LoginError::AccountNotFound);
-            client.send(response).await?;
-            return Ok(());
+            return client.send(response).await;
         }
     };
 
@@ -38,28 +36,24 @@ pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
     // Validate the bytes of the entered password against the hash stored in db
     if argon2::verify_encoded(&account.password, password.as_bytes()).is_err() {
         let response = login_failed(LoginError::IncorrectPassword);
-        client.send(response).await?;
-        return Ok(());
+        return client.send(response).await;
     }
 
     if !matches!(account.state, LoginState::LoggedOut) {
         let response = login_failed(LoginError::AlreadyLoggedIn);
-        client.send(response).await?;
-        return Ok(());
+        return client.send(response).await;
     }
 
     if account.banned == true {
         let response = login_failed(LoginError::AccountBanned);
-        client.send(response).await?;
-        return Ok(());
+        return client.send(response).await;
     }
 
     // If the account hasn't accepted tos send the accept tos prompt
     if account.tos == false {
         let response = login_failed(LoginError::PromptTOS);
         client.session.account_id = account.id;
-        client.send(response).await?;
-        return Ok(());
+        return client.send(response).await;
     }
 
     packet.skip(6);

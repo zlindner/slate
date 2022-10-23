@@ -9,7 +9,7 @@ generator client {
 }
 
 model Session {
-    id              Int     @id
+    id              Int         @id
     account_id      Int
     character_id    Int
     world_id        Int
@@ -23,16 +23,16 @@ model Session {
 }
 
 model Account {
-    id          Int         @id @default(autoincrement())
-    name        String      @unique
-    password    String
-    pin         String
-    pic         String
-    state       LoginState  @default(LOGGED_OUT)
-    banned      Boolean     @default(false)
-    tos         Boolean     @default(false)
-    last_login  DateTime?
-    gender      Int
+    id              Int             @id @default(autoincrement())
+    name            String          @unique
+    password        String
+    pin             String
+    pic             String
+    state           LoginState      @default(LOGGED_OUT)
+    banned          Boolean         @default(false)
+    tos             Boolean         @default(false)
+    last_login      DateTime?
+    gender          Int
 }
 
 enum LoginState {
@@ -42,6 +42,89 @@ enum LoginState {
 }
 
 model World {
-    id          Int         @id
-    connected   Int
+    id              Int             @id
+    connected       Int
+}
+
+model Character {
+    id              Int             @id @default(autoincrement())
+    account_id      Int
+    world_id        Int
+    name            String
+    level           Int
+    exp             Int
+    gacha_exp       Int
+    str             Int
+    dex             Int
+    luk             Int
+    int             Int
+    hp              Int
+    mp              Int
+    max_hp          Int
+    max_mp          Int
+    mesos           Int
+    job             Int
+    skin_colour     Int
+    gender          Int
+    fame            Int
+    hair            Int
+    face            Int
+    ap              Int
+    sp              Int[]
+    map             Int
+    spawn_point     Int
+    gm              Int
+    party           Int
+    buddy_capacity  Int
+    created_at      DateTime        @default(now())
+    rank            Int
+    rank_move       Int
+    job_rank        Int
+    job_rank_move   Int
+    guild           Int
+    guild_rank      Int
+    slots           Int[]
+    items           Item[]
+    equips          Equip[]
+}
+
+model Item {
+    id              Int             @id @default(autoincrement())
+    item_id         Int
+    character       Character       @relation(fields: [character_id], references: [id])
+    character_id    Int
+    item_type       Int
+    inventory_type  Int
+    position        Int
+    amount          Int
+}
+
+model Equip {
+    id              Int             @id @default(autoincrement())
+    item_id         Int
+    character       Character       @relation(fields: [character_id], references: [id])
+    character_id    Int
+    position        Int
+    amount          Int
+    upgrade_slots   Int
+    level           Int
+    item_level      Int
+    exp             Int
+    str             Int
+    dex             Int
+    int             Int
+    luk             Int
+    hp              Int
+    mp              Int
+    w_atk           Int
+    m_atk           Int
+    w_def           Int
+    m_def           Int
+    acc             Int
+    avoid           Int
+    hands           Int
+    speed           Int
+    jump            Int
+    locked          Int
+    vicious         Int
 }
