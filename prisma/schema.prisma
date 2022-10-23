@@ -50,7 +50,7 @@ model Character {
     id              Int             @id @default(autoincrement())
     account_id      Int
     world_id        Int
-    name            String
+    name            String          @unique
     level           Int
     exp             Int
     gacha_exp       Int

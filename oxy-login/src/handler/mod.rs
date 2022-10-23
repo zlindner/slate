@@ -6,6 +6,7 @@ use serde::Deserialize;
 mod character_list;
 mod login;
 mod tos;
+mod validate_character_name;
 mod world_list;
 mod world_status;
 
@@ -49,6 +50,7 @@ impl HandlePacket for PacketHandler {
             0x06 => world_status::handle(packet, client, &self.config).await?,
             0x07 => tos::handle(packet, client).await?,
             0x0B => world_list::handle(packet, client, &self.config).await?,
+            0x15 => validate_character_name::handle(packet, client).await?,
             _ => log::debug!("Unhandled packet: {:02X?}", op),
         }
 
