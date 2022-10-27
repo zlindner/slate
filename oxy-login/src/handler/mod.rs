@@ -4,6 +4,7 @@ use oxy_core::net::{Client, HandlePacket, Packet};
 use serde::Deserialize;
 
 mod character_list;
+mod create_character;
 mod login;
 mod tos;
 mod validate_character_name;
@@ -51,6 +52,7 @@ impl HandlePacket for PacketHandler {
             0x07 => tos::handle(packet, client).await?,
             0x0B => world_list::handle(packet, client, &self.config).await?,
             0x15 => validate_character_name::handle(packet, client).await?,
+            0x16 => create_character::handle(packet, client).await?,
             _ => log::debug!("Unhandled packet: {:02X?}", op),
         }
 

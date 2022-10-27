@@ -1352,6 +1352,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
 
 [[package]]
+name = "memmap"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e2ffa2c986de11a9df78620c01eeaaf27d94d3ff02bf81bfcca953102dd0c6ff"
+dependencies = [
+ "libc",
+ "winapi",
+]
+
+[[package]]
 name = "memoffset"
 version = "0.6.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1641,6 +1651,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nx"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "842d61c1e08702a2a263d8db5cfa87c6d211298bac80eafd8724a5f9ee2d1f48"
+dependencies = [
+ "cc",
+ "memmap",
+]
+
+[[package]]
 name = "object"
 version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1780,6 +1800,8 @@ dependencies = [
  "async-trait",
  "bytes",
  "log",
+ "nx",
+ "once_cell",
  "prisma-client-rust",
  "rand 0.8.5",
  "serde",

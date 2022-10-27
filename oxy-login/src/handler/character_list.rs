@@ -42,6 +42,9 @@ pub async fn handle(mut packet: Packet, client: &mut Client, config: &HandlerCon
         return client.send(response).await;
     }
 
+    client.session.world_id = world_id as i32;
+    client.session.channel_id = channel_id as i32;
+
     let characters = client
         .db
         .character()
@@ -66,7 +69,6 @@ fn character_list(characters: Vec<character::Data>) -> Packet {
     packet.write_byte(characters.len() as u8);
 
     for character in characters.iter() {
-        // TODO validate once create character is implemented
         write_character(&mut packet, character, false);
     }
 
@@ -76,7 +78,7 @@ fn character_list(characters: Vec<character::Data>) -> Packet {
 }
 
 ///
-fn write_character(packet: &mut Packet, character: &character::Data, view_all: bool) {
+pub fn write_character(packet: &mut Packet, character: &character::Data, view_all: bool) {
     write_character_stats(packet, character);
     write_character_style(packet, character);
     write_character_equipment(packet, character);
@@ -157,9 +159,12 @@ fn write_character_style(packet: &mut Packet, character: &character::Data) {
 }
 
 ///
-// TODO update/validate once create character is implemented
 fn write_character_equipment(packet: &mut Packet, character: &character::Data) {
-    // TODO write equips
+    for equip in character.equips.as_ref().unwrap().iter() {
+        packet.write_byte(equip.position as u8);
+        packet.write_int(equip.item_id);
+    }
+
     packet.write_byte(0xFF);
     // TODO write masked equips
     packet.write_byte(0xFF);

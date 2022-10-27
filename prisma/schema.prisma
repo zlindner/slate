@@ -13,7 +13,7 @@ model Session {
     account_id      Int
     character_id    Int
     world_id        Int
-    chanel_id       Int
+    channel_id      Int
     login_attempts  Int
     pin             String
     pin_attempts    Int
@@ -51,39 +51,39 @@ model Character {
     account_id      Int
     world_id        Int
     name            String          @unique
-    level           Int
-    exp             Int
-    gacha_exp       Int
-    str             Int
-    dex             Int
-    luk             Int
-    int             Int
-    hp              Int
-    mp              Int
-    max_hp          Int
-    max_mp          Int
-    mesos           Int
+    level           Int             @default(1)
+    exp             Int             @default(0)
+    gacha_exp       Int             @default(0)
+    str             Int             @default(4)
+    dex             Int             @default(4)
+    luk             Int             @default(4)
+    int             Int             @default(4)
+    hp              Int             @default(50)
+    mp              Int             @default(5)
+    max_hp          Int             @default(50)
+    max_mp          Int             @default(5)
+    mesos           Int             @default(0)
     job             Int
     skin_colour     Int
     gender          Int
-    fame            Int
+    fame            Int             @default(0)
     hair            Int
     face            Int
-    ap              Int
-    sp              Int[]
+    ap              Int             @default(0)
+    sp              Int[]           @default([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
     map             Int
-    spawn_point     Int
-    gm              Int
-    party           Int
-    buddy_capacity  Int
+    spawn_point     Int             @default(0)
+    gm              Int             @default(0)
+    party           Int?
+    buddy_capacity  Int             @default(25)
     created_at      DateTime        @default(now())
-    rank            Int
-    rank_move       Int
-    job_rank        Int
-    job_rank_move   Int
-    guild           Int
-    guild_rank      Int
-    slots           Int[]
+    rank            Int             @default(0)
+    rank_move       Int             @default(0)
+    job_rank        Int             @default(0)
+    job_rank_move   Int             @default(0)
+    guild           Int?
+    guild_rank      Int?
+    slots           Int[]           @default([24, 24, 24, 24])
     items           Item[]
     equips          Equip[]
 }
@@ -105,26 +105,26 @@ model Equip {
     character       Character       @relation(fields: [character_id], references: [id])
     character_id    Int
     position        Int
-    amount          Int
-    upgrade_slots   Int
-    level           Int
-    item_level      Int
-    exp             Int
-    str             Int
-    dex             Int
-    int             Int
-    luk             Int
-    hp              Int
-    mp              Int
-    w_atk           Int
-    m_atk           Int
-    w_def           Int
-    m_def           Int
-    acc             Int
-    avoid           Int
-    hands           Int
-    speed           Int
-    jump            Int
-    locked          Int
-    vicious         Int
+    amount          Int             @default(1)
+    upgrade_slots   Int             @default(0)
+    level           Int             @default(0)
+    item_level      Int             @default(1)
+    exp             Int             @default(0)
+    str             Int             @default(0)
+    dex             Int             @default(0)
+    int             Int             @default(0)
+    luk             Int             @default(0)
+    hp              Int             @default(0)
+    mp              Int             @default(0)
+    w_atk           Int             @default(0)
+    m_atk           Int             @default(0)
+    w_def           Int             @default(0)
+    m_def           Int             @default(0)
+    acc             Int             @default(0)
+    avoid           Int             @default(0)
+    hands           Int             @default(0)
+    speed           Int             @default(0)
+    jump            Int             @default(0)
+    locked          Int             @default(0)
+    vicious         Int             @default(0)
 }

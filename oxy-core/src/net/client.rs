@@ -26,7 +26,7 @@ impl Client {
             account_id: -1,
             character_id: -1,
             world_id: -1,
-            chanel_id: -1,
+            channel_id: -1,
             login_attempts: 0,
             pin: "".to_string(),
             pin_attempts: 0,
