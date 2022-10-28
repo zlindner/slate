@@ -4,7 +4,7 @@ use once_cell::sync::Lazy;
 use oxy_core::{
     net::{Client, Packet},
     nx::{self, EquipCategory},
-    prisma::character,
+    prisma::{character, keymap},
 };
 use std::collections::HashSet;
 
@@ -39,6 +39,21 @@ pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
         return Ok(());
     }
 
+    // Check if the client has a free character slot in the current world
+    let world_characters = client
+        .db
+        .character()
+        .find_many(vec![
+            character::account_id::equals(client.session.account_id),
+            character::world_id::equals(client.session.world_id),
+        ])
+        .exec()
+        .await?;
+
+    if world_characters.len() >= 3 {
+        return Ok(());
+    }
+
     let (starter_item, job_id, map) = match job {
         0 => (4161047, 1000, 130030000), // Knight of Cygnus (noblesse guide, noblesse, noblesse starting map)
         1 => (4161001, 0, 10000),        // Beginner (beginner's guide, explorer, mushroom town)
@@ -50,6 +65,7 @@ pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
         }
     };
 
+    // Create character
     let mut character = client
         .db
         .character()
@@ -68,6 +84,7 @@ pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
         .exec()
         .await?;
 
+    // Create equips
     let top_equip = client
         .db
         .equip()
@@ -116,10 +133,23 @@ pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
         .exec()
         .await?;
 
+    // Create default keymap
+    let keymap_creates = (0..40).map(|i| {
+        client.db.keymap().create(
+            character::id::equals(character.id),
+            DEFAULT_KEYS[i],
+            DEFAULT_TYPES[i],
+            DEFAULT_ACTIONS[i],
+            vec![],
+        )
+    });
+
+    let keymaps: Vec<keymap::Data> = client.db._batch(keymap_creates).await?;
+
     // This doesn't set/update any db data, just for convenience when calling create_character
     character.equips = Some(vec![top_equip, bottom_equip, shoe_equip, weapon_equip]);
+    character.keymaps = Some(keymaps);
 
-    // TODO create keymap
     // TODO create inventory
     // TODO create skills
 
@@ -218,3 +248,18 @@ static STARTER_FACE: Lazy<HashSet<i32>> = Lazy::new(|| {
     .into_iter()
     .collect()
 });
+
+const DEFAULT_KEYS: [i32; 40] = [
+    18, 65, 2, 23, 3, 4, 5, 6, 16, 17, 19, 25, 26, 27, 31, 34, 35, 37, 38, 40, 43, 44, 45, 46, 50,
+    56, 59, 60, 61, 62, 63, 64, 57, 48, 29, 7, 24, 33, 41, 39,
+];
+
+const DEFAULT_TYPES: [i32; 40] = [
+    4, 6, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 4, 4, 5, 6, 6, 6, 6, 6, 6,
+    5, 4, 5, 4, 4, 4, 4, 4,
+];
+
+const DEFAULT_ACTIONS: [i32; 40] = [
+    0, 106, 10, 1, 12, 13, 18, 24, 8, 5, 4, 19, 14, 15, 2, 17, 11, 3, 20, 16, 9, 50, 51, 6, 7, 53,
+    100, 101, 102, 103, 104, 105, 54, 22, 52, 21, 25, 26, 23, 27,
+];

@@ -26,6 +26,7 @@ pub static DATA: Lazy<HashMap<&str, nx::File>> = Lazy::new(|| {
         let filename = format!("oxy-core/nx/{}.nx", nx_file);
         let path = Path::new(&filename);
 
+        // FIXME get rid of this unsafe, may want to move off of nx crate
         let file = unsafe { nx::File::open(&path).unwrap() };
 
         map.insert(nx_file, file);

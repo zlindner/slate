@@ -86,6 +86,7 @@ model Character {
     slots           Int[]           @default([24, 24, 24, 24])
     items           Item[]
     equips          Equip[]
+    keymaps         Keymap[]
 }
 
 model Item {
@@ -127,4 +128,13 @@ model Equip {
     jump            Int             @default(0)
     locked          Int             @default(0)
     vicious         Int             @default(0)
+}
+
+model Keymap {
+    id              Int             @id @default(autoincrement())
+    character       Character       @relation(fields: [character_id], references: [id])
+    character_id    Int
+    key             Int
+    type_           Int
+    action          Int
 }
