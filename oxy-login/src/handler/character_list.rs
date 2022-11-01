@@ -1,6 +1,6 @@
 use super::{
     world_status::{self, WorldStatus},
-    HandlerConfig,
+    Config,
 };
 use anyhow::Result;
 use oxy_core::{
@@ -10,7 +10,7 @@ use oxy_core::{
 
 /// Login server: character list packet (0x05)
 /// Displays the user's character list after selecting a world and channel
-pub async fn handle(mut packet: Packet, client: &mut Client, config: &HandlerConfig) -> Result<()> {
+pub async fn handle(mut packet: Packet, client: &mut Client, config: &Config) -> Result<()> {
     packet.skip(1);
     let world_id = packet.read_byte();
 

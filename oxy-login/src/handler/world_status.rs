@@ -1,4 +1,4 @@
-use super::HandlerConfig;
+use super::Config;
 use anyhow::Result;
 use oxy_core::{
     net::{Client, Packet},
@@ -8,7 +8,7 @@ use oxy_core::{
 /// Login server: world status (0x06)
 /// Displays the selected world's status/capacity for each channel
 /// NOTE: the same status bar is shown for each channel
-pub async fn handle(mut packet: Packet, client: &mut Client, config: &HandlerConfig) -> Result<()> {
+pub async fn handle(mut packet: Packet, client: &mut Client, config: &Config) -> Result<()> {
     let world_id = packet.read_short();
 
     let response = match config.worlds.get(world_id as usize) {

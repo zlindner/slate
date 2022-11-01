@@ -4,7 +4,7 @@ use once_cell::sync::Lazy;
 use oxy_core::{
     net::{Client, Packet},
     nx::{self, EquipCategory},
-    prisma::{character, keymap},
+    prisma::{character, keymap, InventoryType},
 };
 use std::collections::HashSet;
 
@@ -146,12 +146,25 @@ pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
 
     let keymaps: Vec<keymap::Data> = client.db._batch(keymap_creates).await?;
 
+    // Add starter item to etc inventory
+    let item = client
+        .db
+        .item()
+        .create(
+            starter_item,
+            character::id::equals(character.id),
+            InventoryType::Etc,
+            0,
+            1,
+            vec![],
+        )
+        .exec()
+        .await?;
+
     // This doesn't set/update any db data, just for convenience when calling create_character
     character.equips = Some(vec![top_equip, bottom_equip, shoe_equip, weapon_equip]);
     character.keymaps = Some(keymaps);
-
-    // TODO create inventory
-    // TODO create skills
+    character.items = Some(vec![item]);
 
     let response = create_character(character);
     client.send(response).await?;

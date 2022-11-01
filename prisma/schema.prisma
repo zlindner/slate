@@ -86,6 +86,7 @@ model Character {
     slots           Int[]           @default([24, 24, 24, 24])
     items           Item[]
     equips          Equip[]
+    skills          Skill[]
     keymaps         Keymap[]
 }
 
@@ -94,10 +95,17 @@ model Item {
     item_id         Int
     character       Character       @relation(fields: [character_id], references: [id])
     character_id    Int
-    item_type       Int
-    inventory_type  Int
+    inventory_type  InventoryType
     position        Int
     amount          Int
+}
+
+enum InventoryType {
+    EQUIP
+    USE
+    SETUP
+    ETC
+    CASH
 }
 
 model Equip {
@@ -137,4 +145,14 @@ model Keymap {
     key             Int
     type_           Int
     action          Int
+}
+
+model Skill {
+    id              Int             @id @default(autoincrement())
+    skill_id        Int
+    character       Character       @relation(fields: [character_id], references: [id])
+    character_id    Int
+    level           Int
+    mastery         Int
+    expiration      Int
 }
