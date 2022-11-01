@@ -47,10 +47,10 @@ impl HandlePacket for PacketHandler {
         let op = packet.read_short();
 
         match op {
-            0x01 => login::handle(packet, client).await?,
+            0x01 => login::handle(packet, client, &self.config).await?,
             0x05 => character_list::handle(packet, client, &self.config).await?,
             0x06 => world_status::handle(packet, client, &self.config).await?,
-            0x07 => tos::handle(packet, client).await?,
+            0x07 => tos::handle(packet, client, &self.config).await?,
             0x0B | 0x04 => world_list::handle(packet, client, &self.config).await?,
             0x15 => validate_character_name::handle(packet, client).await?,
             0x16 => create_character::handle(packet, client).await?,
@@ -64,6 +64,8 @@ impl HandlePacket for PacketHandler {
 
 #[derive(Deserialize)]
 pub struct Config {
+    enable_pin: u8,
+    enable_pic: u8,
     worlds: Vec<WorldConfig>,
 }
 

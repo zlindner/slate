@@ -1,3 +1,4 @@
+use super::Config;
 use anyhow::Result;
 use oxy_core::{
     net::{Client, Packet},
@@ -7,7 +8,7 @@ use oxy_core::{
 
 /// Login server: login packet (0x01)
 /// Called when the client clicks login after entering name and password
-pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
+pub async fn handle(mut packet: Packet, client: &mut Client, config: &Config) -> Result<()> {
     if client.session.login_attempts >= 5 {
         let response = login_failed(LoginError::TooManyAttempts);
         return client.send(response).await;
@@ -66,7 +67,7 @@ pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
     client.session.tos = account.tos;
     client.update_state(LoginState::LoggedIn).await?;
 
-    let response = login_succeeded(&account);
+    let response = login_succeeded(&account, config);
     client.send(response).await?;
     Ok(())
 }
@@ -92,7 +93,7 @@ fn login_failed(error: LoginError) -> Packet {
 }
 
 /// Packet indicating login succeeded
-pub fn login_succeeded(account: &account::Data) -> Packet {
+pub fn login_succeeded(account: &account::Data, config: &Config) -> Packet {
     let mut packet = Packet::new();
     packet.write_short(0x00);
     packet.write_int(0);
@@ -108,7 +109,7 @@ pub fn login_succeeded(account: &account::Data) -> Packet {
     packet.write_long(0);
     packet.write_long(0);
     packet.write_int(1); // "select the world"... TODO test what this does
-    packet.write_byte(1); // 0: enable pin, 1: disable pin TODO config
-    packet.write_byte(2); // 0: register pic, 1: ask for pic, 2: disabled TODO config
+    packet.write_byte(config.enable_pin); // 0: enabled, 1: disabled
+    packet.write_byte(config.enable_pic); // 0: register pic, 1: ask for pic, 2: disabled
     packet
 }

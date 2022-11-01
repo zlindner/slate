@@ -1,3 +1,4 @@
+use super::Config;
 use anyhow::Result;
 use oxy_core::{
     net::{Client, Packet},
@@ -6,7 +7,7 @@ use oxy_core::{
 
 /// Login server: accept tos packet (0x07)
 /// Called after client successfully logs in, but hasn't yet accepted tos
-pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
+pub async fn handle(mut packet: Packet, client: &mut Client, config: &Config) -> Result<()> {
     let accepted = packet.read_byte();
 
     // If the tos isn't accepted, client returns 0 and disconnects itself
@@ -46,7 +47,7 @@ pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
     client.session.tos = account.tos;
     client.update_state(LoginState::LoggedIn).await?;
 
-    let response = super::login::login_succeeded(&account);
+    let response = super::login::login_succeeded(&account, config);
     client.send(response).await?;
     Ok(())
 }
