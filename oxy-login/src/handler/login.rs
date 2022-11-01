@@ -72,15 +72,14 @@ pub async fn handle(mut packet: Packet, client: &mut Client, config: &Config) ->
     Ok(())
 }
 
-// TODO make core?
 /// Error returned to client if login fails
 enum LoginError {
-    AccountBanned = 3,
-    IncorrectPassword = 4,
-    AccountNotFound = 5,
-    TooManyAttempts = 6,
-    AlreadyLoggedIn = 7,
-    PromptTOS = 23,
+    AccountBanned = 0x03,
+    IncorrectPassword = 0x04,
+    AccountNotFound = 0x05,
+    TooManyAttempts = 0x06,
+    AlreadyLoggedIn = 0x07,
+    PromptTOS = 0x17,
 }
 
 /// Packet indicating login failed due to the given error
