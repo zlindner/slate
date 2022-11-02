@@ -27,7 +27,7 @@ pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
 
     if (a, b) == (1, 0) || (a, b) == (2, 0) {
         if client.session.pin_attempts >= 6 {
-            // TODO does client auto-disconnect here?
+            client.disconnect().await;
             return Ok(());
         }
 
@@ -55,7 +55,7 @@ enum PinOperation {
     Accepted = 0x00,
     Register = 0x01,
     Invalid = 0x02,
-    Request = 0x03,
+    Request = 0x04,
 }
 
 fn pin_operation(op: PinOperation) -> Packet {

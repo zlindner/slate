@@ -69,6 +69,17 @@ impl Client {
         Ok(())
     }
 
+    /// Force disconnects the client from the connected server
+    pub async fn disconnect(&mut self) {
+        if let Err(e) = self.stream.shutdown().await {
+            log::error!(
+                "Error disconnecting client (session {}): {}",
+                self.session.id,
+                e
+            );
+        }
+    }
+
     /// Sends the handshake packet to the client to setup encryption
     pub async fn send_handshake(&mut self) -> Result<()> {
         let handshake = self.aes.get_handshake();

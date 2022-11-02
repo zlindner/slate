@@ -35,7 +35,7 @@ pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
             "Client tried to packet edit in character creation (account id {})",
             client.session.account_id
         );
-        // TODO force disconnect client
+        client.disconnect().await;
         return Ok(());
     }
 
