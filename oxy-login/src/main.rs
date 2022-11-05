@@ -37,7 +37,8 @@ async fn main() -> Result<()> {
 }
 
 async fn startup(db: &Arc<PrismaClient>) -> Result<()> {
-    // TODO set all accounts to logged out, delete sessions, etc.
+    // Clear all sessions
+    db.session().delete_many(vec![]).exec().await?;
 
     // Set all accounts to logged out
     db.account()

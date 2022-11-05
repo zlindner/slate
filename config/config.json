@@ -1,6 +1,6 @@
 {
-    "enable_pin": 0,
-    "enable_pic": 0,
+    "enable_pin": false,
+    "enable_pic": true,
     "worlds": [
         {
             "id": 0,

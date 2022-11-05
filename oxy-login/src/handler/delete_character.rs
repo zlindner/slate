@@ -1,3 +1,4 @@
+use super::Config;
 use anyhow::Result;
 use oxy_core::{
     net::{Client, Packet},
@@ -6,12 +7,24 @@ use oxy_core::{
 
 /// Login server: delete character packet (0x17)
 ///
-pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
+pub async fn handle(mut packet: Packet, client: &mut Client, config: &Config) -> Result<()> {
     let pic = packet.read_string();
+
+    if config.enable_pic {
+        if client.session.pic_attempts >= 6 {
+            client.disconnect().await;
+            return Ok(());
+        }
+
+        client.session.pic_attempts += 1;
+
+        if client.session.pic.is_empty() || client.session.pic != pic {
+            let response = super::select_character_pic::invalid_pic();
+            return client.send(response).await;
+        }
+    }
+
     let character_id = packet.read_int();
-
-    // TODO Validate PIC if enabled
-
     let character = client
         .db
         .character()
@@ -22,7 +35,7 @@ pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
     let character = match character {
         Some(character) => character,
         None => {
-            let response = delete_character_error(character_id, DeleteCharacterError::Unknown);
+            let response = delete_character(character_id, Reason::Unknown);
             return client.send(response).await;
         }
     };
@@ -33,12 +46,10 @@ pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
     // TODO if character has a family send DeleteCharacterError::FamilyMember
 
     // TODO handle if player is currently in a party
-    // TODO delete character_id from buddies table
-    // TODO delete character_id from bbs_threads table
-    // TODO delete character_id from wishlists table
-    // TODO delete character_id from buddies table
 
-    // TODO does this delete relations?
+    // Delete the character (and all relations) from db
+    // NOTE: relations to Character should be created with `onDelete: Cascade`
+    // so they are automatically deleted here
     client
         .db
         .character()
@@ -46,12 +57,13 @@ pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
         .exec()
         .await?;
 
-    let response = delete_character_success(character_id);
+    let response = delete_character(character_id, Reason::Success);
     client.send(response).await?;
     Ok(())
 }
 
-enum DeleteCharacterError {
+enum Reason {
+    Success = 0x00,
     Unknown = 0x09,
     InvalidPic = 0x14,
     GuildMaster = 0x16,
@@ -60,15 +72,9 @@ enum DeleteCharacterError {
     FamilyMember = 0x1D,
 }
 
-fn delete_character_success(character_id: i32) -> Packet {
+fn delete_character(character_id: i32, reason: Reason) -> Packet {
     let mut packet = Packet::new();
-    packet.write_int(character_id);
-    packet.write_byte(0);
-    packet
-}
-
-fn delete_character_error(character_id: i32, reason: DeleteCharacterError) -> Packet {
-    let mut packet = Packet::new();
+    packet.write_short(0x0F);
     packet.write_int(character_id);
     packet.write_byte(reason as u8);
     packet

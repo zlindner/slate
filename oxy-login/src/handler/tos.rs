@@ -47,7 +47,7 @@ pub async fn handle(mut packet: Packet, client: &mut Client, config: &Config) ->
     client.session.tos = account.tos;
     client.update_state(LoginState::LoggedIn).await?;
 
-    let response = super::login::login_succeeded(&account, config);
+    let response = super::login::login_succeeded(&account, client, config);
     client.send(response).await?;
     Ok(())
 }

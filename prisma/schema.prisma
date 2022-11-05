@@ -93,7 +93,7 @@ model Character {
 model Item {
     id              Int             @id @default(autoincrement())
     item_id         Int
-    character       Character       @relation(fields: [character_id], references: [id])
+    character       Character       @relation(fields: [character_id], references: [id], onDelete: Cascade)
     character_id    Int
     inventory_type  InventoryType
     position        Int
@@ -111,7 +111,7 @@ enum InventoryType {
 model Equip {
     id              Int             @id @default(autoincrement())
     item_id         Int
-    character       Character       @relation(fields: [character_id], references: [id])
+    character       Character       @relation(fields: [character_id], references: [id], onDelete: Cascade)
     character_id    Int
     position        Int
     amount          Int             @default(1)
@@ -140,7 +140,7 @@ model Equip {
 
 model Keymap {
     id              Int             @id @default(autoincrement())
-    character       Character       @relation(fields: [character_id], references: [id])
+    character       Character       @relation(fields: [character_id], references: [id], onDelete: Cascade)
     character_id    Int
     key             Int
     type_           Int
@@ -150,7 +150,7 @@ model Keymap {
 model Skill {
     id              Int             @id @default(autoincrement())
     skill_id        Int
-    character       Character       @relation(fields: [character_id], references: [id])
+    character       Character       @relation(fields: [character_id], references: [id], onDelete: Cascade)
     character_id    Int
     level           Int
     mastery         Int

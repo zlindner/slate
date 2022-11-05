@@ -67,7 +67,7 @@ pub async fn handle(mut packet: Packet, client: &mut Client, config: &Config) ->
     client.session.tos = account.tos;
     client.update_state(LoginState::LoggedIn).await?;
 
-    let response = login_succeeded(&account, config);
+    let response = login_succeeded(&account, client, config);
     client.send(response).await?;
     Ok(())
 }
@@ -92,7 +92,7 @@ fn login_failed(error: LoginError) -> Packet {
 }
 
 /// Packet indicating login succeeded
-pub fn login_succeeded(account: &account::Data, config: &Config) -> Packet {
+pub fn login_succeeded(account: &account::Data, client: &Client, config: &Config) -> Packet {
     let mut packet = Packet::new();
     packet.write_short(0x00);
     packet.write_int(0);
@@ -108,7 +108,16 @@ pub fn login_succeeded(account: &account::Data, config: &Config) -> Packet {
     packet.write_long(0);
     packet.write_long(0);
     packet.write_int(1); // "select the world"... TODO test what this does
-    packet.write_byte(config.enable_pin); // 0: enabled, 1: disabled
-    packet.write_byte(config.enable_pic); // 0: register pic, 1: ask for pic, 2: disabled
+    packet.write_byte(!config.enable_pin as u8); // 0: enabled, 1: disabled
+
+    // 0: register pic (user hasn't registered pic)
+    // 1: prompt pic (user already registered pic)
+    // 2: disable pic
+    let pic_flag = match config.enable_pic {
+        true => !client.session.pic.is_empty() as u8,
+        false => 2,
+    };
+
+    packet.write_byte(pic_flag);
     packet
 }

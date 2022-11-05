@@ -8,7 +8,10 @@ mod create_character;
 mod delete_character;
 mod login;
 mod pin_operation;
+mod register_pic;
 mod register_pin;
+mod select_character;
+mod select_character_pic;
 mod tos;
 mod validate_character_name;
 mod world_list;
@@ -56,9 +59,12 @@ impl HandlePacket for PacketHandler {
             0x09 => pin_operation::handle(packet, client).await?,
             0x0A => register_pin::handle(packet, client).await?,
             0x0B | 0x04 => world_list::handle(packet, client, &self.config).await?,
+            0x13 => select_character::handle(packet, client).await?,
             0x15 => validate_character_name::handle(packet, client).await?,
             0x16 => create_character::handle(packet, client).await?,
-            0x17 => delete_character::handle(packet, client).await?,
+            0x17 => delete_character::handle(packet, client, &self.config).await?,
+            0x1D => register_pic::handle(packet, client).await?,
+            0x1E => select_character_pic::handle(packet, client).await?,
             _ => log::debug!("Unhandled packet: {:02X?}", op),
         }
 
@@ -68,8 +74,8 @@ impl HandlePacket for PacketHandler {
 
 #[derive(Deserialize)]
 pub struct Config {
-    enable_pin: u8,
-    enable_pic: u8,
+    enable_pin: bool,
+    enable_pic: bool,
     worlds: Vec<WorldConfig>,
 }
 

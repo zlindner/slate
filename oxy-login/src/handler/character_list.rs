@@ -56,13 +56,13 @@ pub async fn handle(mut packet: Packet, client: &mut Client, config: &Config) ->
         .exec()
         .await?;
 
-    let response = character_list(characters);
+    let response = character_list(characters, client, config);
     client.send(response).await?;
     Ok(())
 }
 
 ///
-fn character_list(characters: Vec<character::Data>) -> Packet {
+fn character_list(characters: Vec<character::Data>, client: &Client, config: &Config) -> Packet {
     let mut packet = Packet::new();
     packet.write_short(0x0B);
     packet.write_byte(0); // status
@@ -72,7 +72,15 @@ fn character_list(characters: Vec<character::Data>) -> Packet {
         write_character(&mut packet, character, false);
     }
 
-    packet.write_byte(2); // pic flag
+    // 0: register pic (user hasn't registered pic)
+    // 1: prompt pic (user already registered pic)
+    // 2: disable pic
+    let pic_flag = match config.enable_pic {
+        true => !client.session.pic.is_empty() as u8,
+        false => 2,
+    };
+
+    packet.write_byte(pic_flag);
     packet.write_int(3); // character slots
     packet
 }
