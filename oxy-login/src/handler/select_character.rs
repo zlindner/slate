@@ -39,6 +39,7 @@ pub async fn connect_to_world_server(client: &mut Client) -> Result<()> {
         .exec()
         .await?;
 
+    // TODO is this really required?
     client.update_state(LoginState::Transitioning).await?;
 
     let response = world_server_addr(client.session.id);

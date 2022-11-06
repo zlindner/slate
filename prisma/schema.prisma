@@ -83,11 +83,13 @@ model Character {
     job_rank_move   Int             @default(0)
     guild           Int?
     guild_rank      Int?
-    slots           Int[]           @default([24, 24, 24, 24])
+    slots           Int[]           @default([24, 24, 24, 24, 96])
     items           Item[]
     equips          Equip[]
     skills          Skill[]
     keymaps         Keymap[]
+    cooldowns       Cooldown[]
+    quests          Quest[]
 }
 
 model Item {
@@ -98,6 +100,8 @@ model Item {
     inventory_type  InventoryType
     position        Int
     amount          Int
+    owner           String          @default("")
+    flag            Int             @default(0)
 }
 
 enum InventoryType {
@@ -136,6 +140,8 @@ model Equip {
     jump            Int             @default(0)
     locked          Int             @default(0)
     vicious         Int             @default(0)
+    owner           String          @default("")
+    flag            Int             @default(0)
 }
 
 model Keymap {
@@ -154,5 +160,33 @@ model Skill {
     character_id    Int
     level           Int
     mastery         Int
-    expiration      Int
+    expiration      BigInt
+}
+
+model Cooldown {
+    id              Int             @id @default(autoincrement())
+    character       Character       @relation(fields: [character_id], references: [id], onDelete: Cascade)
+    character_id    Int
+    skill_id        Int
+    start           BigInt
+    length          BigInt
+}
+
+enum QuestStatus {
+    NOT_STARTED
+    STARTED
+    COMPLETED
+}
+
+model Quest {
+    id              Int             @id @default(autoincrement())
+    character       Character       @relation(fields: [character_id], references: [id], onDelete: Cascade)
+    character_id    Int
+    quest_id        Int
+    status          QuestStatus
+    time            Int
+    expires         BigInt
+    forfeited       Int
+    completed       Int
+    info            Int
 }

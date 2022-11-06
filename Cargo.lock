@@ -1836,6 +1836,7 @@ dependencies = [
  "log",
  "oxy-core",
  "prisma-client-rust",
+ "rand 0.8.5",
  "simple_logger",
  "tokio",
 ]

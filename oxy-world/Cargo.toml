@@ -10,5 +10,6 @@ dotenv = "0.15.0"
 log = "0.4.17"
 oxy-core = { path = "../oxy-core" }
 prisma-client-rust = { git = "https://github.com/Brendonovich/prisma-client-rust", tag = "0.6.2", default-features = false, features = ['postgresql'] }
+rand = "0.8.5"
 simple_logger = "2.3.0"
 tokio = { version = "1.21.2", features = ["rt"] }
