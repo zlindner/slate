@@ -194,12 +194,18 @@ fn write_character_inventory(packet: &mut Packet, character: &character::Data) {
 
 /// Writes an equip's data to a packet
 fn write_equip(packet: &mut Packet, equip: &equip::Data) {
-    packet.write_short(equip.position as i16);
+    let mut pos = equip.position.abs();
+
+    if pos > 100 {
+        pos -= 100;
+    }
+
+    packet.write_short(pos as i16);
     packet.write_byte(1); // item type (equip)
     packet.write_int(equip.item_id);
     packet.write_byte(0); // TODO is cash
                           // TODO if is cash write id again?
-    packet.write_long(150842304000000000); // TODO equip expiration time if not permanent
+    packet.write_long(-1); // TODO equip expiration time if not permanent
     packet.write_byte(equip.upgrade_slots as u8);
     packet.write_byte(equip.level as u8);
     packet.write_short(equip.str as i16);
@@ -234,12 +240,13 @@ fn write_equip(packet: &mut Packet, equip: &equip::Data) {
 
 /// Writes an item's data to a packet
 fn write_item(packet: &mut Packet, item: &item::Data) {
-    packet.write_short(item.position as i16);
+    // Positions are 0-indexed in db, client expects 1-indexed
+    packet.write_byte((item.position + 1) as u8);
     packet.write_byte(2); // item type (item)
     packet.write_int(item.item_id);
     packet.write_byte(0); // TODO is cash
                           // TODO if is cash write id again?
-    packet.write_long(150842304000000000); // TODO item expiration time if not permanent
+    packet.write_long(-1); // TODO item expiration time if not permanent
     packet.write_short(item.amount as i16);
     packet.write_string(&item.owner);
     packet.write_short(item.flag as i16);
@@ -259,7 +266,7 @@ fn write_character_skills(packet: &mut Packet, character: &character::Data) {
             // TODO if hidden, continue
             packet.write_int(skill.skill_id);
             packet.write_int(skill.level);
-            packet.write_long(150842304000000000); // TODO expiration?
+            packet.write_long(-1); // TODO expiration?
                                                    // TODO if skill is fourth job write int(masterlevel)
         }
     } else {
@@ -348,19 +355,24 @@ fn write_character_monster_book(packet: &mut Packet, character: &character::Data
                            // TODO write each card
 }
 
-///
+/// Packet containing the character's keymap configuration
 fn character_keymap(character: &character::Data) -> Packet {
     let mut packet = Packet::new();
     packet.write_short(0x14F);
     packet.write_byte(0);
 
     let keymaps = character.keymaps.as_ref().unwrap();
+    let mut map: HashMap<i32, (u8, i32)> = HashMap::new();
 
-    for i in 0..90 {
-        match keymaps.get(i) {
+    for keymap in keymaps.iter() {
+        map.insert(keymap.key, (keymap.type_ as u8, keymap.action));
+    }
+
+    for key in 0..90 {
+        match map.get(&key) {
             Some(binding) => {
-                packet.write_byte(binding.type_ as u8);
-                packet.write_int(binding.action);
+                packet.write_byte(binding.0);
+                packet.write_int(binding.1);
             }
             None => {
                 packet.write_byte(0);
