@@ -1,15 +1,17 @@
 use anyhow::Result;
 use oxy_core::{
-    net::{Client, Packet},
+    net::Packet,
     packets,
     prisma::{character, equip, item, quest, session, InventoryType, QuestStatus},
 };
 use prisma_client_rust::chrono::{Local, Utc};
 use std::collections::HashMap;
 
+use crate::client::WorldClient;
+
 /// World server: connect packet (0x14)
 /// Called when the client begins transition from login -> world server
-pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
+pub async fn handle(mut packet: Packet, client: &mut WorldClient) -> Result<()> {
     let session_id = packet.read_int();
 
     let session = client
@@ -267,7 +269,7 @@ fn write_character_skills(packet: &mut Packet, character: &character::Data) {
             packet.write_int(skill.skill_id);
             packet.write_int(skill.level);
             packet.write_long(-1); // TODO expiration?
-                                                   // TODO if skill is fourth job write int(masterlevel)
+                                   // TODO if skill is fourth job write int(masterlevel)
         }
     } else {
         packet.write_short(0);

@@ -1,12 +1,13 @@
+use crate::client::LoginClient;
 use anyhow::Result;
 use oxy_core::{
-    net::{Client, Packet},
+    net::Packet,
     prisma::{account, LoginState},
 };
 
 /// Login server: register pin packet (0x0A)
 ///
-pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
+pub async fn handle(mut packet: Packet, client: &mut LoginClient) -> Result<()> {
     if packet.read_byte() == 0 {
         client.disconnect().await;
         return Ok(());
@@ -31,7 +32,7 @@ pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
         .await?;
 
     client.session.pin = pin;
-    client.update_state(LoginState::LoggedOut).await?;
+    client.update_login_state(LoginState::LoggedOut).await?;
 
     let response = pin_registered();
     client.send(response).await?;

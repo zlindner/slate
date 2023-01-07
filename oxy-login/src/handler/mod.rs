@@ -1,6 +1,6 @@
+use crate::client::LoginClient;
 use anyhow::Result;
-use async_trait::async_trait;
-use oxy_core::net::{Client, HandlePacket, Packet};
+use oxy_core::net::Packet;
 use serde::Deserialize;
 
 mod character_list;
@@ -17,11 +17,11 @@ mod validate_character_name;
 mod world_list;
 mod world_status;
 
-pub struct PacketHandler {
+pub struct LoginPacketHandler {
     pub config: Config,
 }
 
-impl PacketHandler {
+impl LoginPacketHandler {
     pub fn new() -> Self {
         Self {
             config: Self::load_config(),
@@ -43,12 +43,8 @@ impl PacketHandler {
             }
         }
     }
-}
 
-#[async_trait]
-impl HandlePacket for PacketHandler {
-    async fn handle(&self, mut packet: Packet, client: &mut Client) -> Result<()> {
-        log::debug!("Received: {}", packet);
+    pub async fn handle(&self, mut packet: Packet, client: &mut LoginClient) -> Result<()> {
         let op = packet.read_short();
 
         match op {

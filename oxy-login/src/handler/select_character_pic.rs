@@ -1,9 +1,10 @@
+use crate::client::LoginClient;
 use anyhow::Result;
-use oxy_core::net::{Client, Packet};
+use oxy_core::net::Packet;
 
 /// Login server: select character with pic packet (0x1E)
 ///
-pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
+pub async fn handle(mut packet: Packet, client: &mut LoginClient) -> Result<()> {
     if client.session.pic_attempts >= 6 {
         client.disconnect().await;
         return Ok(());
