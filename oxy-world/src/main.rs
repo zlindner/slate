@@ -29,13 +29,13 @@ async fn main() -> Result<()> {
     let db: Arc<PrismaClient> = Arc::new(prisma::new_client().await?);
     startup(&db).await?;
 
-    // Parse addr from environment variables (defaults to 0.0.0.0:8484)
-    let port = std::env::var("PORT").unwrap_or("10000".to_string());
-    let ip = std::env::var("IP").unwrap_or("0.0.0.0".to_string());
+    // Parse addr from environment variables (defaults to 0.0.0.0:10000)
+    let ip = std::env::var("WORLD_IP").unwrap_or("0.0.0.0".to_string());
+    let port = std::env::var("WORLD_PORT").unwrap_or("10000".to_string());
     let addr = format!("{}:{}", ip, port);
     let listener = TcpListener::bind(&addr).await?;
 
-    log::info!("Login server started @ {}", addr);
+    log::info!("World server started @ {}", addr);
     let mut session_id = 0;
     let (tx, _rx) = broadcast::channel::<BroadcastPacket>(16);
 

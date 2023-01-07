@@ -27,8 +27,8 @@ async fn main() -> Result<()> {
     startup(&db).await?;
 
     // Parse addr from environment variables (defaults to 0.0.0.0:8484)
-    let port = std::env::var("PORT").unwrap_or("8484".to_string());
-    let ip = std::env::var("IP").unwrap_or("0.0.0.0".to_string());
+    let ip = std::env::var("LOGIN_IP").unwrap_or("0.0.0.0".to_string());
+    let port = std::env::var("LOGIN_PORT").unwrap_or("8484".to_string());
     let addr = format!("{}:{}", ip, port);
     let listener = TcpListener::bind(&addr).await?;
 
