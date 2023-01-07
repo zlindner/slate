@@ -1,14 +1,17 @@
+use crate::client::WorldClient;
 use anyhow::Result;
-use async_trait::async_trait;
-use oxy_core::net::{Client, HandlePacket, Packet};
+use oxy_core::net::Packet;
 
 mod connect;
 
-pub struct PacketHandler;
+pub struct WorldPacketHandler;
 
-#[async_trait]
-impl HandlePacket for PacketHandler {
-    async fn handle(&self, mut packet: Packet, client: &mut Client) -> Result<()> {
+impl WorldPacketHandler {
+    pub fn new() -> Self {
+        Self
+    }
+
+    pub async fn handle(&self, mut packet: Packet, client: &mut WorldClient) -> Result<()> {
         let op = packet.read_short();
 
         match op {

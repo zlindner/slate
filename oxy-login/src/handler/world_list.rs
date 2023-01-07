@@ -1,10 +1,11 @@
 use super::{Config, WorldConfig};
+use crate::client::LoginClient;
 use anyhow::Result;
-use oxy_core::net::{Client, Packet};
+use oxy_core::net::Packet;
 
 /// Login server: world list (0x0B)
 /// Displays the world list to the user after successful login
-pub async fn handle(_packet: Packet, client: &mut Client, config: &Config) -> Result<()> {
+pub async fn handle(_packet: Packet, client: &mut LoginClient, config: &Config) -> Result<()> {
     for world in config.worlds.iter() {
         let response = world_info(world);
         client.send(response).await?;

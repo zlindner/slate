@@ -1,6 +1,7 @@
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use std::fmt::{Display, Formatter};
 
+#[derive(Clone, Debug)]
 pub struct Packet {
     pub bytes: BytesMut,
 }
@@ -97,4 +98,11 @@ impl Display for Packet {
         write!(f, "]")?;
         Ok(())
     }
+}
+
+#[derive(Clone, Debug)]
+pub struct BroadcastPacket {
+    pub packet: Packet,
+    pub sender_map_id: i32,
+    pub sender_position: (i32, i32),
 }

@@ -1,13 +1,11 @@
 use super::Config;
+use crate::client::LoginClient;
 use anyhow::Result;
-use oxy_core::{
-    net::{Client, Packet},
-    prisma::character,
-};
+use oxy_core::{net::Packet, prisma::character};
 
 /// Login server: delete character packet (0x17)
 ///
-pub async fn handle(mut packet: Packet, client: &mut Client, config: &Config) -> Result<()> {
+pub async fn handle(mut packet: Packet, client: &mut LoginClient, config: &Config) -> Result<()> {
     let pic = packet.read_string();
 
     if config.enable_pic {

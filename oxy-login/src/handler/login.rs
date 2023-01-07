@@ -1,14 +1,11 @@
 use super::Config;
+use crate::client::LoginClient;
 use anyhow::Result;
-use oxy_core::{
-    net::{Client, Packet},
-    prisma::account,
-    prisma::LoginState,
-};
+use oxy_core::{net::Packet, prisma::account, prisma::LoginState};
 
 /// Login server: login packet (0x01)
 /// Called when the client clicks login after entering name and password
-pub async fn handle(mut packet: Packet, client: &mut Client, config: &Config) -> Result<()> {
+pub async fn handle(mut packet: Packet, client: &mut LoginClient, config: &Config) -> Result<()> {
     if client.session.login_attempts >= 5 {
         let response = login_failed(LoginError::TooManyAttempts);
         return client.send(response).await;
@@ -65,7 +62,7 @@ pub async fn handle(mut packet: Packet, client: &mut Client, config: &Config) ->
     client.session.pin = account.pin.clone();
     client.session.pic = account.pic.clone();
     client.session.tos = account.tos;
-    client.update_state(LoginState::LoggedIn).await?;
+    client.update_login_state(LoginState::LoggedIn).await?;
 
     let response = login_succeeded(&account, client, config);
     client.send(response).await?;
@@ -92,7 +89,7 @@ fn login_failed(error: LoginError) -> Packet {
 }
 
 /// Packet indicating login succeeded
-pub fn login_succeeded(account: &account::Data, client: &Client, config: &Config) -> Packet {
+pub fn login_succeeded(account: &account::Data, client: &LoginClient, config: &Config) -> Packet {
     let mut packet = Packet::new();
     packet.write_short(0x00);
     packet.write_int(0);

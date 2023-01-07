@@ -1,12 +1,10 @@
+use crate::client::LoginClient;
 use anyhow::Result;
-use oxy_core::{
-    net::{Client, Packet},
-    prisma::character,
-};
+use oxy_core::{net::Packet, prisma::character};
 
 /// Login server: validate character name packet (0x15)
 ///
-pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
+pub async fn handle(mut packet: Packet, client: &mut LoginClient) -> Result<()> {
     let name = packet.read_string();
 
     // TODO add blocked names list (rot13?)

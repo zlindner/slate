@@ -1,14 +1,16 @@
+use crate::client::WorldClient;
 use anyhow::Result;
 use dotenv::dotenv;
-use handler::PacketHandler;
 use log::LevelFilter;
 use oxy_core::{
-    net::Server,
+    net::BroadcastPacket,
     prisma::{self, PrismaClient},
 };
 use simple_logger::SimpleLogger;
 use std::sync::Arc;
+use tokio::{net::TcpListener, sync::broadcast};
 
+mod client;
 mod handler;
 
 #[tokio::main]
@@ -23,10 +25,32 @@ async fn main() -> Result<()> {
         .env()
         .init()?;
 
-    let port = std::env::var("PORT").unwrap_or("10000".to_string());
-    let addr = format!("0.0.0.0:{}", port);
+    // Initialize db and perform startup operations
     let db: Arc<PrismaClient> = Arc::new(prisma::new_client().await?);
-    Server::start(&addr, &PacketHandler, db).await?;
+    startup(&db).await?;
 
+    // Parse addr from environment variables (defaults to 0.0.0.0:8484)
+    let port = std::env::var("PORT").unwrap_or("10000".to_string());
+    let ip = std::env::var("IP").unwrap_or("0.0.0.0".to_string());
+    let addr = format!("{}:{}", ip, port);
+    let listener = TcpListener::bind(&addr).await?;
+
+    log::info!("Login server started @ {}", addr);
+    let mut session_id = 0;
+    let (tx, _rx) = broadcast::channel::<BroadcastPacket>(16);
+
+    loop {
+        let (stream, _) = listener.accept().await?;
+        session_id += 1;
+        let client = WorldClient::new(stream, db.clone(), session_id, tx.clone(), tx.subscribe());
+
+        tokio::spawn(async move {
+            client.process().await;
+        });
+    }
+}
+
+async fn startup(_db: &Arc<PrismaClient>) -> Result<()> {
+    // TODO
     Ok(())
 }

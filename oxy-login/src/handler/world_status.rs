@@ -1,14 +1,12 @@
 use super::Config;
+use crate::client::LoginClient;
 use anyhow::Result;
-use oxy_core::{
-    net::{Client, Packet},
-    prisma::world,
-};
+use oxy_core::{net::Packet, prisma::world};
 
 /// Login server: world status (0x06)
 /// Displays the selected world's status/capacity for each channel
 /// NOTE: the same status bar is shown for each channel
-pub async fn handle(mut packet: Packet, client: &mut Client, config: &Config) -> Result<()> {
+pub async fn handle(mut packet: Packet, client: &mut LoginClient, config: &Config) -> Result<()> {
     let world_id = packet.read_short();
 
     let response = match config.worlds.get(world_id as usize) {

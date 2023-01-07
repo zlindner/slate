@@ -1,9 +1,10 @@
+use crate::client::LoginClient;
 use anyhow::Result;
-use oxy_core::net::{Client, Packet};
+use oxy_core::net::Packet;
 
 /// Login server: pin operation/after login packet (0x09)
 ///
-pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
+pub async fn handle(mut packet: Packet, client: &mut LoginClient) -> Result<()> {
     let a = packet.read_byte();
     let b = match packet.remaining() {
         0 => 5,

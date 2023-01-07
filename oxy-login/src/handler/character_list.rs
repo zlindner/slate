@@ -2,16 +2,17 @@ use super::{
     world_status::{self, WorldStatus},
     Config,
 };
+use crate::client::LoginClient;
 use anyhow::Result;
 use oxy_core::{
-    net::{Client, Packet},
+    net::Packet,
     packets,
     prisma::{character, world},
 };
 
 /// Login server: character list packet (0x05)
 /// Displays the user's character list after selecting a world and channel
-pub async fn handle(mut packet: Packet, client: &mut Client, config: &Config) -> Result<()> {
+pub async fn handle(mut packet: Packet, client: &mut LoginClient, config: &Config) -> Result<()> {
     packet.skip(1);
     let world_id = packet.read_byte();
 
@@ -63,7 +64,11 @@ pub async fn handle(mut packet: Packet, client: &mut Client, config: &Config) ->
 }
 
 ///
-fn character_list(characters: Vec<character::Data>, client: &Client, config: &Config) -> Packet {
+fn character_list(
+    characters: Vec<character::Data>,
+    client: &LoginClient,
+    config: &Config,
+) -> Packet {
     let mut packet = Packet::new();
     packet.write_short(0x0B);
     packet.write_byte(0); // status

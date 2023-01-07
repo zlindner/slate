@@ -1,12 +1,10 @@
+use crate::client::LoginClient;
 use anyhow::Result;
-use oxy_core::{
-    net::{Client, Packet},
-    prisma::account,
-};
+use oxy_core::{net::Packet, prisma::account};
 
 /// Login server: register pic packet (0x1D)
 ///
-pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
+pub async fn handle(mut packet: Packet, client: &mut LoginClient) -> Result<()> {
     if packet.read_byte() == 0 {
         client.disconnect().await;
         return Ok(());

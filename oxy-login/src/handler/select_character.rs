@@ -1,12 +1,10 @@
+use crate::client::LoginClient;
 use anyhow::Result;
-use oxy_core::{
-    net::{Client, Packet},
-    prisma::LoginState,
-};
+use oxy_core::{net::Packet, prisma::LoginState};
 
 /// Login server: select character packet (0x13)
 ///
-pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
+pub async fn handle(mut packet: Packet, client: &mut LoginClient) -> Result<()> {
     let character_id = packet.read_int();
     let mac_addr = packet.read_string();
     let host_addr = packet.read_string();
@@ -16,7 +14,7 @@ pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
     Ok(())
 }
 
-pub async fn connect_to_world_server(client: &mut Client) -> Result<()> {
+pub async fn connect_to_world_server(client: &mut LoginClient) -> Result<()> {
     // TODO we can check mac_addr/hwid from host_addr if we want to prevent multi-logging
 
     client
@@ -40,7 +38,7 @@ pub async fn connect_to_world_server(client: &mut Client) -> Result<()> {
         .await?;
 
     // TODO is this really required?
-    client.update_state(LoginState::Transitioning).await?;
+    client.update_login_state(LoginState::Transitioning).await?;
 
     let response = world_server_addr(client.session.id);
     client.send(response).await?;

@@ -1,8 +1,10 @@
+use crate::client::LoginClient;
+
 use super::character_list::write_character;
 use anyhow::Result;
 use once_cell::sync::Lazy;
 use oxy_core::{
-    net::{Client, Packet},
+    net::Packet,
     nx::{self, EquipCategory},
     prisma::{character, keymap, InventoryType},
 };
@@ -10,7 +12,7 @@ use std::collections::HashSet;
 
 /// Login server: create character packet (0x16)
 ///
-pub async fn handle(mut packet: Packet, client: &mut Client) -> Result<()> {
+pub async fn handle(mut packet: Packet, client: &mut LoginClient) -> Result<()> {
     let name = packet.read_string();
     let job = packet.read_int();
     let face = packet.read_int();
