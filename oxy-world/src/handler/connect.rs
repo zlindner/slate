@@ -6,6 +6,7 @@ use oxy_core::{
     prisma::{character, equip, item, quest, session, InventoryType, QuestStatus},
 };
 use prisma_client_rust::chrono::{Local, Utc};
+use rand::random;
 use std::collections::HashMap;
 
 /// World server: connect packet (0x14)
@@ -54,6 +55,12 @@ pub async fn handle(mut packet: Packet, client: &mut WorldClient) -> Result<()> 
 
     let response = character_keymap(&character);
     client.send(response).await?;
+
+    // Send the character data to all other clients
+    let response = spawn_player(&character, true);
+    client.broadcast(response).await?;
+    // TODO MapleMap.sendObjectPlacement
+
     Ok(())
 }
 
@@ -383,4 +390,138 @@ fn character_keymap(character: &character::Data) -> Packet {
     }
 
     packet
+}
+
+///
+fn spawn_player(character: &character::Data, entering: bool) -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0xA0);
+    packet.write_int(character.id);
+    packet.write_byte(character.level as u8);
+    packet.write_string(&character.name);
+
+    match character.guild {
+        Some(guild_id) => {
+            // TODO load guild data by id, if found write guild data
+            packet.write_string("");
+            packet.write_bytes(&[0, 0, 0, 0, 0, 0]);
+        }
+        None => {
+            packet.write_string("");
+            packet.write_bytes(&[0, 0, 0, 0, 0, 0]);
+        }
+    };
+
+    write_buffs(&mut packet);
+    // TODO need to get the correct job id based on the job, create an enum that maps all jobs to job ids? (see Job class)
+    packet.write_short(0); // FIXME job id
+    packets::write_character_style(&mut packet, character);
+    packets::write_character_equipment(&mut packet, character);
+    packet.write_int(0); // TODO # of heart shaped chocolate in cash inv??? why
+    packet.write_int(0); // TODO item effect
+    packet.write_int(0); // TODO chair id
+
+    // FIXME hardcoding 0, 0 as position
+    // not too sure what value should actually be, newClient() sets it to the closest portal's position
+    // to the player found in the map
+    // Check if character is already present in the map
+    if entering {
+        packet.write_position((0, 0 - 42)); // FIXME character pos
+        packet.write_byte(6); // stance
+    } else {
+        packet.write_position((0, 0)); // FIXME character pos
+        packet.write_byte(0); // TODO stance
+    }
+
+    packet.write_short(0);
+    packet.write_byte(0);
+
+    // TODO pet info
+    for i in 0..3 {
+        // TODO write pet[i]
+    }
+
+    packet.write_byte(0);
+
+    // TODO mount info
+    packet.write_int(1);
+    packet.write_long(0);
+
+    // TODO shop and minigame info
+    packet.write_byte(0);
+
+    // TODO chalkboard
+    packet.write_byte(0);
+
+    // TODO crush ring
+    packet.write_byte(0);
+
+    // TODO friendship ring
+    packet.write_byte(0);
+
+    // TODO marriage ring
+    packet.write_byte(0);
+
+    // TODO new years card info
+    packet.write_byte(0);
+
+    packet.write_byte(0);
+    packet.write_byte(0);
+    packet.write_byte(0); // TODO team
+    packet
+}
+
+///
+fn write_buffs(packet: &mut Packet) {
+    packet.write_int(0);
+    packet.write_short(0);
+    packet.write_byte(0xFC);
+    packet.write_byte(1);
+    packet.write_int(0); // TODO morph
+
+    let buff_mask = 0i64;
+    // TODO compute buff mask
+    packet.write_int(((buff_mask >> 32) & 0xffffffffi64) as i32);
+    // TODO buff value
+    packet.write_int((buff_mask & 0xffffffffi64) as i32);
+
+    // TODO energy
+    packet.write_int(0);
+    packet.write_short(0);
+    packet.write_bytes(&[0u8; 4]);
+
+    // TODO dash buff
+    packet.write_int(0);
+    packet.write_bytes(&[0u8; 11]);
+    packet.write_short(0);
+
+    // TODO dash jump
+    packet.write_bytes(&[0u8; 9]);
+    packet.write_int(0);
+    packet.write_short(0);
+    packet.write_byte(0);
+
+    // TODO monster riding
+    packet.write_long(0);
+
+    let char_magic_spawn = random::<i32>();
+    packet.write_int(char_magic_spawn);
+
+    // Speed Infusion
+    packet.write_bytes(&[0u8; 8]);
+    packet.write_int(char_magic_spawn);
+    packet.write_byte(0);
+    packet.write_int(char_magic_spawn);
+    packet.write_short(0);
+
+    // Homing Beacon
+    packet.write_bytes(&[0u8; 9]);
+    packet.write_int(char_magic_spawn);
+    packet.write_int(0);
+
+    // Zombify
+    packet.write_bytes(&[0u8; 9]);
+    packet.write_int(char_magic_spawn);
+    packet.write_short(0);
+    packet.write_short(0);
 }

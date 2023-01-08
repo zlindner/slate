@@ -94,8 +94,8 @@ fn character_list(
 ///
 pub fn write_character(packet: &mut Packet, character: &character::Data, view_all: bool) {
     packets::write_character_stats(packet, character);
-    write_character_style(packet, character);
-    write_character_equipment(packet, character);
+    packets::write_character_style(packet, character);
+    packets::write_character_equipment(packet, character);
 
     if !view_all {
         packet.write_byte(0);
@@ -113,32 +113,4 @@ pub fn write_character(packet: &mut Packet, character: &character::Data, view_al
     packet.write_int(character.rank_move);
     packet.write_int(character.job_rank);
     packet.write_int(character.job_rank_move);
-}
-
-///
-fn write_character_style(packet: &mut Packet, character: &character::Data) {
-    packet.write_byte(character.gender as u8);
-    packet.write_byte(character.skin_colour as u8);
-    packet.write_int(character.face);
-    packet.write_byte(1); // 0: megaphone, 1: normal
-    packet.write_int(character.hair);
-}
-
-///
-fn write_character_equipment(packet: &mut Packet, character: &character::Data) {
-    for equip in character.equips.as_ref().unwrap().iter() {
-        packet.write_byte(equip.position as u8);
-        packet.write_int(equip.item_id);
-    }
-
-    packet.write_byte(0xFF);
-    // TODO write masked equips
-    packet.write_byte(0xFF);
-    // TODO write item @ pos -111 (weapon?)
-    packet.write_int(0);
-
-    for i in 0..3 {
-        // TODO write pet item id's
-        packet.write_int(0);
-    }
 }
