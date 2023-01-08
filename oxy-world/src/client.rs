@@ -17,6 +17,9 @@ pub struct WorldClient {
     pub session: session::Data,
     broadcast_tx: Sender<BroadcastPacket>,
     broadcast_rx: Receiver<BroadcastPacket>,
+    // TODO move character specific stuff to Character struct?
+    pub position: (i32, i32),
+    pub stance: i32,
 }
 
 impl WorldClient {
@@ -47,6 +50,8 @@ impl WorldClient {
             session,
             broadcast_tx,
             broadcast_rx,
+            position: (0, 0),
+            stance: 0,
         }
     }
 

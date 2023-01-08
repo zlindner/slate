@@ -3,6 +3,7 @@ use anyhow::Result;
 use oxy_core::net::Packet;
 
 mod connect;
+mod move_character;
 
 pub struct WorldPacketHandler;
 
@@ -16,6 +17,7 @@ impl WorldPacketHandler {
 
         match op {
             0x14 => connect::handle(packet, client).await?,
+            0x29 => move_character::handle(packet, client).await?,
             _ => log::debug!("Unhandled packet: {:02X?}", op),
         }
 

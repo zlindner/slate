@@ -1,3 +1,4 @@
+use crate::client::WorldClient;
 use anyhow::Result;
 use oxy_core::{
     net::Packet,
@@ -6,8 +7,6 @@ use oxy_core::{
 };
 use prisma_client_rust::chrono::{Local, Utc};
 use std::collections::HashMap;
-
-use crate::client::WorldClient;
 
 /// World server: connect packet (0x14)
 /// Called when the client begins transition from login -> world server
