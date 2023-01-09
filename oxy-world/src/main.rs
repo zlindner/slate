@@ -1,10 +1,11 @@
 use crate::client::WorldClient;
 use anyhow::Result;
+use dashmap::DashMap;
 use dotenv::dotenv;
 use log::LevelFilter;
 use oxy_core::{
     net::BroadcastPacket,
-    prisma::{self, PrismaClient},
+    prisma::{self, character, PrismaClient},
 };
 use simple_logger::SimpleLogger;
 use std::sync::Arc;
@@ -12,6 +13,34 @@ use tokio::{net::TcpListener, sync::broadcast};
 
 mod client;
 mod handler;
+
+pub struct Shared {
+    maps: DashMap<i32, Map>,
+}
+
+impl Shared {
+    pub fn new() -> Self {
+        Self {
+            maps: DashMap::new(),
+        }
+    }
+}
+
+pub struct Map {
+    // TODO create MapleCharacter struct that contains character::Data and pos stuff
+    // insert that into map instead
+    // should ideally be a reference in the map that is owned in the client
+    // can hopefully do with lifetimes
+    pub characters: DashMap<i32, character::Data>,
+}
+
+impl Map {
+    pub fn new() -> Self {
+        Self {
+            characters: DashMap::new(),
+        }
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -41,10 +70,20 @@ async fn main() -> Result<()> {
 
     //oxy_core::nx::load_map(10000);
 
+    let shared = Arc::new(Shared::new());
+
     loop {
         let (stream, _) = listener.accept().await?;
         session_id += 1;
-        let client = WorldClient::new(stream, db.clone(), session_id, tx.clone(), tx.subscribe());
+
+        let client = WorldClient::new(
+            stream,
+            db.clone(),
+            session_id,
+            tx.clone(),
+            tx.subscribe(),
+            shared.clone(),
+        );
 
         tokio::spawn(async move {
             client.process().await;

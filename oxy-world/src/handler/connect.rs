@@ -1,4 +1,4 @@
-use crate::client::WorldClient;
+use crate::{client::WorldClient, Map};
 use anyhow::Result;
 use oxy_core::{
     net::Packet,
@@ -60,9 +60,33 @@ pub async fn handle(mut packet: Packet, client: &mut WorldClient) -> Result<()> 
     let response = spawn_player(&character, true);
     client.broadcast(response, false).await?;
 
-    // TODO MapleMap.sendObjectPlacement
-    // we need to maintain some kind of cache of what players are in what map,
-    // in this handler add them to the map, so they can be sent in sendObjectPlacement
+    // TODO maybe want to make shared.get_map()?
+    if !client.shared.maps.contains_key(&character.map) {
+        client.shared.maps.insert(character.map, Map::new());
+    }
+
+    // Create a new scope here since client is borrowed as immutable when getting a reference to shared.
+    // TODO is there a better way?
+    let map_object_spawn_packets = {
+        let mut object_spawn_packets = Vec::new();
+        let map = client.shared.maps.get(&character.map).unwrap();
+
+        for map_character in map.characters.iter() {
+            log::debug!("Found character in map w/ id: {}", map_character.name);
+            object_spawn_packets.push(spawn_player(&map_character, false));
+        }
+
+        // TODO MapleMap.sendObjectPlacement
+        // we need to maintain some kind of cache of what players are in what map,
+        // in this handler add them to the map, so they can be sent in sendObjectPlacement
+
+        map.characters.insert(character.id, character);
+        object_spawn_packets
+    };
+
+    for spawn_packet in map_object_spawn_packets.into_iter() {
+        client.send(spawn_packet).await?;
+    }
 
     Ok(())
 }

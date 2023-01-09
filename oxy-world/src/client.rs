@@ -1,4 +1,4 @@
-use crate::handler::WorldPacketHandler;
+use crate::{handler::WorldPacketHandler, Shared};
 use anyhow::{anyhow, Result};
 use oxy_core::{
     net::{BroadcastPacket, MapleStream, Packet},
@@ -17,6 +17,7 @@ pub struct WorldClient {
     pub session: session::Data,
     broadcast_tx: Sender<BroadcastPacket>,
     broadcast_rx: Receiver<BroadcastPacket>,
+    pub shared: Arc<Shared>,
     // TODO move character specific stuff to Character struct?
     pub position: (i32, i32),
     pub stance: i32,
@@ -29,6 +30,7 @@ impl WorldClient {
         session_id: i32,
         broadcast_tx: Sender<BroadcastPacket>,
         broadcast_rx: Receiver<BroadcastPacket>,
+        shared: Arc<Shared>,
     ) -> Self {
         let session = session::Data {
             id: session_id,
@@ -50,6 +52,7 @@ impl WorldClient {
             session,
             broadcast_tx,
             broadcast_rx,
+            shared,
             position: (0, 0),
             stance: 0,
         }
