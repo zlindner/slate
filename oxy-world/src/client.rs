@@ -90,6 +90,10 @@ impl WorldClient {
                         }
                     };
 
+                    if broadcast_packet.sender_character_id == self.session.character_id {
+                        continue;
+                    }
+
                     // TODO validate map id and position
                     if let Err(e) = self.stream.write_packet(broadcast_packet.packet).await {
                         log::error!("Error writing broadcast packet: {}", e);
@@ -115,6 +119,7 @@ impl WorldClient {
         // FIXME
         let broadcast_packet = BroadcastPacket {
             packet,
+            sender_character_id: self.session.character_id,
             sender_map_id: 0,
             sender_position: (0, 0),
         };

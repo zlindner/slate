@@ -39,6 +39,8 @@ async fn main() -> Result<()> {
     let mut session_id = 0;
     let (tx, _rx) = broadcast::channel::<BroadcastPacket>(16);
 
+    //oxy_core::nx::load_map(10000);
+
     loop {
         let (stream, _) = listener.accept().await?;
         session_id += 1;
