@@ -61,7 +61,7 @@ pub async fn handle(mut packet: Packet, client: &mut WorldClient) -> Result<()> 
     // TODO we should build a vec in the above loop and only broadcast movement packets that matter
     // on the client (ex. don't need to send absolute movement)
     let response = move_player(client.session.character_id, packet_copy);
-    client.broadcast(response).await?;
+    client.broadcast(response, false).await?;
 
     Ok(())
 }

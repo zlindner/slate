@@ -81,21 +81,22 @@ impl WorldClient {
                         log::error!("Error handling packet: {}", e);
                     }
                 }
-                broadcast_packet = self.broadcast_rx.recv() => {
-                    let broadcast_packet = match broadcast_packet {
-                        Ok(broadcast_packet) => broadcast_packet,
+                broadcast = self.broadcast_rx.recv() => {
+                    let broadcast = match broadcast {
+                        Ok(broadcast) => broadcast,
                         Err(e) => {
                             log::error!("Error receiving broadcast packet: {}", e);
                             break; // TODO does this break the loop or select?
                         }
                     };
 
-                    if broadcast_packet.sender_character_id == self.session.character_id {
+                    // Check if we should send to the sender of the broadcast
+                    if !broadcast.send_to_sender && broadcast.sender_character_id == self.session.character_id {
                         continue;
                     }
 
                     // TODO validate map id and position
-                    if let Err(e) = self.stream.write_packet(broadcast_packet.packet).await {
+                    if let Err(e) = self.stream.write_packet(broadcast.packet).await {
                         log::error!("Error writing broadcast packet: {}", e);
                     }
                 }
@@ -115,13 +116,14 @@ impl WorldClient {
     /// Broadcasts a packet to all other connected clients via a channel.
     /// Currently broadcasts to all connected clients (very inefficient).
     /// In future should implement broadcasting to specific world/channel/map.
-    pub async fn broadcast(&mut self, packet: Packet) -> Result<()> {
+    pub async fn broadcast(&mut self, packet: Packet, send_to_sender: bool) -> Result<()> {
         // FIXME
         let broadcast_packet = BroadcastPacket {
             packet,
             sender_character_id: self.session.character_id,
             sender_map_id: 0,
             sender_position: (0, 0),
+            send_to_sender,
         };
 
         self.broadcast_tx.send(broadcast_packet)?;

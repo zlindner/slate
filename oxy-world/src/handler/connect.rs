@@ -58,8 +58,11 @@ pub async fn handle(mut packet: Packet, client: &mut WorldClient) -> Result<()> 
 
     // Send the character data to all other clients
     let response = spawn_player(&character, true);
-    client.broadcast(response).await?;
+    client.broadcast(response, false).await?;
+
     // TODO MapleMap.sendObjectPlacement
+    // we need to maintain some kind of cache of what players are in what map,
+    // in this handler add them to the map, so they can be sent in sendObjectPlacement
 
     Ok(())
 }
