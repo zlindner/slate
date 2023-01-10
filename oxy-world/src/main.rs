@@ -1,5 +1,7 @@
 use crate::client::WorldClient;
 use anyhow::Result;
+use character::Character;
+use dashmap::{mapref::one::Ref, DashMap};
 use dotenv::dotenv;
 use log::LevelFilter;
 use oxy_core::{
@@ -10,8 +12,44 @@ use simple_logger::SimpleLogger;
 use std::sync::Arc;
 use tokio::{net::TcpListener, sync::broadcast};
 
+mod character;
 mod client;
 mod handler;
+
+pub struct Shared {
+    maps: DashMap<i32, Map>,
+}
+
+impl Shared {
+    pub fn new() -> Self {
+        Self {
+            maps: DashMap::new(),
+        }
+    }
+
+    pub fn get_map(&self, map_id: i32) -> Ref<'_, i32, Map> {
+        if !self.maps.contains_key(&map_id) {
+            // TODO should we actually load the map from nx here?
+            self.maps.insert(map_id, Map::new(map_id));
+        }
+
+        self.maps.get(&map_id).unwrap()
+    }
+}
+
+pub struct Map {
+    pub id: i32,
+    pub characters: DashMap<i32, Character>,
+}
+
+impl Map {
+    pub fn new(id: i32) -> Self {
+        Self {
+            id,
+            characters: DashMap::new(),
+        }
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -39,13 +77,19 @@ async fn main() -> Result<()> {
     let mut session_id = 0;
     let (tx, _rx) = broadcast::channel::<BroadcastPacket>(16);
 
+    //oxy_core::nx::load_map(10000);
+
+    let shared = Arc::new(Shared::new());
+
     loop {
         let (stream, _) = listener.accept().await?;
         session_id += 1;
+
         let client = WorldClient::new(stream, db.clone(), session_id, tx.clone(), tx.subscribe());
+        let shared = shared.clone();
 
         tokio::spawn(async move {
-            client.process().await;
+            client.process(shared).await;
         });
     }
 }

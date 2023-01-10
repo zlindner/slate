@@ -23,6 +23,7 @@ pub static DATA: Lazy<HashMap<&str, nx::File>> = Lazy::new(|| {
     let mut map = HashMap::new();
 
     for nx_file in NX_FILES {
+        // FIXME this path is problematic, depends on where the binary is located
         let filename = format!("oxy-core/nx/{}.nx", nx_file);
         let path = Path::new(&filename);
 
@@ -58,6 +59,7 @@ impl EquipCategory {
 }
 
 /// Loads equipd data from Character.nx for the given equip id and category
+// FIXME this panics for handaxe?
 pub fn get_equip_data(equip_id: i32, equip_category: EquipCategory) -> Vec<equip::SetParam> {
     let id = format!("0{}.img", equip_id);
     let root = DATA.get("Character").unwrap().root();
@@ -97,6 +99,7 @@ pub struct Map {
     pub mob_rate: f64,
     pub on_user_enter: String,
     pub on_first_user_enter: String,
+    pub life: Vec<Life>,
     pub portals: HashMap<i64, Portal>,
     pub return_map_id: i64,
     pub bounds: (i64, i64, i64, i64),
@@ -123,6 +126,7 @@ pub fn load_map(map_id: i32) -> Option<Map> {
         return None;
     }
 
+    let map_data = map_data.unwrap();
     let info = map_data.get("info").unwrap();
     log::debug!("Loading map data from {}/{}", area_name, map_name);
 
@@ -184,7 +188,25 @@ pub fn load_map(map_id: i32) -> Option<Map> {
     // TODO seat
     // TODO add player npc -> playernpcs
     // TODO add player npc -> developer npcs?
-    // TODO load life from nx
+
+    let life_root = map_data.get("life");
+    let life = match life_root {
+        Some(life_root) => load_life(life_root),
+        None => Vec::new(),
+    };
+
+    let portal_root = map_data.get("portal");
+    let portals = match portal_root {
+        Some(portal_root) => load_portals(portal_root),
+        None => HashMap::new(),
+    };
+
+    let foothold_root = map_data.get("foothold");
+    let footholds = match foothold_root {
+        Some(foothold_root) => load_footholds(foothold_root),
+        None => Vec::new(),
+    };
+
     // TODO load life from db
     // TODO if cpq map load monsterCarnival
     // TODO reactor
@@ -196,12 +218,88 @@ pub fn load_map(map_id: i32) -> Option<Map> {
         mob_rate,
         on_user_enter,
         on_first_user_enter,
-        portals: load_portals(map_data.get("portal").unwrap()),
+        life,
+        portals,
         return_map_id,
         bounds,
-        footholds: load_footholds(map_data.get("foothold").unwrap()),
+        footholds,
         town,
     })
+}
+
+pub struct Life {
+    id: i64,
+    type_: LifeType,
+    position: (i64, i64),
+    object_id: i32,
+    stance: i32,
+    f: i64,
+    is_hidden: bool,
+    fh: i64,
+    start_fh: i64,
+    cy: i64,
+    rx0: i64,
+    rx1: i64,
+    mob_time: i64,
+}
+
+pub enum LifeType {
+    NPC,
+    Monster,
+}
+
+#[derive(Default)]
+pub struct LifeStats {
+    name: String,
+}
+
+/// Loads all life (NPCs and monsters)
+fn load_life(life_root: nx::Node) -> Vec<Life> {
+    let map_life = Vec::new();
+
+    for life in life_root.iter() {
+        let id = life.get("id").string().unwrap_or_default();
+        let type_ = life.get("type").string().unwrap_or_default();
+
+        let life_type = match type_ {
+            "n" | "N" => LifeType::NPC,
+            "m" | "M" => LifeType::Monster,
+            _ => break,
+        };
+
+        let team = life.get("team").integer().unwrap_or(-1);
+        // TODO team stuff
+        let x = life.get("x").integer().unwrap_or(0);
+        let y = life.get("y").integer().unwrap_or(0);
+
+        let life = Life {
+            id: id.parse().unwrap_or(0),
+            type_: life_type,
+            position: (x, y),
+            object_id: 0, // TODO is this needed
+            stance: 0,    // TODO is this needed
+            f: life.get("f").integer().unwrap_or(0),
+            is_hidden: life.get("hide").integer().unwrap_or(0) == 1,
+            fh: life.get("fh").integer().unwrap_or(0),
+            start_fh: life.get("fh").integer().unwrap_or(0),
+            cy: life.get("cy").integer().unwrap_or(0),
+            rx0: life.get("rx0").integer().unwrap_or(0),
+            rx1: life.get("rx1").integer().unwrap_or(0),
+            mob_time: life.get("mobTime").integer().unwrap_or(0),
+        };
+
+        // TODO if NPC => load name from String.nx
+        // TODO if Monster => load stats from Mob.nx
+
+        let life_stats = match life.type_ {
+            LifeType::NPC => {
+                let stats = LifeStats::default();
+            }
+            LifeType::Monster => {}
+        };
+    }
+
+    map_life
 }
 
 pub struct Portal {

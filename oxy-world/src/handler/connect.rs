@@ -1,3 +1,4 @@
+use crate::{character::Character, client::WorldClient, Shared};
 use anyhow::Result;
 use oxy_core::{
     net::Packet,
@@ -5,13 +6,16 @@ use oxy_core::{
     prisma::{character, equip, item, quest, session, InventoryType, QuestStatus},
 };
 use prisma_client_rust::chrono::{Local, Utc};
-use std::collections::HashMap;
-
-use crate::client::WorldClient;
+use rand::random;
+use std::{collections::HashMap, sync::Arc};
 
 /// World server: connect packet (0x14)
 /// Called when the client begins transition from login -> world server
-pub async fn handle(mut packet: Packet, client: &mut WorldClient) -> Result<()> {
+pub async fn handle(
+    mut packet: Packet,
+    client: &mut WorldClient,
+    shared: &Arc<Shared>,
+) -> Result<()> {
     let session_id = packet.read_int();
 
     let session = client
@@ -29,7 +33,7 @@ pub async fn handle(mut packet: Packet, client: &mut WorldClient) -> Result<()> 
         }
     };
 
-    let character = client
+    let character_data = client
         .db
         .character()
         .find_unique(character::id::equals(client.session.character_id))
@@ -42,19 +46,46 @@ pub async fn handle(mut packet: Packet, client: &mut WorldClient) -> Result<()> 
         .exec()
         .await?;
 
-    let character = match character {
-        Some(character) => character,
+    let character_data = match character_data {
+        Some(character_data) => character_data,
         None => {
             let response = connect_error(ConnectError::Unknown);
             return client.send(response).await;
         }
     };
 
-    let response = character_info(client.session.channel_id, &character);
+    // Set the client's character id
+    // TODO is it possible to set client.character here and insert &client.character into shared?
+    let character = Character::new(character_data);
+    client.map_id = character.map_id;
+    client.character_id = character.id;
+
+    let response = character_info(client.session.channel_id, &character.data);
     client.send(response).await?;
 
-    let response = character_keymap(&character);
+    let response = character_keymap(&character.data);
     client.send(response).await?;
+
+    // Send the character data to all other clients
+    let response = spawn_character(&character, true);
+    client.broadcast(response, false).await?;
+
+    let map = shared.get_map(character.map_id);
+
+    let mut objects = Vec::new();
+
+    for map_character in map.characters.iter() {
+        objects.push(spawn_character(&map_character, false));
+    }
+
+    // TODO npcs, mobs, etc.
+
+    map.characters.insert(character.id, character);
+
+    for spawn_packet in objects.into_iter() {
+        client.send(spawn_packet).await?;
+    }
+
     Ok(())
 }
 
@@ -384,4 +415,137 @@ fn character_keymap(character: &character::Data) -> Packet {
     }
 
     packet
+}
+
+///
+fn spawn_character(character: &Character, entering: bool) -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0xA0);
+
+    packet.write_int(character.data.id);
+    packet.write_byte(character.data.level as u8);
+    packet.write_string(&character.data.name);
+
+    match character.data.guild {
+        Some(guild_id) => {
+            // TODO load guild data by id, if found write guild data
+            packet.write_string("");
+            packet.write_bytes(&[0, 0, 0, 0, 0, 0]);
+        }
+        None => {
+            packet.write_string("");
+            packet.write_bytes(&[0, 0, 0, 0, 0, 0]);
+        }
+    };
+
+    write_buffs(&mut packet);
+    // TODO need to get the correct job id based on the job, create an enum that maps all jobs to job ids? (see Job class)
+    packet.write_short(0); // FIXME job id
+    packets::write_character_style(&mut packet, &character.data);
+    packets::write_character_equipment(&mut packet, &character.data);
+    packet.write_int(0); // TODO # of heart shaped chocolate in cash inv??? why
+    packet.write_int(0); // TODO item effect
+    packet.write_int(0); // TODO chair id
+
+    // Check if character is already present in the map
+    if entering {
+        // TODO should be set to portal closest to map spawn point
+        packet.write_position((0, 0 - 42));
+        packet.write_byte(6);
+    } else {
+        packet.write_position(character.position);
+        packet.write_byte(character.stance as u8);
+    }
+
+    packet.write_short(0);
+    packet.write_byte(0);
+
+    // TODO pet info
+    for i in 0..3 {
+        // TODO write pet[i]
+    }
+
+    packet.write_byte(0);
+
+    // TODO mount info
+    packet.write_int(1);
+    packet.write_long(0);
+
+    // TODO shop and minigame info
+    packet.write_byte(0);
+
+    // TODO chalkboard
+    packet.write_byte(0);
+
+    // TODO crush ring
+    packet.write_byte(0);
+
+    // TODO friendship ring
+    packet.write_byte(0);
+
+    // TODO marriage ring
+    packet.write_byte(0);
+
+    // TODO new years card info
+    packet.write_byte(0);
+
+    packet.write_byte(0);
+    packet.write_byte(0);
+    packet.write_byte(0); // TODO team
+    packet
+}
+
+///
+fn write_buffs(packet: &mut Packet) {
+    packet.write_int(0);
+    packet.write_short(0);
+    packet.write_byte(0xFC);
+    packet.write_byte(1);
+    packet.write_int(0); // TODO morph
+
+    let buff_mask = 0i64;
+    // TODO compute buff mask
+    packet.write_int(((buff_mask >> 32) & 0xffffffffi64) as i32);
+    // TODO buff value
+    packet.write_int((buff_mask & 0xffffffffi64) as i32);
+
+    // TODO energy
+    packet.write_int(0);
+    packet.write_short(0);
+    packet.write_bytes(&[0u8; 4]);
+
+    // TODO dash buff
+    packet.write_int(0);
+    packet.write_bytes(&[0u8; 11]);
+    packet.write_short(0);
+
+    // TODO dash jump
+    packet.write_bytes(&[0u8; 9]);
+    packet.write_int(0);
+    packet.write_short(0);
+    packet.write_byte(0);
+
+    // TODO monster riding
+    packet.write_long(0);
+
+    let char_magic_spawn = random::<i32>();
+    packet.write_int(char_magic_spawn);
+
+    // Speed Infusion
+    packet.write_bytes(&[0u8; 8]);
+    packet.write_int(char_magic_spawn);
+    packet.write_byte(0);
+    packet.write_int(char_magic_spawn);
+    packet.write_short(0);
+
+    // Homing Beacon
+    packet.write_bytes(&[0u8; 9]);
+    packet.write_int(char_magic_spawn);
+    packet.write_int(0);
+
+    // Zombify
+    packet.write_bytes(&[0u8; 9]);
+    packet.write_int(char_magic_spawn);
+    packet.write_short(0);
+    packet.write_short(0);
 }

@@ -46,6 +46,11 @@ impl Packet {
         self.write_bytes(string.as_bytes());
     }
 
+    pub fn write_position(&mut self, pos: (i32, i32)) {
+        self.write_short(pos.0 as i16);
+        self.write_short(pos.1 as i16);
+    }
+
     pub fn read_byte(&mut self) -> u8 {
         self.bytes.get_u8()
     }
@@ -103,6 +108,8 @@ impl Display for Packet {
 #[derive(Clone, Debug)]
 pub struct BroadcastPacket {
     pub packet: Packet,
+    pub sender_character_id: i32,
     pub sender_map_id: i32,
     pub sender_position: (i32, i32),
+    pub send_to_sender: bool,
 }

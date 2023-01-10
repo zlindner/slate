@@ -1,4 +1,4 @@
-use crate::handler::WorldPacketHandler;
+use crate::{handler::WorldPacketHandler, Shared};
 use anyhow::{anyhow, Result};
 use oxy_core::{
     net::{BroadcastPacket, MapleStream, Packet},
@@ -17,6 +17,8 @@ pub struct WorldClient {
     pub session: session::Data,
     broadcast_tx: Sender<BroadcastPacket>,
     broadcast_rx: Receiver<BroadcastPacket>,
+    pub map_id: i32,
+    pub character_id: i32,
 }
 
 impl WorldClient {
@@ -47,10 +49,12 @@ impl WorldClient {
             session,
             broadcast_tx,
             broadcast_rx,
+            map_id: -1,
+            character_id: -1,
         }
     }
 
-    pub async fn process(mut self) {
+    pub async fn process(mut self, shared: Arc<Shared>) {
         if let Err(e) = self.on_connect().await {
             log::error!("Client connection error: {}", e);
             self.on_disconnect().await;
@@ -72,21 +76,26 @@ impl WorldClient {
                         }
                     };
 
-                    if let Err(e) = handler.handle(packet, &mut self).await {
+                    if let Err(e) = handler.handle(packet, &mut self, &shared).await {
                         log::error!("Error handling packet: {}", e);
                     }
                 }
-                broadcast_packet = self.broadcast_rx.recv() => {
-                    let broadcast_packet = match broadcast_packet {
-                        Ok(broadcast_packet) => broadcast_packet,
+                broadcast = self.broadcast_rx.recv() => {
+                    let broadcast = match broadcast {
+                        Ok(broadcast) => broadcast,
                         Err(e) => {
                             log::error!("Error receiving broadcast packet: {}", e);
                             break; // TODO does this break the loop or select?
                         }
                     };
 
+                    // Check if we should send to the sender of the broadcast
+                    if !broadcast.send_to_sender && broadcast.sender_character_id == self.session.character_id {
+                        continue;
+                    }
+
                     // TODO validate map id and position
-                    if let Err(e) = self.stream.write_packet(broadcast_packet.packet).await {
+                    if let Err(e) = self.stream.write_packet(broadcast.packet).await {
                         log::error!("Error writing broadcast packet: {}", e);
                     }
                 }
@@ -106,12 +115,14 @@ impl WorldClient {
     /// Broadcasts a packet to all other connected clients via a channel.
     /// Currently broadcasts to all connected clients (very inefficient).
     /// In future should implement broadcasting to specific world/channel/map.
-    pub async fn broadcast(&mut self, packet: Packet) -> Result<()> {
+    pub async fn broadcast(&mut self, packet: Packet, send_to_sender: bool) -> Result<()> {
         // FIXME
         let broadcast_packet = BroadcastPacket {
             packet,
+            sender_character_id: self.session.character_id,
             sender_map_id: 0,
             sender_position: (0, 0),
+            send_to_sender,
         };
 
         self.broadcast_tx.send(broadcast_packet)?;
@@ -158,5 +169,7 @@ impl WorldClient {
         if let Err(e) = self.update_login_state(LoginState::LoggedOut).await {
             log::debug!("Error updating login state: {}", e);
         }
+
+        // TODO remove character from map
     }
 }
