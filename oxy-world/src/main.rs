@@ -1,16 +1,18 @@
 use crate::client::WorldClient;
 use anyhow::Result;
-use dashmap::DashMap;
+use character::Character;
+use dashmap::{mapref::one::Ref, DashMap};
 use dotenv::dotenv;
 use log::LevelFilter;
 use oxy_core::{
     net::BroadcastPacket,
-    prisma::{self, character, PrismaClient},
+    prisma::{self, PrismaClient},
 };
 use simple_logger::SimpleLogger;
 use std::sync::Arc;
 use tokio::{net::TcpListener, sync::broadcast};
 
+mod character;
 mod client;
 mod handler;
 
@@ -24,19 +26,26 @@ impl Shared {
             maps: DashMap::new(),
         }
     }
+
+    pub fn get_map(&self, map_id: i32) -> Ref<'_, i32, Map> {
+        if !self.maps.contains_key(&map_id) {
+            // TODO should we actually load the map from nx here?
+            self.maps.insert(map_id, Map::new(map_id));
+        }
+
+        self.maps.get(&map_id).unwrap()
+    }
 }
 
 pub struct Map {
-    // TODO create MapleCharacter struct that contains character::Data and pos stuff
-    // insert that into map instead
-    // should ideally be a reference in the map that is owned in the client
-    // can hopefully do with lifetimes
-    pub characters: DashMap<i32, character::Data>,
+    pub id: i32,
+    pub characters: DashMap<i32, Character>,
 }
 
 impl Map {
-    pub fn new() -> Self {
+    pub fn new(id: i32) -> Self {
         Self {
+            id,
             characters: DashMap::new(),
         }
     }
@@ -76,17 +85,11 @@ async fn main() -> Result<()> {
         let (stream, _) = listener.accept().await?;
         session_id += 1;
 
-        let client = WorldClient::new(
-            stream,
-            db.clone(),
-            session_id,
-            tx.clone(),
-            tx.subscribe(),
-            shared.clone(),
-        );
+        let client = WorldClient::new(stream, db.clone(), session_id, tx.clone(), tx.subscribe());
+        let shared = shared.clone();
 
         tokio::spawn(async move {
-            client.process().await;
+            client.process(shared).await;
         });
     }
 }

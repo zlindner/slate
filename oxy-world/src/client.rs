@@ -17,10 +17,8 @@ pub struct WorldClient {
     pub session: session::Data,
     broadcast_tx: Sender<BroadcastPacket>,
     broadcast_rx: Receiver<BroadcastPacket>,
-    pub shared: Arc<Shared>,
-    // TODO move character specific stuff to Character struct?
-    pub position: (i32, i32),
-    pub stance: i32,
+    pub map_id: i32,
+    pub character_id: i32,
 }
 
 impl WorldClient {
@@ -30,7 +28,6 @@ impl WorldClient {
         session_id: i32,
         broadcast_tx: Sender<BroadcastPacket>,
         broadcast_rx: Receiver<BroadcastPacket>,
-        shared: Arc<Shared>,
     ) -> Self {
         let session = session::Data {
             id: session_id,
@@ -52,13 +49,12 @@ impl WorldClient {
             session,
             broadcast_tx,
             broadcast_rx,
-            shared,
-            position: (0, 0),
-            stance: 0,
+            map_id: -1,
+            character_id: -1,
         }
     }
 
-    pub async fn process(mut self) {
+    pub async fn process(mut self, shared: Arc<Shared>) {
         if let Err(e) = self.on_connect().await {
             log::error!("Client connection error: {}", e);
             self.on_disconnect().await;
@@ -80,7 +76,7 @@ impl WorldClient {
                         }
                     };
 
-                    if let Err(e) = handler.handle(packet, &mut self).await {
+                    if let Err(e) = handler.handle(packet, &mut self, &shared).await {
                         log::error!("Error handling packet: {}", e);
                     }
                 }
@@ -173,5 +169,7 @@ impl WorldClient {
         if let Err(e) = self.update_login_state(LoginState::LoggedOut).await {
             log::debug!("Error updating login state: {}", e);
         }
+
+        // TODO remove character from map
     }
 }
