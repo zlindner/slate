@@ -7,15 +7,11 @@ use oxy_core::{
 };
 use prisma_client_rust::chrono::{Local, Utc};
 use rand::random;
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 /// World server: connect packet (0x14)
 /// Called when the client begins transition from login -> world server
-pub async fn handle(
-    mut packet: Packet,
-    client: &mut WorldClient,
-    shared: &Arc<Shared>,
-) -> Result<()> {
+pub async fn handle(mut packet: Packet, client: &mut WorldClient, shared: &Shared) -> Result<()> {
     let session_id = packet.read_int();
 
     let session = client

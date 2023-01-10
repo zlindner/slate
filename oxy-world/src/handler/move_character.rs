@@ -1,16 +1,10 @@
-use std::sync::Arc;
-
 use crate::{client::WorldClient, Shared};
 use anyhow::Result;
 use oxy_core::net::Packet;
 
 /// World server: move character packet (0x29)
 /// Called when the client moves their character
-pub async fn handle(
-    mut packet: Packet,
-    client: &mut WorldClient,
-    shared: &Arc<Shared>,
-) -> Result<()> {
+pub async fn handle(mut packet: Packet, client: &mut WorldClient, shared: &Shared) -> Result<()> {
     packet.skip(9);
     let packet_copy = packet.clone();
     let num_commands = packet.read_byte();

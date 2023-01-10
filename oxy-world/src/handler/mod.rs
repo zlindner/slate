@@ -1,16 +1,11 @@
 use crate::{client::WorldClient, Shared};
 use anyhow::Result;
 use oxy_core::net::Packet;
-use std::sync::Arc;
 
 mod connect;
 mod move_character;
 
-pub async fn handle(
-    mut packet: Packet,
-    client: &mut WorldClient,
-    shared: &Arc<Shared>,
-) -> Result<()> {
+pub async fn handle(mut packet: Packet, client: &mut WorldClient, shared: &Shared) -> Result<()> {
     let op = packet.read_short();
 
     match op {
