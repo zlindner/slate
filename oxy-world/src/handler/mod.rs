@@ -6,27 +6,18 @@ use std::sync::Arc;
 mod connect;
 mod move_character;
 
-pub struct WorldPacketHandler;
+pub async fn handle(
+    mut packet: Packet,
+    client: &mut WorldClient,
+    shared: &Arc<Shared>,
+) -> Result<()> {
+    let op = packet.read_short();
 
-impl WorldPacketHandler {
-    pub fn new() -> Self {
-        Self
+    match op {
+        0x14 => connect::handle(packet, client, &shared).await?,
+        0x29 => move_character::handle(packet, client, &shared).await?,
+        _ => log::debug!("Unhandled packet: {:02X?}", op),
     }
 
-    pub async fn handle(
-        &self,
-        mut packet: Packet,
-        client: &mut WorldClient,
-        shared: &Arc<Shared>,
-    ) -> Result<()> {
-        let op = packet.read_short();
-
-        match op {
-            0x14 => connect::handle(packet, client, &shared).await?,
-            0x29 => move_character::handle(packet, client, &shared).await?,
-            _ => log::debug!("Unhandled packet: {:02X?}", op),
-        }
-
-        Ok(())
-    }
+    Ok(())
 }

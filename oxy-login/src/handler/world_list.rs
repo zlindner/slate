@@ -1,12 +1,14 @@
-use super::{Config, WorldConfig};
-use crate::client::LoginClient;
+use crate::{
+    client::LoginClient,
+    shared::{Shared, WorldConfig},
+};
 use anyhow::Result;
 use oxy_core::net::Packet;
 
 /// Login server: world list (0x0B)
 /// Displays the world list to the user after successful login
-pub async fn handle(_packet: Packet, client: &mut LoginClient, config: &Config) -> Result<()> {
-    for world in config.worlds.iter() {
+pub async fn handle(_packet: Packet, client: &mut LoginClient, shared: &Shared) -> Result<()> {
+    for world in shared.config.worlds.iter() {
         let response = world_info(world);
         client.send(response).await?;
     }
@@ -17,7 +19,7 @@ pub async fn handle(_packet: Packet, client: &mut LoginClient, config: &Config) 
     // NOTE: We can send a 0x1A packet here to pre-select the most active world,
     // but that doesn't seem like great a UX and clients ignore it anyway
 
-    let response = recommended_world(&config.worlds);
+    let response = recommended_world(&shared.config.worlds);
     client.send(response).await?;
     Ok(())
 }

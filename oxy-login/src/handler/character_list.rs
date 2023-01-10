@@ -1,8 +1,8 @@
-use super::{
-    world_status::{self, WorldStatus},
-    Config,
+use super::world_status::{self, WorldStatus};
+use crate::{
+    client::LoginClient,
+    shared::{Config, Shared},
 };
-use crate::client::LoginClient;
 use anyhow::Result;
 use oxy_core::{
     net::Packet,
@@ -12,11 +12,11 @@ use oxy_core::{
 
 /// Login server: character list packet (0x05)
 /// Displays the user's character list after selecting a world and channel
-pub async fn handle(mut packet: Packet, client: &mut LoginClient, config: &Config) -> Result<()> {
+pub async fn handle(mut packet: Packet, client: &mut LoginClient, shared: &Shared) -> Result<()> {
     packet.skip(1);
     let world_id = packet.read_byte();
 
-    let world_config = match config.worlds.get(world_id as usize) {
+    let world_config = match shared.config.worlds.get(world_id as usize) {
         Some(config) => config,
         None => {
             let response = world_status::world_status(WorldStatus::Full);
@@ -58,7 +58,7 @@ pub async fn handle(mut packet: Packet, client: &mut LoginClient, config: &Confi
         .exec()
         .await?;
 
-    let response = character_list(characters, client, config);
+    let response = character_list(characters, client, &shared.config);
     client.send(response).await?;
     Ok(())
 }

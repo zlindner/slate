@@ -1,7 +1,6 @@
-use crate::client::LoginClient;
+use crate::{client::LoginClient, Shared};
 use anyhow::Result;
 use oxy_core::net::Packet;
-use serde::Deserialize;
 
 mod character_list;
 mod create_character;
@@ -17,78 +16,26 @@ mod validate_character_name;
 mod world_list;
 mod world_status;
 
-pub struct LoginPacketHandler {
-    pub config: Config,
-}
+///
+pub async fn handle(mut packet: Packet, client: &mut LoginClient, shared: &Shared) -> Result<()> {
+    let op = packet.read_short();
 
-impl LoginPacketHandler {
-    pub fn new() -> Self {
-        Self {
-            config: Self::load_config(),
-        }
+    match op {
+        0x01 => login::handle(packet, client, shared).await?,
+        0x05 => character_list::handle(packet, client, shared).await?,
+        0x06 => world_status::handle(packet, client, shared).await?,
+        0x07 => tos::handle(packet, client, shared).await?,
+        0x09 => pin_operation::handle(packet, client).await?,
+        0x0A => register_pin::handle(packet, client).await?,
+        0x0B | 0x04 => world_list::handle(packet, client, shared).await?,
+        0x13 => select_character::handle(packet, client).await?,
+        0x15 => validate_character_name::handle(packet, client).await?,
+        0x16 => create_character::handle(packet, client).await?,
+        0x17 => delete_character::handle(packet, client, shared).await?,
+        0x1D => register_pic::handle(packet, client).await?,
+        0x1E => select_character_pic::handle(packet, client).await?,
+        _ => log::debug!("Unhandled packet: {:02X?}", op),
     }
 
-    fn load_config() -> Config {
-        let data = match std::fs::read_to_string("config/config.json") {
-            Ok(data) => data,
-            Err(e) => {
-                panic!("Error loading config: {}", e);
-            }
-        };
-
-        match serde_json::from_str(&data) {
-            Ok(config) => config,
-            Err(e) => {
-                panic!("Error deserializing config: {}", e);
-            }
-        }
-    }
-
-    pub async fn handle(&self, mut packet: Packet, client: &mut LoginClient) -> Result<()> {
-        let op = packet.read_short();
-
-        match op {
-            0x01 => login::handle(packet, client, &self.config).await?,
-            0x05 => character_list::handle(packet, client, &self.config).await?,
-            0x06 => world_status::handle(packet, client, &self.config).await?,
-            0x07 => tos::handle(packet, client, &self.config).await?,
-            0x09 => pin_operation::handle(packet, client).await?,
-            0x0A => register_pin::handle(packet, client).await?,
-            0x0B | 0x04 => world_list::handle(packet, client, &self.config).await?,
-            0x13 => select_character::handle(packet, client).await?,
-            0x15 => validate_character_name::handle(packet, client).await?,
-            0x16 => create_character::handle(packet, client).await?,
-            0x17 => delete_character::handle(packet, client, &self.config).await?,
-            0x1D => register_pic::handle(packet, client).await?,
-            0x1E => select_character_pic::handle(packet, client).await?,
-            _ => log::debug!("Unhandled packet: {:02X?}", op),
-        }
-
-        Ok(())
-    }
-}
-
-#[derive(Deserialize)]
-pub struct Config {
-    enable_pin: bool,
-    enable_pic: bool,
-    worlds: Vec<WorldConfig>,
-}
-
-#[derive(Deserialize)]
-pub struct WorldConfig {
-    id: u8,
-    name: String,
-    channels: u8,
-    flag: u8,
-    event_message: String,
-    recommended_message: String,
-    exp_rate: u8,
-    meso_rate: u8,
-    drop_rate: u8,
-    boss_drop_rate: u8,
-    quest_rate: u8,
-    fishing_rate: u8,
-    travel_rate: u8,
-    max_players: i32,
+    Ok(())
 }

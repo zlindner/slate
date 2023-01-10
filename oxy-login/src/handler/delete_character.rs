@@ -1,14 +1,13 @@
-use super::Config;
-use crate::client::LoginClient;
+use crate::{client::LoginClient, shared::Shared};
 use anyhow::Result;
 use oxy_core::{net::Packet, prisma::character};
 
 /// Login server: delete character packet (0x17)
 ///
-pub async fn handle(mut packet: Packet, client: &mut LoginClient, config: &Config) -> Result<()> {
+pub async fn handle(mut packet: Packet, client: &mut LoginClient, shared: &Shared) -> Result<()> {
     let pic = packet.read_string();
 
-    if config.enable_pic {
+    if shared.config.enable_pic {
         if client.session.pic_attempts >= 6 {
             client.disconnect().await;
             return Ok(());

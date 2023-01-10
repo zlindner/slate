@@ -1,4 +1,4 @@
-use crate::client::LoginClient;
+use crate::{client::LoginClient, shared::Shared};
 use anyhow::Result;
 use dotenv::dotenv;
 use log::LevelFilter;
@@ -9,6 +9,7 @@ use tokio::net::TcpListener;
 
 mod client;
 mod handler;
+mod shared;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -34,18 +35,22 @@ async fn main() -> Result<()> {
 
     log::info!("Login server started @ {}", addr);
     let mut session_id = 0;
+    let shared = Arc::new(Shared::new());
 
     loop {
         let (stream, _) = listener.accept().await?;
         session_id += 1;
+
         let client = LoginClient::new(stream, db.clone(), session_id);
+        let shared = shared.clone();
 
         tokio::spawn(async move {
-            client.process().await;
+            client.process(shared).await;
         });
     }
 }
 
+///
 async fn startup(db: &Arc<PrismaClient>) -> Result<()> {
     // Clear all sessions
     db.session().delete_many(vec![]).exec().await?;

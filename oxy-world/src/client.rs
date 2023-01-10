@@ -1,4 +1,4 @@
-use crate::{handler::WorldPacketHandler, Shared};
+use crate::{handler, Shared};
 use anyhow::{anyhow, Result};
 use oxy_core::{
     net::{BroadcastPacket, MapleStream, Packet},
@@ -61,8 +61,6 @@ impl WorldClient {
             return;
         }
 
-        let handler = WorldPacketHandler::new();
-
         loop {
             tokio::select! {
                 // FIXME read_exact is not cancellation safe, not sure how to fix...
@@ -76,7 +74,7 @@ impl WorldClient {
                         }
                     };
 
-                    if let Err(e) = handler.handle(packet, &mut self, &shared).await {
+                    if let Err(e) = handler::handle(packet, &mut self, &shared).await {
                         log::error!("Error handling packet: {}", e);
                     }
                 }

@@ -1,4 +1,4 @@
-use crate::handler::LoginPacketHandler;
+use crate::{handler, Shared};
 use anyhow::{anyhow, Result};
 use oxy_core::{
     net::{MapleStream, Packet},
@@ -37,14 +37,13 @@ impl LoginClient {
         }
     }
 
-    pub async fn process(mut self) {
+    ///
+    pub async fn process(mut self, shared: Arc<Shared>) {
         if let Err(e) = self.on_connect().await {
             log::error!("Client connection error: {}", e);
             self.on_disconnect().await;
             return;
         }
-
-        let handler = LoginPacketHandler::new();
 
         loop {
             let packet = match self.stream.read_packet().await {
@@ -55,7 +54,7 @@ impl LoginClient {
                 }
             };
 
-            if let Err(e) = handler.handle(packet, &mut self).await {
+            if let Err(e) = handler::handle(packet, &mut self, &shared).await {
                 log::error!("Error handling packet: {}", e);
             }
         }

@@ -1,5 +1,4 @@
-use super::Config;
-use crate::client::LoginClient;
+use crate::{client::LoginClient, shared::Shared};
 use anyhow::Result;
 use oxy_core::{
     net::Packet,
@@ -8,7 +7,7 @@ use oxy_core::{
 
 /// Login server: accept tos packet (0x07)
 /// Called after client successfully logs in, but hasn't yet accepted tos
-pub async fn handle(mut packet: Packet, client: &mut LoginClient, config: &Config) -> Result<()> {
+pub async fn handle(mut packet: Packet, client: &mut LoginClient, shared: &Shared) -> Result<()> {
     let accepted = packet.read_byte();
 
     // If the tos isn't accepted, client returns 0 and disconnects itself
@@ -48,7 +47,7 @@ pub async fn handle(mut packet: Packet, client: &mut LoginClient, config: &Confi
     client.session.tos = account.tos;
     client.update_login_state(LoginState::LoggedIn).await?;
 
-    let response = super::login::login_succeeded(&account, client, config);
+    let response = super::login::login_succeeded(&account, client, &shared.config);
     client.send(response).await?;
     Ok(())
 }
