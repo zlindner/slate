@@ -6,10 +6,11 @@ use dotenv::dotenv;
 use log::LevelFilter;
 use oxy_core::{
     net::BroadcastPacket,
+    nx,
     prisma::{self, PrismaClient},
 };
 use simple_logger::SimpleLogger;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 use tokio::{net::TcpListener, sync::broadcast};
 
 mod character;
@@ -29,7 +30,6 @@ impl Shared {
 
     pub fn get_map(&self, map_id: i32) -> Ref<'_, i32, Map> {
         if !self.maps.contains_key(&map_id) {
-            // TODO should we actually load the map from nx here?
             self.maps.insert(map_id, Map::new(map_id));
         }
 
@@ -40,13 +40,20 @@ impl Shared {
 pub struct Map {
     pub id: i32,
     pub characters: DashMap<i32, Character>,
+    pub npcs: HashMap<i32, nx::Life>,
+    pub monsters: HashMap<i32, nx::Life>,
 }
 
 impl Map {
     pub fn new(id: i32) -> Self {
+        // TODO error handle
+        let map_data = nx::load_map(id).unwrap();
+
         Self {
             id,
             characters: DashMap::new(),
+            npcs: map_data.npcs,
+            monsters: map_data.monsters,
         }
     }
 }
@@ -76,8 +83,6 @@ async fn main() -> Result<()> {
     log::info!("World server started @ {}", addr);
     let mut session_id = 0;
     let (tx, _rx) = broadcast::channel::<BroadcastPacket>(16);
-
-    //oxy_core::nx::load_map(10000);
 
     let shared = Arc::new(Shared::new());
 

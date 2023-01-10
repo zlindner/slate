@@ -1,6 +1,7 @@
 use crate::prisma::equip;
 use nx::GenericNode;
 use once_cell::sync::Lazy;
+use rand::Rng;
 use std::{collections::HashMap, path::Path};
 
 const NX_FILES: [&str; 13] = [
@@ -99,7 +100,8 @@ pub struct Map {
     pub mob_rate: f64,
     pub on_user_enter: String,
     pub on_first_user_enter: String,
-    pub life: Vec<Life>,
+    pub npcs: HashMap<i32, Life>,
+    pub monsters: HashMap<i32, Life>,
     pub portals: HashMap<i64, Portal>,
     pub return_map_id: i64,
     pub bounds: (i64, i64, i64, i64),
@@ -190,9 +192,9 @@ pub fn load_map(map_id: i32) -> Option<Map> {
     // TODO add player npc -> developer npcs?
 
     let life_root = map_data.get("life");
-    let life = match life_root {
+    let (npcs, monsters) = match life_root {
         Some(life_root) => load_life(life_root),
-        None => Vec::new(),
+        None => (HashMap::new(), HashMap::new()),
     };
 
     let portal_root = map_data.get("portal");
@@ -218,7 +220,8 @@ pub fn load_map(map_id: i32) -> Option<Map> {
         mob_rate,
         on_user_enter,
         on_first_user_enter,
-        life,
+        npcs,
+        monsters,
         portals,
         return_map_id,
         bounds,
@@ -228,19 +231,20 @@ pub fn load_map(map_id: i32) -> Option<Map> {
 }
 
 pub struct Life {
-    id: i64,
-    type_: LifeType,
-    position: (i64, i64),
-    object_id: i32,
-    stance: i32,
-    f: i64,
-    is_hidden: bool,
-    fh: i64,
-    start_fh: i64,
-    cy: i64,
-    rx0: i64,
-    rx1: i64,
-    mob_time: i64,
+    pub id: i32,
+    pub life_type: LifeType,
+    pub name: String,
+    pub position: (i16, i16),
+    pub object_id: i32,
+    pub stance: i32,
+    pub f: u8,
+    pub is_hidden: bool,
+    pub fh: i16,
+    pub start_fh: i16,
+    pub cy: i16,
+    pub rx0: i16,
+    pub rx1: i16,
+    pub mob_time: i64,
 }
 
 pub enum LifeType {
@@ -248,14 +252,10 @@ pub enum LifeType {
     Monster,
 }
 
-#[derive(Default)]
-pub struct LifeStats {
-    name: String,
-}
-
 /// Loads all life (NPCs and monsters)
-fn load_life(life_root: nx::Node) -> Vec<Life> {
-    let map_life = Vec::new();
+fn load_life(life_root: nx::Node) -> (HashMap<i32, Life>, HashMap<i32, Life>) {
+    let mut npcs = HashMap::new();
+    let mut monsters = HashMap::new();
 
     for life in life_root.iter() {
         let id = life.get("id").string().unwrap_or_default();
@@ -269,37 +269,46 @@ fn load_life(life_root: nx::Node) -> Vec<Life> {
 
         let team = life.get("team").integer().unwrap_or(-1);
         // TODO team stuff
-        let x = life.get("x").integer().unwrap_or(0);
-        let y = life.get("y").integer().unwrap_or(0);
+        let x = life.get("x").integer().unwrap_or(0) as i16;
+        let y = life.get("y").integer().unwrap_or(0) as i16;
 
-        let life = Life {
+        let mut life = Life {
             id: id.parse().unwrap_or(0),
-            type_: life_type,
+            life_type,
+            name: String::new(),
             position: (x, y),
-            object_id: 0, // TODO is this needed
-            stance: 0,    // TODO is this needed
-            f: life.get("f").integer().unwrap_or(0),
+            // FIXME this is terrible
+            // Maple requires object ids be i32s (🤢) so pick some random number above
+            // 10000000 to not collide with character ids. Should probably maintain a set per
+            // map that contains used object ids, keep generating until unused.
+            object_id: rand::thread_rng().gen_range(10000000..=i32::MAX),
+            stance: 0,
+            f: life.get("f").integer().unwrap_or(0) as u8,
             is_hidden: life.get("hide").integer().unwrap_or(0) == 1,
-            fh: life.get("fh").integer().unwrap_or(0),
-            start_fh: life.get("fh").integer().unwrap_or(0),
-            cy: life.get("cy").integer().unwrap_or(0),
-            rx0: life.get("rx0").integer().unwrap_or(0),
-            rx1: life.get("rx1").integer().unwrap_or(0),
+            fh: life.get("fh").integer().unwrap_or(0) as i16,
+            start_fh: life.get("fh").integer().unwrap_or(0) as i16,
+            cy: life.get("cy").integer().unwrap_or(0) as i16,
+            rx0: life.get("rx0").integer().unwrap_or(0) as i16,
+            rx1: life.get("rx1").integer().unwrap_or(0) as i16,
             mob_time: life.get("mobTime").integer().unwrap_or(0),
         };
 
-        // TODO if NPC => load name from String.nx
-        // TODO if Monster => load stats from Mob.nx
-
-        let life_stats = match life.type_ {
+        match life.life_type {
             LifeType::NPC => {
-                let stats = LifeStats::default();
+                // TODO wait wtf is the point of this
+                let name = load_npc_string(life.id, "name");
+                life.name = name;
+
+                npcs.insert(life.object_id, life);
             }
-            LifeType::Monster => {}
+            LifeType::Monster => {
+                // TODO load stats from Mob.nx
+                monsters.insert(life.object_id, life);
+            }
         };
     }
 
-    map_life
+    (npcs, monsters)
 }
 
 pub struct Portal {
@@ -395,4 +404,24 @@ fn get_map_img_name(map_id: i32) -> String {
 
     let map_name = format!("{}.img", map_id_str);
     map_name
+}
+
+///
+fn load_npc_string(npc_id: i32, key: &str) -> String {
+    let root = DATA.get("String").unwrap().root();
+    let npc_root = root.get("Npc.img").unwrap();
+
+    let npc = npc_root.get(&npc_id.to_string());
+
+    if npc.is_none() {
+        return String::new();
+    }
+
+    let val = npc.unwrap().get(key);
+
+    if val.is_none() {
+        return String::new();
+    }
+
+    val.unwrap().string().unwrap_or("").to_string()
 }

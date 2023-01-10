@@ -2,7 +2,7 @@ use crate::{character::Character, client::WorldClient, Shared};
 use anyhow::Result;
 use oxy_core::{
     net::Packet,
-    packets,
+    nx, packets,
     prisma::{character, equip, item, quest, session, InventoryType, QuestStatus},
 };
 use prisma_client_rust::chrono::{Local, Utc};
@@ -72,19 +72,22 @@ pub async fn handle(
 
     let map = shared.get_map(character.map_id);
 
-    let mut objects = Vec::new();
-
+    // Send currently connected characters in the current map
     for map_character in map.characters.iter() {
-        objects.push(spawn_character(&map_character, false));
+        client.send(spawn_character(&map_character, false)).await?;
     }
 
-    // TODO npcs, mobs, etc.
+    // Send NPCs in the current map
+    for npc in map.npcs.values() {
+        client.send(spawn_npc(npc)).await?;
+        client.send(spawn_npc_request_controller(npc)).await?;
+    }
 
+    // TODO spawn monsters
+    // Send monsters in the current map
+
+    // Add the character to the maps' characters
     map.characters.insert(character.id, character);
-
-    for spawn_packet in objects.into_iter() {
-        client.send(spawn_packet).await?;
-    }
 
     Ok(())
 }
@@ -548,4 +551,37 @@ fn write_buffs(packet: &mut Packet) {
     packet.write_int(char_magic_spawn);
     packet.write_short(0);
     packet.write_short(0);
+}
+
+///
+fn spawn_npc(npc: &nx::Life) -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x101);
+    packet.write_int(npc.object_id);
+    packet.write_int(npc.id);
+    packet.write_short(npc.position.0);
+    packet.write_short(npc.cy);
+    packet.write_byte((npc.f != 1) as u8);
+    packet.write_short(npc.fh);
+    packet.write_short(npc.rx0);
+    packet.write_short(npc.rx1);
+    packet.write_byte(1);
+    packet
+}
+
+///
+fn spawn_npc_request_controller(npc: &nx::Life) -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x103);
+    packet.write_byte(1);
+    packet.write_int(npc.object_id);
+    packet.write_int(npc.id);
+    packet.write_short(npc.position.0);
+    packet.write_short(npc.cy);
+    packet.write_byte((npc.f != 1) as u8);
+    packet.write_short(npc.fh);
+    packet.write_short(npc.rx0);
+    packet.write_short(npc.rx1);
+    packet.write_byte(1);
+    packet
 }
