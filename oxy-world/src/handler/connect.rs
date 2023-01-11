@@ -51,7 +51,6 @@ pub async fn handle(mut packet: Packet, client: &mut WorldClient, shared: &Share
     };
 
     // Set the client's character id
-    // TODO is it possible to set client.character here and insert &client.character into shared?
     let character = Character::new(character_data);
     client.session.map_id = character.map_id;
 

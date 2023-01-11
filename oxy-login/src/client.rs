@@ -14,6 +14,7 @@ pub struct LoginClient {
     pub session: session::Data,
 }
 
+/// A client connected to the login server.
 impl LoginClient {
     pub fn new(stream: TcpStream, db: Arc<PrismaClient>, session_id: i32) -> Self {
         let session = session::Data {

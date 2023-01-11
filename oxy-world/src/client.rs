@@ -14,6 +14,7 @@ pub struct WorldClient {
     pub session: session::Data,
 }
 
+/// A client connected to the world server.
 impl WorldClient {
     pub fn new(stream: TcpStream, session_id: i32) -> Self {
         let session = session::Data {
@@ -38,6 +39,7 @@ impl WorldClient {
         }
     }
 
+    ///
     pub async fn process(mut self, shared: Arc<Shared>) {
         if let Err(e) = self.on_connect().await {
             log::error!("Client connection error: {}", e);
@@ -62,6 +64,7 @@ impl WorldClient {
                         log::error!("Error handling packet: {}", e);
                     }
                 }
+                // Since async blocks are lazy, broadcast_rx won't be unwrapped unless it is some
                 broadcast = async { self.broadcast_rx.as_mut().unwrap().recv().await }, if self.broadcast_rx.is_some() => {
                     let broadcast = match broadcast {
                         Ok(broadcast) => broadcast,
@@ -71,14 +74,12 @@ impl WorldClient {
                         }
                     };
 
-                    // TODO we can do some position check to only receive if we are in range
-
                     if !broadcast.send_to_sender && broadcast.sender_id == self.session.character_id {
                         continue;
                     }
 
-                    log::debug!("Sending broadcast...");
-                    
+                    // TODO we can do some position check to only receive if we are in range
+
                     if let Err(e) = self.send(broadcast.packet).await {
                         log::error!("Error writing broadcast packet: {}", e);
                     }
