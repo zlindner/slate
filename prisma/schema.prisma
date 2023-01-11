@@ -14,6 +14,7 @@ model Session {
     character_id    Int
     world_id        Int
     channel_id      Int
+    map_id          Int         @default(-1)
     login_attempts  Int
     pin             String
     pin_attempts    Int

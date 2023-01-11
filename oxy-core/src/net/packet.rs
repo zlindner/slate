@@ -108,8 +108,7 @@ impl Display for Packet {
 #[derive(Clone, Debug)]
 pub struct BroadcastPacket {
     pub packet: Packet,
-    pub sender_character_id: i32,
-    pub sender_map_id: i32,
+    pub sender_id: i32,
     pub sender_position: (i32, i32),
     pub send_to_sender: bool,
 }

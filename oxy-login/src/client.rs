@@ -22,6 +22,7 @@ impl LoginClient {
             character_id: -1,
             world_id: -1,
             channel_id: -1,
+            map_id: -1,
             login_attempts: 0,
             pin: String::new(),
             pin_attempts: 0,

@@ -9,10 +9,11 @@ pub async fn handle(mut packet: Packet, client: &mut WorldClient, shared: &Share
     let packet_copy = packet.clone();
     let num_commands = packet.read_byte();
 
-    let map = shared.get_map(client.map_id);
-
-    // TODO would .get() with a clone, then insert at the end be faster?
-    let mut character = map.characters.get_mut(&client.character_id).unwrap();
+    let map = shared.get_map(client.session.map_id);
+    let mut character = map
+        .characters
+        .get_mut(&client.session.character_id)
+        .unwrap();
 
     for _ in 0..num_commands {
         let command = packet.read_byte();
@@ -66,7 +67,7 @@ pub async fn handle(mut packet: Packet, client: &mut WorldClient, shared: &Share
     // TODO we should build a vec in the above loop and only broadcast movement packets that matter
     // on the client (ex. don't need to send absolute movement)
     let response = move_player(client.session.character_id, packet_copy);
-    client.broadcast(response, false).await?;
+    map.broadcast(response, &character, false)?;
 
     Ok(())
 }

@@ -14,7 +14,7 @@ use std::collections::HashMap;
 pub async fn handle(mut packet: Packet, client: &mut WorldClient, shared: &Shared) -> Result<()> {
     let session_id = packet.read_int();
 
-    let session = client
+    let session = shared
         .db
         .session()
         .find_unique(session::id::equals(session_id))
@@ -29,7 +29,7 @@ pub async fn handle(mut packet: Packet, client: &mut WorldClient, shared: &Share
         }
     };
 
-    let character_data = client
+    let character_data = shared
         .db
         .character()
         .find_unique(character::id::equals(client.session.character_id))
@@ -53,8 +53,7 @@ pub async fn handle(mut packet: Packet, client: &mut WorldClient, shared: &Share
     // Set the client's character id
     // TODO is it possible to set client.character here and insert &client.character into shared?
     let character = Character::new(character_data);
-    client.map_id = character.map_id;
-    client.character_id = character.id;
+    client.session.map_id = character.map_id;
 
     let response = character_info(client.session.channel_id, &character.data);
     client.send(response).await?;
@@ -62,11 +61,13 @@ pub async fn handle(mut packet: Packet, client: &mut WorldClient, shared: &Share
     let response = character_keymap(&character.data);
     client.send(response).await?;
 
+    // Get the current character's Map and subscribe to it's broadcast channel
+    let map = shared.get_map(character.map_id);
+    client.broadcast_rx = Some(map.broadcast_tx.subscribe());
+
     // Send the character data to all other clients
     let response = spawn_character(&character, true);
-    client.broadcast(response, false).await?;
-
-    let map = shared.get_map(character.map_id);
+    map.broadcast(response, &character, false)?;
 
     // Send currently connected characters in the current map
     for map_character in map.characters.iter() {
