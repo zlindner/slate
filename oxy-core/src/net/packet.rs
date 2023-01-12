@@ -4,17 +4,22 @@ use std::fmt::{Display, Formatter};
 #[derive(Clone, Debug)]
 pub struct Packet {
     pub bytes: BytesMut,
+    pub use_encryption: bool,
 }
 
 impl Packet {
     pub fn new() -> Self {
         Self {
             bytes: BytesMut::with_capacity(1024),
+            use_encryption: true,
         }
     }
 
     pub fn wrap(bytes: BytesMut) -> Self {
-        Self { bytes }
+        Self {
+            bytes,
+            use_encryption: true,
+        }
     }
 
     pub fn write_byte(&mut self, byte: u8) {

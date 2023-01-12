@@ -49,11 +49,12 @@ impl LoginClient {
 
         loop {
             let packet = match self.stream.read_packet().await {
-                Ok(packet) => packet,
-                Err(e) => {
+                Some(Ok(packet)) => packet,
+                Some(Err(e)) => {
                     log::error!("Error reading packet: {}", e);
                     break;
                 }
+                None => break,
             };
 
             if let Err(e) = handler::handle(packet, &mut self, &shared).await {

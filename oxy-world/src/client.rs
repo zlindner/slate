@@ -53,11 +53,12 @@ impl WorldClient {
                 // Can try to use tokio codec framed reads again, somehow remove select, ...
                 packet = self.stream.read_packet() => {
                     let packet = match packet {
-                        Ok(packet) => packet,
-                        Err(e) => {
+                        Some(Ok(packet)) => packet,
+                        Some(Err(e)) => {
                             log::error!("Error reading packet: {}", e);
                             break;
-                        }
+                        },
+                        None => break,
                     };
 
                     if let Err(e) = handler::handle(packet, &mut self, &shared).await {
