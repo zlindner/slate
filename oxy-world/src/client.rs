@@ -98,6 +98,17 @@ impl WorldClient {
         Ok(())
     }
 
+    /// Force disconnects the client from the connected server
+    pub async fn disconnect(&mut self) {
+        if let Err(e) = self.stream.close().await {
+            log::error!(
+                "Error disconnecting client (session {}): {}",
+                self.session.id,
+                e
+            );
+        }
+    }
+
     /// Called when the client connects to the server.
     async fn on_connect(&mut self) -> Result<()> {
         log::info!("Client connected to server (session {})", self.session.id);
