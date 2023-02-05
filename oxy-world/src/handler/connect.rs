@@ -65,8 +65,8 @@ pub async fn handle(mut packet: Packet, client: &mut WorldClient, shared: &Share
     client.broadcast_rx = Some(map.broadcast_tx.subscribe());
 
     // Send the character data to all other clients
-    let response = spawn_character(&character, true);
-    map.broadcast(response, &character, false)?;
+    let broadcast = spawn_character(&character, true);
+    map.broadcast(broadcast, &character, false)?;
 
     // Send currently connected characters in the current map
     for map_character in map.characters.iter() {

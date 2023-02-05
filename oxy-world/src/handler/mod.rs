@@ -3,6 +3,7 @@ use anyhow::Result;
 use oxy_core::net::Packet;
 
 mod connect;
+mod general_chat;
 mod move_character;
 
 pub async fn handle(mut packet: Packet, client: &mut WorldClient, shared: &Shared) -> Result<()> {
@@ -11,6 +12,7 @@ pub async fn handle(mut packet: Packet, client: &mut WorldClient, shared: &Share
     match op {
         0x14 => connect::handle(packet, client, &shared).await?,
         0x29 => move_character::handle(packet, client, &shared).await?,
+        0x31 => general_chat::handle(packet, client, &shared).await?,
         _ => log::debug!("Unhandled packet: {:02X?}", op),
     }
 
