@@ -1,5 +1,5 @@
 use crate::prisma::{account, LoginState, PrismaClient};
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use prisma_client_rust::chrono::{DateTime, FixedOffset, Utc};
 
 /// Updates the login state and last login time (to now) for the given account id.
@@ -9,7 +9,7 @@ pub async fn update_login_state(
     new_state: LoginState,
 ) -> Result<()> {
     if account_id == -1 {
-        return Err(anyhow!("Error updating state: invalid account id"));
+        return Ok(());
     }
 
     let now: DateTime<FixedOffset> = DateTime::from(Utc::now());

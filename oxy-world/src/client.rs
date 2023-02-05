@@ -2,7 +2,7 @@ use crate::{handler, Shared};
 use anyhow::Result;
 use oxy_core::{
     net::{BroadcastPacket, MapleStream, Packet},
-    prisma::{session, LoginState, PrismaClient},
+    prisma::{session, LoginState},
     queries,
 };
 use std::sync::Arc;
@@ -43,7 +43,7 @@ impl WorldClient {
     pub async fn process(mut self, shared: Arc<Shared>) {
         if let Err(e) = self.on_connect().await {
             log::error!("Client connection error: {}", e);
-            self.on_disconnect(&shared.db).await;
+            self.on_disconnect(&shared).await;
             return;
         }
 
@@ -88,7 +88,7 @@ impl WorldClient {
             };
         }
 
-        self.on_disconnect(&shared.db).await;
+        self.on_disconnect(&shared).await;
     }
 
     /// Sends a packet to the client.
@@ -117,18 +117,23 @@ impl WorldClient {
     }
 
     /// Called when the client disconnects from the server.
-    async fn on_disconnect(&self, db: &PrismaClient) {
+    async fn on_disconnect(&self, shared: &Shared) {
         log::info!(
             "Client disconnected from server (session {})",
             self.session.id
         );
 
         if let Err(e) =
-            queries::update_login_state(db, self.session.account_id, LoginState::LoggedOut).await
+            queries::update_login_state(&shared.db, self.session.account_id, LoginState::LoggedOut)
+                .await
         {
             log::debug!("Error updating login state: {}", e);
         }
 
-        // TODO remove character from map
+        // Remove the client's character from the current map
+        if self.session.character_id != -1 && shared.is_map_loaded(self.session.map_id) {
+            let map = shared.get_map(self.session.map_id);
+            map.characters.remove(&self.session.character_id);
+        }
     }
 }
