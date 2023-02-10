@@ -11,7 +11,7 @@ pub struct MapleCodec {
 impl MapleCodec {
     pub fn new() -> Self {
         Self {
-            aes: MapleAES::new(83)
+            aes: MapleAES::new(83),
         }
     }
 }
@@ -26,19 +26,27 @@ impl Decoder for MapleCodec {
             return Ok(None);
         }
 
-        let header = buf.split_to(4);
-
-        if !self.aes.is_valid_header(&header) {
-            return Err(anyhow!("Invalid packet header: {:02X?}", header));
+        if !self.aes.is_valid_header(&buf) {
+            return Err(anyhow!("Invalid packet header"));
         }
 
-        let len = self.aes.get_packet_len(&header);
+        let len = self.aes.get_packet_len(&buf) as usize;
 
-        if len as usize > buf.len() {
-            log::warn!("Packet length {} is greater than buf length {}", len, buf.len());
+        // The current frame doesn't contain the entire packet
+        if buf.len() < len + 4 {
+            // TODO should remove this log once verified that this stuff works :)
+            log::warn!(
+                "Packet length {} is greater than buf length {}",
+                len,
+                buf.len()
+            );
+            return Ok(None);
         }
 
-        let mut body = buf.split_to(len as usize);
+        // Remove packet header
+        _ = buf.split_to(4);
+
+        let mut body = buf.split_to(len);
         self.aes.decrypt(&mut body);
         Ok(Some(Packet::wrap(body)))
     }

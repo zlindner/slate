@@ -1,6 +1,6 @@
-use crate::{client::WorldClient, Shared, character::Character};
+use crate::{client::WorldClient, Shared};
 use anyhow::Result;
-use oxy_core::net::Packet;
+use oxy_core::{maple::Character, net::Packet};
 
 /// World server: general chat packet (0x31)
 /// Called when a character sends a general chat message

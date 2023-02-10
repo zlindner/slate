@@ -4,6 +4,9 @@ use once_cell::sync::Lazy;
 use rand::Rng;
 use std::{collections::HashMap, path::Path};
 
+pub mod quest;
+pub use self::quest::Quest;
+
 const NX_FILES: [&str; 13] = [
     "Base",
     "Character",
@@ -102,7 +105,7 @@ pub struct Map {
     pub on_first_user_enter: String,
     pub npcs: HashMap<i32, Life>,
     pub monsters: HashMap<i32, Life>,
-    pub portals: HashMap<i64, Portal>,
+    pub portals: HashMap<i32, Portal>,
     pub return_map_id: i64,
     pub bounds: (i64, i64, i64, i64),
     pub footholds: Vec<Foothold>,
@@ -315,24 +318,24 @@ pub struct Portal {
     pub name: String,
     pub script: String,
     pub target: String,
-    pub target_map_id: i64,
-    pub type_: i64,
-    pub x: i64,
-    pub y: i64,
+    pub target_map_id: i32,
+    pub type_: i32,
+    pub x: i32,
+    pub y: i32,
 }
 
 /// Loads all portals in a given map TODO can this be a vec?
-fn load_portals(portal_root: nx::Node) -> HashMap<i64, Portal> {
+fn load_portals(portal_root: nx::Node) -> HashMap<i32, Portal> {
     let mut portals = HashMap::new();
 
     for data in portal_root.iter() {
         let name = data.get("pn").string().unwrap_or_default().to_string();
         let script = data.get("script").string().unwrap_or_default().to_string();
         let target = data.get("tn").string().unwrap_or_default().to_string();
-        let target_map_id = data.get("tm").integer().unwrap_or_default();
-        let type_ = data.get("pt").integer().unwrap_or_default();
-        let x = data.get("x").integer().unwrap_or_default();
-        let y = data.get("x").integer().unwrap_or_default();
+        let target_map_id = data.get("tm").integer().unwrap_or_default() as i32;
+        let type_ = data.get("pt").integer().unwrap_or_default() as i32;
+        let x = data.get("x").integer().unwrap_or_default() as i32;
+        let y = data.get("x").integer().unwrap_or_default() as i32;
 
         let portal = Portal {
             name,
@@ -344,7 +347,7 @@ fn load_portals(portal_root: nx::Node) -> HashMap<i64, Portal> {
             y,
         };
 
-        let id: i64 = data.name().parse().unwrap();
+        let id: i32 = data.name().parse().unwrap();
         portals.insert(id, portal);
     }
 

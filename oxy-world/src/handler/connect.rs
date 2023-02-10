@@ -1,6 +1,7 @@
-use crate::{character::Character, client::WorldClient, Shared};
+use crate::{client::WorldClient, Shared};
 use anyhow::Result;
 use oxy_core::{
+    maple::Character,
     net::Packet,
     nx, packets,
     prisma::{character, equip, item, quest, session, InventoryType, QuestStatus},
@@ -81,6 +82,12 @@ pub async fn handle(mut packet: Packet, client: &mut WorldClient, shared: &Share
 
     // TODO spawn monsters
     // Send monsters in the current map
+
+    // Send portals in the current map
+    // TODO uncomment once quest stuff works, is this needed?
+    for portal in map.portals.values() {
+        //client.send(spawn_portal(portal, character.map_id)).await?;
+    }
 
     // Add the character to the maps' characters
     map.characters.insert(character.id, character);
@@ -579,5 +586,15 @@ fn spawn_npc_request_controller(npc: &nx::Life) -> Packet {
     packet.write_short(npc.rx0);
     packet.write_short(npc.rx1);
     packet.write_byte(1);
+    packet
+}
+
+///
+fn spawn_portal(portal: &nx::Portal, current_map_id: i32) -> Packet {
+    let mut packet = Packet::new();
+    packet.write_short(0x43);
+    packet.write_int(current_map_id);
+    packet.write_int(portal.target_map_id);
+    packet.write_position((portal.x, portal.y));
     packet
 }

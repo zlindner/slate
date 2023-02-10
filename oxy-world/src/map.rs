@@ -1,7 +1,7 @@
-use crate::character::Character;
 use anyhow::Result;
 use dashmap::DashMap;
 use oxy_core::{
+    maple::Character,
     net::{BroadcastPacket, Packet},
     nx,
 };
@@ -13,6 +13,7 @@ pub struct Map {
     pub characters: DashMap<i32, Character>,
     pub npcs: HashMap<i32, nx::Life>,
     pub monsters: HashMap<i32, nx::Life>,
+    pub portals: HashMap<i32, nx::Portal>,
     pub broadcast_tx: Sender<BroadcastPacket>,
 }
 
@@ -20,13 +21,14 @@ impl Map {
     pub fn new(id: i32) -> Self {
         // TODO error handle
         let map_data = nx::load_map(id).unwrap();
-        let (tx, _rx) = broadcast::channel::<BroadcastPacket>(100);
+        let (tx, _) = broadcast::channel::<BroadcastPacket>(100);
 
         Self {
             id,
             characters: DashMap::new(),
             npcs: map_data.npcs,
             monsters: map_data.monsters,
+            portals: map_data.portals,
             broadcast_tx: tx,
         }
     }

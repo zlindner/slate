@@ -39,7 +39,7 @@ impl WorldClient {
         }
     }
 
-    ///
+    /// Process the client connection
     pub async fn process(mut self, shared: Arc<Shared>) {
         if let Err(e) = self.on_connect().await {
             log::error!("Client connection error: {}", e);
@@ -49,8 +49,6 @@ impl WorldClient {
 
         loop {
             tokio::select! {
-                // FIXME read_exact is not cancellation safe, not sure how to fix...
-                // Can try to use tokio codec framed reads again, somehow remove select, ...
                 packet = self.stream.read_packet() => {
                     let packet = match packet {
                         Some(Ok(packet)) => packet,
@@ -65,6 +63,7 @@ impl WorldClient {
                         log::error!("Error handling packet: {}", e);
                     }
                 }
+
                 // Since async blocks are lazy, broadcast_rx won't be unwrapped unless it is some
                 broadcast = async { self.broadcast_rx.as_mut().unwrap().recv().await }, if self.broadcast_rx.is_some() => {
                     let broadcast = match broadcast {

@@ -1,4 +1,4 @@
-use oxy_core::prisma::character;
+use crate::prisma::character;
 
 pub struct Character {
     pub id: i32,

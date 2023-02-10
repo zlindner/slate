@@ -7,7 +7,6 @@ use simple_logger::SimpleLogger;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 
-mod character;
 mod client;
 mod handler;
 mod map;
@@ -54,5 +53,9 @@ async fn main() -> Result<()> {
 
 async fn startup(_db: &Arc<PrismaClient>) -> Result<()> {
     // TODO
+    let quest = oxy_core::nx::quest::load_quest(28337);
+    log::debug!("{:?}", quest);
+    //oxy_core::nx::quest::load_quest(2300);
+
     Ok(())
 }
