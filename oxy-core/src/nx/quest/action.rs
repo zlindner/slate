@@ -2,10 +2,6 @@ use crate::maple::Character;
 use nx::GenericNode;
 use std::collections::HashSet;
 
-pub trait Action {
-    fn execute(&self, character: Character);
-}
-
 #[derive(Debug)]
 pub enum QuestActionType {
     Undefined(String),
@@ -20,6 +16,27 @@ pub enum QuestActionType {
     PetTameness(PetTamenessAction),
     PetSpeed(PetSpeedAction),
     Info(InfoAction),
+}
+
+impl QuestActionType {
+    pub fn execute(&self, character: &Character) {
+        use QuestActionType::*;
+
+        match self {
+            Undefined(_) => todo!(),
+            Exp(_) => todo!(),
+            Meso(_) => todo!(),
+            Item(_) => todo!(),
+            Skill(_) => todo!(),
+            NextQuest(_) => todo!(),
+            Fame(_) => todo!(),
+            Buff(_) => todo!(),
+            PetSkill(_) => todo!(),
+            PetTameness(_) => todo!(),
+            PetSpeed(_) => todo!(),
+            Info(_) => todo!(),
+        }
+    }
 }
 
 ///
@@ -60,12 +77,6 @@ impl ExpAction {
     }
 }
 
-impl Action for ExpAction {
-    fn execute(&self, character: Character) {
-        todo!()
-    }
-}
-
 #[derive(Debug)]
 pub struct MesoAction {
     mesos: i32,
@@ -76,12 +87,6 @@ impl MesoAction {
         Self {
             mesos: data.integer().unwrap() as i32,
         }
-    }
-}
-
-impl Action for MesoAction {
-    fn execute(&self, character: Character) {
-        todo!()
     }
 }
 
@@ -107,12 +112,6 @@ impl ItemAction {
         }
 
         Self { items }
-    }
-}
-
-impl Action for ItemAction {
-    fn execute(&self, character: Character) {
-        todo!()
     }
 }
 
@@ -158,12 +157,6 @@ impl SkillAction {
     }
 }
 
-impl Action for SkillAction {
-    fn execute(&self, character: Character) {
-        todo!()
-    }
-}
-
 #[derive(Debug)]
 struct SkillActionEntry {
     id: i32,
@@ -185,12 +178,6 @@ impl NextQuestAction {
     }
 }
 
-impl Action for NextQuestAction {
-    fn execute(&self, character: Character) {
-        todo!()
-    }
-}
-
 #[derive(Debug)]
 pub struct FameAction {
     fame: i32,
@@ -201,12 +188,6 @@ impl FameAction {
         Self {
             fame: data.integer().unwrap() as i32,
         }
-    }
-}
-
-impl Action for FameAction {
-    fn execute(&self, character: Character) {
-        todo!()
     }
 }
 
@@ -223,12 +204,6 @@ impl BuffAction {
     }
 }
 
-impl Action for BuffAction {
-    fn execute(&self, character: Character) {
-        todo!()
-    }
-}
-
 #[derive(Debug)]
 pub struct PetSkillAction {
     flag: i32,
@@ -239,12 +214,6 @@ impl PetSkillAction {
         Self {
             flag: data.get("petskill").integer().unwrap() as i32,
         }
-    }
-}
-
-impl Action for PetSkillAction {
-    fn execute(&self, character: Character) {
-        todo!()
     }
 }
 
@@ -261,20 +230,8 @@ impl PetTamenessAction {
     }
 }
 
-impl Action for PetTamenessAction {
-    fn execute(&self, character: Character) {
-        todo!()
-    }
-}
-
 #[derive(Debug)]
 pub struct PetSpeedAction;
-
-impl Action for PetSpeedAction {
-    fn execute(&self, character: Character) {
-        todo!()
-    }
-}
 
 #[derive(Debug)]
 pub struct InfoAction {
@@ -286,11 +243,5 @@ impl InfoAction {
         Self {
             info: data.string().unwrap().to_string(),
         }
-    }
-}
-
-impl Action for InfoAction {
-    fn execute(&self, character: Character) {
-        todo!()
     }
 }
