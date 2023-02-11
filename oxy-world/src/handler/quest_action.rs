@@ -1,12 +1,19 @@
 use crate::{client::WorldClient, Shared};
 use anyhow::Result;
-use oxy_core::net::Packet;
+use oxy_core::{net::Packet, nx};
 
 /// World server: quest action packet (0x6B)
 ///
 pub async fn handle(mut packet: Packet, client: &mut WorldClient, shared: &Shared) -> Result<()> {
     let action = packet.read_byte();
     let quest_id = packet.read_short();
+    let quest = match nx::quest::load_quest(quest_id as i32) {
+        Some(quest) => quest,
+        None => return Ok(()),
+    };
+
+    let map = shared.get_map(client.session.map_id);
+    let character = map.characters.get(&client.session.character_id).unwrap();
 
     match action {
         // Restore lost item
@@ -17,10 +24,12 @@ pub async fn handle(mut packet: Packet, client: &mut WorldClient, shared: &Share
         }
         // Start quest
         1 => {
-            let npc = packet.read_int();
+            let npc_id = packet.read_int();
+
             // TODO check if npc is nearby
-            // TODO check if quest can start
-            // TODO start quest
+            if quest.can_start(&character, npc_id) {
+                // TODO start quest
+            }
         }
         // Complete quest
         2 => {

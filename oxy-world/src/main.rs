@@ -53,8 +53,8 @@ async fn main() -> Result<()> {
 
 async fn startup(_db: &Arc<PrismaClient>) -> Result<()> {
     // TODO
-    let quest = oxy_core::nx::quest::load_quest(28337);
-    log::debug!("{:?}", quest);
+    //let quest = oxy_core::nx::quest::load_quest(28337);
+    //log::debug!("{:?}", quest);
     //oxy_core::nx::quest::load_quest(2300);
 
     Ok(())

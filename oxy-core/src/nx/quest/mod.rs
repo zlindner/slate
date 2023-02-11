@@ -1,3 +1,5 @@
+use crate::maple::{character, Character};
+
 use self::{
     action::{load_quest_actions, QuestActionType},
     requirement::{load_quest_requirements, QuestRequirementType},
@@ -21,6 +23,27 @@ pub struct Quest {
     complete_requirements: Vec<QuestRequirementType>,
     start_actions: Vec<QuestActionType>,
     complete_actions: Vec<QuestActionType>,
+}
+
+impl Quest {
+    /// Checks if a character can start the current quest
+    pub fn can_start(&self, character: &Character, npc_id: i32) -> bool {
+        // TODO check character quest status
+
+        for req in self.start_requirements.iter() {
+            if !req.validate(character, npc_id) {
+                return false;
+            }
+        }
+
+        // TODO check quest / char info progress
+
+        true
+    }
+
+    pub fn start(&self, character: &Character) {
+        //
+    }
 }
 
 ///

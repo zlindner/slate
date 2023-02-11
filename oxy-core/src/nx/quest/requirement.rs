@@ -3,10 +3,6 @@ use nx::GenericNode;
 use prisma_client_rust::chrono::{NaiveDateTime, Utc};
 use std::collections::{HashMap, HashSet};
 
-pub trait Requirement {
-    fn has_requirement(&self, character: Character) -> bool;
-}
-
 /// Loads the quest start/complete requirements from the given root node
 pub fn load_quest_requirements(quest_requirements_root: nx::Node) -> Vec<QuestRequirementType> {
     use QuestRequirementType::*;
@@ -65,6 +61,35 @@ pub enum QuestRequirementType {
     Buff(BuffRequirement),
 }
 
+impl QuestRequirementType {
+    pub fn validate(&self, character: &Character, npc_id: i32) -> bool {
+        use QuestRequirementType::*;
+
+        match self {
+            Undefined(_) => true,
+            Job(req) => req.validate(character),
+            Quest(req) => req.validate(character),
+            Item(req) => req.validate(character),
+            MinLevel(req) => req.validate(character),
+            MaxLevel(req) => req.validate(character),
+            EndDate(req) => req.validate(),
+            Mob(req) => req.validate(character),
+            Npc(req) => req.validate(character),
+            FieldEnter(req) => req.validate(character),
+            Interval(req) => req.validate(character),
+            Script(req) => req.validate(character),
+            Pet(req) => req.validate(character),
+            PetTameness(req) => req.validate(character),
+            MonsterBook(req) => req.validate(character),
+            InfoNumber(_) => true,
+            InfoExpected(_) => true,
+            CompletedQuest(req) => req.validate(character),
+            Meso(req) => req.validate(character),
+            Buff(req) => req.validate(character),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct JobRequirement {
     job_ids: Vec<i32>,
@@ -80,10 +105,8 @@ impl JobRequirement {
 
         Self { job_ids }
     }
-}
 
-impl Requirement for JobRequirement {
-    fn has_requirement(&self, character: Character) -> bool {
+    fn validate(&self, character: &Character) -> bool {
         if character.data.gm > 1 {
             return true;
         }
@@ -116,10 +139,8 @@ impl QuestRequirement {
 
         Self { quests }
     }
-}
 
-impl Requirement for QuestRequirement {
-    fn has_requirement(&self, character: Character) -> bool {
+    fn validate(&self, character: &Character) -> bool {
         todo!()
     }
 }
@@ -141,10 +162,8 @@ impl ItemRequirement {
 
         Self { items }
     }
-}
 
-impl Requirement for ItemRequirement {
-    fn has_requirement(&self, character: Character) -> bool {
+    fn validate(&self, character: &Character) -> bool {
         todo!()
     }
 }
@@ -160,10 +179,8 @@ impl MinLevelRequirement {
             level: data.integer().unwrap_or(0) as i32,
         }
     }
-}
 
-impl Requirement for MinLevelRequirement {
-    fn has_requirement(&self, character: Character) -> bool {
+    fn validate(&self, character: &Character) -> bool {
         character.data.level >= self.level
     }
 }
@@ -179,10 +196,8 @@ impl MaxLevelRequirement {
             level: data.integer().unwrap_or(0) as i32,
         }
     }
-}
 
-impl Requirement for MaxLevelRequirement {
-    fn has_requirement(&self, character: Character) -> bool {
+    fn validate(&self, character: &Character) -> bool {
         character.data.level <= self.level
     }
 }
@@ -198,10 +213,8 @@ impl EndDateRequirement {
         let end_date = NaiveDateTime::parse_from_str(&date_str, "%Y%m%d%H%M%S").unwrap();
         Self { end_date }
     }
-}
 
-impl Requirement for EndDateRequirement {
-    fn has_requirement(&self, _: Character) -> bool {
+    fn validate(&self) -> bool {
         self.end_date <= Utc::now().naive_utc()
     }
 }
@@ -223,11 +236,8 @@ impl MobRequirement {
 
         Self { mobs }
     }
-}
 
-impl Requirement for MobRequirement {
-    fn has_requirement(&self, character: Character) -> bool {
-        // TODO check characters progress for the current quest id
+    fn validate(&self, character: &Character) -> bool {
         todo!()
     }
 }
@@ -243,10 +253,8 @@ impl NpcRequirement {
             npc_id: data.integer().unwrap() as i32,
         }
     }
-}
 
-impl Requirement for NpcRequirement {
-    fn has_requirement(&self, character: Character) -> bool {
+    fn validate(&self, character: &Character) -> bool {
         todo!()
     }
 }
@@ -262,10 +270,8 @@ impl FieldEnterRequirement {
             map_id: data.integer().unwrap_or(-1) as i32,
         }
     }
-}
 
-impl Requirement for FieldEnterRequirement {
-    fn has_requirement(&self, character: Character) -> bool {
+    fn validate(&self, character: &Character) -> bool {
         character.map_id == self.map_id
     }
 }
@@ -281,10 +287,8 @@ impl IntervalRequirement {
             interval: data.integer().unwrap() as i32,
         }
     }
-}
 
-impl Requirement for IntervalRequirement {
-    fn has_requirement(&self, character: Character) -> bool {
+    fn validate(&self, character: &Character) -> bool {
         // TODO check if character has completed the current quest less than self.interval time ago
         // self.interval contains number of minutes character needs to wait after completing quest
         todo!()
@@ -302,10 +306,8 @@ impl ScriptRequirement {
             script: data.string().unwrap().to_string(),
         }
     }
-}
 
-impl Requirement for ScriptRequirement {
-    fn has_requirement(&self, character: Character) -> bool {
+    fn validate(&self, character: &Character) -> bool {
         todo!()
     }
 }
@@ -326,10 +328,8 @@ impl PetRequirement {
 
         Self { pet_ids }
     }
-}
 
-impl Requirement for PetRequirement {
-    fn has_requirement(&self, character: Character) -> bool {
+    fn validate(&self, character: &Character) -> bool {
         todo!()
     }
 }
@@ -345,10 +345,8 @@ impl PetTamenessRequirement {
             min_tameness: data.integer().unwrap() as i32,
         }
     }
-}
 
-impl Requirement for PetTamenessRequirement {
-    fn has_requirement(&self, character: Character) -> bool {
+    fn validate(&self, character: &Character) -> bool {
         todo!()
     }
 }
@@ -364,10 +362,8 @@ impl MonsterBookRequirement {
             required_cards: data.integer().unwrap() as i32,
         }
     }
-}
 
-impl Requirement for MonsterBookRequirement {
-    fn has_requirement(&self, character: Character) -> bool {
+    fn validate(&self, character: &Character) -> bool {
         todo!()
     }
 }
@@ -382,12 +378,6 @@ impl InfoNumberRequirement {
         Self {
             info_number: data.integer().unwrap() as i32,
         }
-    }
-}
-
-impl Requirement for InfoNumberRequirement {
-    fn has_requirement(&self, character: Character) -> bool {
-        true
     }
 }
 
@@ -409,12 +399,6 @@ impl InfoExpectedRequirement {
     }
 }
 
-impl Requirement for InfoExpectedRequirement {
-    fn has_requirement(&self, character: Character) -> bool {
-        true
-    }
-}
-
 #[derive(Debug)]
 pub struct CompletedQuestRequirement {
     required_quests: i32,
@@ -426,10 +410,8 @@ impl CompletedQuestRequirement {
             required_quests: data.integer().unwrap() as i32,
         }
     }
-}
 
-impl Requirement for CompletedQuestRequirement {
-    fn has_requirement(&self, character: Character) -> bool {
+    fn validate(&self, character: &Character) -> bool {
         // TODO Check character's number of completed quests
         todo!()
     }
@@ -446,10 +428,8 @@ impl MesoRequirement {
             mesos: data.integer().unwrap() as i32,
         }
     }
-}
 
-impl Requirement for MesoRequirement {
-    fn has_requirement(&self, character: Character) -> bool {
+    fn validate(&self, character: &Character) -> bool {
         todo!()
     }
 }
@@ -465,10 +445,8 @@ impl BuffRequirement {
             buff_id: data.integer().unwrap() as i32 * -1,
         }
     }
-}
 
-impl Requirement for BuffRequirement {
-    fn has_requirement(&self, character: Character) -> bool {
+    fn validate(&self, character: &Character) -> bool {
         todo!()
     }
 }
