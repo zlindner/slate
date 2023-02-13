@@ -24,7 +24,7 @@ pub async fn handle(mut packet: Packet, client: &mut WorldClient, shared: &Share
     // TODO check if map is muted
 
     let show = packet.read_byte();
-    let map = shared.get_map(client.session.map_id);
+    let map = shared.maps.get(&client.session.map_id).unwrap();
     let character = map.characters.get(&client.session.character_id).unwrap();
 
     let broadcast = general_chat(&character, message, show);

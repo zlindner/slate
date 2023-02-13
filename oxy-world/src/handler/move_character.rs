@@ -9,7 +9,7 @@ pub async fn handle(mut packet: Packet, client: &mut WorldClient, shared: &Share
     let packet_copy = packet.clone();
     let num_commands = packet.read_byte();
 
-    let map = shared.get_map(client.session.map_id);
+    let map = shared.maps.get(&client.session.map_id).unwrap();
     let mut character = map
         .characters
         .get_mut(&client.session.character_id)

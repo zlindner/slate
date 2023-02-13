@@ -62,7 +62,7 @@ pub async fn handle(mut packet: Packet, client: &mut WorldClient, shared: &Share
     client.send(response).await?;
 
     // Get the current character's Map and subscribe to it's broadcast channel
-    let map = shared.get_map(character.map_id);
+    let map = shared.maps.get(&character.map_id).unwrap();
     client.broadcast_rx = Some(map.broadcast_tx.subscribe());
 
     // Send the character data to all other clients

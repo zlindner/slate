@@ -26,7 +26,8 @@ async fn main() -> Result<()> {
 
     // Initialize db and perform startup operations
     let db: Arc<PrismaClient> = Arc::new(prisma::new_client().await?);
-    startup(&db).await?;
+    let shared = Arc::new(Shared::new(db));
+    startup(&shared).await?;
 
     // Parse addr from environment variables (defaults to 0.0.0.0:10000)
     let ip = std::env::var("WORLD_IP").unwrap_or("0.0.0.0".to_string());
@@ -36,7 +37,6 @@ async fn main() -> Result<()> {
 
     log::info!("World server started @ {}", addr);
     let mut session_id = 0;
-    let shared = Arc::new(Shared::new(db));
 
     loop {
         let (stream, _) = listener.accept().await?;
@@ -51,11 +51,13 @@ async fn main() -> Result<()> {
     }
 }
 
-async fn startup(_db: &Arc<PrismaClient>) -> Result<()> {
+async fn startup(shared: &Arc<Shared>) -> Result<()> {
     // TODO
     //let quest = oxy_core::nx::quest::load_quest(28337);
     //log::debug!("{:?}", quest);
     //oxy_core::nx::quest::load_quest(2300);
+    let maps = oxy_core::nx::load_maps();
+    log::info!("Loaded {} maps", maps.len());
 
     Ok(())
 }

@@ -130,8 +130,8 @@ impl WorldClient {
         }
 
         // Remove the client's character from the current map
-        if self.session.character_id != -1 && shared.is_map_loaded(self.session.map_id) {
-            let map = shared.get_map(self.session.map_id);
+        if self.session.character_id != -1 {
+            let map = shared.maps.get(&self.session.map_id).unwrap();
             map.characters.remove(&self.session.character_id);
         }
     }

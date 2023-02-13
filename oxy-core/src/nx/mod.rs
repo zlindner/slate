@@ -112,29 +112,28 @@ pub struct Map {
     pub town: i64,
 }
 
+///
+pub fn load_maps() -> HashMap<i32, Map> {
+    let mut maps = HashMap::new();
+    let root = DATA.get("Map").unwrap().root().get("Map").unwrap();
+
+    for map_root in root.iter() {
+        if map_root.name() == "AreaCode.img" {
+            continue;
+        }
+
+        for map in map_root.iter() {
+            let id = map.name()[0..9].parse::<i32>().unwrap();
+            maps.insert(id, load_map(map, id));
+        }
+    }
+
+    maps
+}
+
 /// Loads map data from Map.nx for the given map id
-pub fn load_map(map_id: i32) -> Option<Map> {
-    let root = DATA.get("Map").unwrap().root().get("Map");
-    let area_name = format!("Map{}", map_id / 100000000);
-    let area_data = root.get(&area_name);
-
-    if area_data.is_none() {
-        log::debug!("Area {} not found", area_name);
-        return None;
-    }
-
-    let map_name = get_map_img_name(map_id);
-    let map_data = area_data.get(&map_name);
-
-    if map_data.is_none() {
-        log::debug!("{} not found", map_name);
-        return None;
-    }
-
-    let map_data = map_data.unwrap();
-    let info = map_data.get("info").unwrap();
-    log::debug!("Loading map data from {}/{}", area_name, map_name);
-
+pub fn load_map(map_root: nx::Node, map_id: i32) -> Map {
+    let info = map_root.get("info").unwrap();
     let create_mob_interval = info.get("createMobInterval").integer().unwrap_or(50000);
     let field_limit = info.get("fieldLimit").integer().unwrap_or_default();
     let mob_rate = info.get("mobRate").float().unwrap_or_default();
@@ -166,7 +165,7 @@ pub fn load_map(map_id: i32) -> Option<Map> {
 
     let bounds: (i64, i64, i64, i64) = if vr_top == vr_bottom {
         // Old style baked map: uses point bounds
-        let minimap_data = map_data.get("miniMap");
+        let minimap_data = map_root.get("miniMap");
 
         match minimap_data {
             Some(data) => {
@@ -194,19 +193,19 @@ pub fn load_map(map_id: i32) -> Option<Map> {
     // TODO add player npc -> playernpcs
     // TODO add player npc -> developer npcs?
 
-    let life_root = map_data.get("life");
+    let life_root = map_root.get("life");
     let (npcs, monsters) = match life_root {
         Some(life_root) => load_life(life_root),
         None => (HashMap::new(), HashMap::new()),
     };
 
-    let portal_root = map_data.get("portal");
+    let portal_root = map_root.get("portal");
     let portals = match portal_root {
         Some(portal_root) => load_portals(portal_root),
         None => HashMap::new(),
     };
 
-    let foothold_root = map_data.get("foothold");
+    let foothold_root = map_root.get("foothold");
     let footholds = match foothold_root {
         Some(foothold_root) => load_footholds(foothold_root),
         None => Vec::new(),
@@ -217,7 +216,7 @@ pub fn load_map(map_id: i32) -> Option<Map> {
     // TODO reactor
     // TODO load map and street name?
 
-    Some(Map {
+    Map {
         create_mob_interval,
         field_limit,
         mob_rate,
@@ -230,7 +229,7 @@ pub fn load_map(map_id: i32) -> Option<Map> {
         bounds,
         footholds,
         town,
-    })
+    }
 }
 
 pub struct Life {
@@ -392,21 +391,6 @@ fn load_footholds(foothold_root: nx::Node) -> Vec<Foothold> {
     // TODO we may want to put footholds in a better data structure for searching...
 
     footholds
-}
-
-/// Converts the given map id to the nx .img node name
-fn get_map_img_name(map_id: i32) -> String {
-    let mut map_id_str = String::new();
-
-    // Left-pad map id with zeros
-    for _ in 0..9 - map_id.to_string().len() {
-        map_id_str.push('0');
-    }
-
-    map_id_str.push_str(&map_id.to_string());
-
-    let map_name = format!("{}.img", map_id_str);
-    map_name
 }
 
 ///

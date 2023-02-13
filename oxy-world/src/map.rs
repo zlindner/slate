@@ -20,15 +20,18 @@ pub struct Map {
 impl Map {
     pub fn new(id: i32) -> Self {
         // TODO error handle
-        let map_data = nx::load_map(id).unwrap();
+        //let map_data = nx::load_map(id).unwrap();
         let (tx, _) = broadcast::channel::<BroadcastPacket>(100);
 
         Self {
             id,
             characters: DashMap::new(),
-            npcs: map_data.npcs,
+            /*npcs: map_data.npcs,
             monsters: map_data.monsters,
-            portals: map_data.portals,
+            portals: map_data.portals,*/
+            npcs: HashMap::new(),
+            monsters: HashMap::new(),
+            portals: HashMap::new(),
             broadcast_tx: tx,
         }
     }
