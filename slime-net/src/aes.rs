@@ -115,7 +115,7 @@ impl MapleAES {
 
     /// Generates a new initialization vector
     fn get_new_iv(&self, iv: [u8; 4]) -> [u8; 4] {
-        let mut new_iv = super::DEFAULT_IV;
+        let mut new_iv = random::<[u8; 4]>();
         let shift_bytes = super::SHIFT_BYTES;
 
         for i in 0..4 {
