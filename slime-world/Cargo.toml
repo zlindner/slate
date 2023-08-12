@@ -1,0 +1,10 @@
+[package]
+name = "slime-world"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.72"
+dotenvy = "0.15.7"
+sqlx = { version = "0.7.1", features = ["runtime-tokio", "tls-native-tls", "mysql"] }
+tokio = { version = "1.29.1", features = ["full"] }

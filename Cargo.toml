@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "slime-login",
+    "slime-net",
+    "slime-nx",
+    "slime-world",
+]
