@@ -41,8 +41,7 @@ impl MapleAES {
 
     /// Creates the handshake packet for sharing IVs with the client
     pub fn get_handshake(&self) -> Packet {
-        let mut handshake = Packet::new();
-        handshake.write_short(0x0E);
+        let mut handshake = Packet::new(0x0E);
         handshake.write_short(83); // maple version
         handshake.write_string("1"); // maple patch version
         handshake.write_bytes(&self.recv_iv);
@@ -161,7 +160,7 @@ mod tests {
         client_aes.send_iv = (*handshake.read_bytes(4)).try_into().unwrap();
         client_aes.recv_iv = (*handshake.read_bytes(4)).try_into().unwrap();
 
-        let mut packet = Packet::new();
+        let mut packet = Packet::empty();
         let random_bytes = random::<[u8; 16]>();
         packet.write_bytes(&random_bytes);
 
@@ -170,7 +169,7 @@ mod tests {
 
         assert!(random_bytes.iter().eq(packet.bytes.iter()));
 
-        let mut packet = Packet::new();
+        let mut packet = Packet::empty();
         let random_bytes = random::<[u8; 16]>();
         packet.write_bytes(&random_bytes);
 

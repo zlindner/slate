@@ -8,16 +8,25 @@ pub struct Packet {
 }
 
 impl Packet {
-    pub fn new() -> Self {
-        Self {
+    pub fn new(op_code: i16) -> Self {
+        let mut packet = Self {
             bytes: BytesMut::with_capacity(1024),
             use_encryption: true,
-        }
+        };
+        packet.write_short(op_code);
+        packet
     }
 
     pub fn wrap(bytes: BytesMut) -> Self {
         Self {
             bytes,
+            use_encryption: true,
+        }
+    }
+
+    pub fn empty() -> Self {
+        Self {
+            bytes: BytesMut::with_capacity(1024),
             use_encryption: true,
         }
     }

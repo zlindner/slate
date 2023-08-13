@@ -3,6 +3,15 @@ name = "slime-login"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+slime-net = { path = "../slime-net" }
+
+anyhow = "1.0.72"
+dotenvy = "0.15.7"
+sqlx = { version = "0.7.1", features = ["runtime-tokio", "tls-native-tls", "mysql", "chrono"] }
+tokio = { version = "1.29.1", features = ["full"] }
+log = "0.4.20"
+rust-argon2 = "2.0.0"
+env_logger = "0.10.0"
+toml = "0.7.6"
+serde = "1.0.183"
