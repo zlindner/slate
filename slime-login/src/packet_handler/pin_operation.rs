@@ -48,7 +48,7 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
                 session
                     .stream
                     .write_packet(pin_operation(PinOperation::Accepted))
-                    .await;
+                    .await?;
 
                 return Ok(());
             }
@@ -56,7 +56,7 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
             session
                 .stream
                 .write_packet(pin_operation(PinOperation::Register))
-                .await;
+                .await?;
 
             return Ok(());
         }
