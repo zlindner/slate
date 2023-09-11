@@ -7,7 +7,7 @@ use sqlx::{
 };
 
 #[derive(Default, FromRow)]
-pub struct Session {
+pub struct LoginSessionData {
     pub account_id: i32,
     pub character_id: i32,
     pub world_id: i32,

@@ -1,4 +1,4 @@
-use crate::{config::Config, model::Session, packet_handler};
+use crate::{config::Config, model::LoginSessionData, packet_handler};
 use anyhow::Result;
 use slime_net::MapleStream;
 use sqlx::{MySql, Pool};
@@ -34,7 +34,7 @@ impl LoginServer {
                 id: session_id,
                 stream: stream,
                 db: self.db.clone(),
-                data: Session::default(),
+                data: LoginSessionData::default(),
                 config: self.config.clone(),
             };
 
@@ -81,6 +81,6 @@ pub struct LoginSession {
     pub id: i32,
     pub stream: MapleStream,
     pub db: Pool<MySql>,
-    pub data: Session,
+    pub data: LoginSessionData,
     pub config: Arc<Config>,
 }

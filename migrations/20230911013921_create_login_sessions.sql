@@ -1,4 +1,4 @@
-CREATE TABLE `sessions` (
+CREATE TABLE `login_sessions` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
   `account_id` int NOT NULL,
   `character_id` int NOT NULL,
