@@ -1,6 +1,0 @@
-{
-  "rust-analyzer.linkedProjects": [
-    "./slime-net/Cargo.toml",
-    "./slime-login/Cargo.toml"
-  ]
-}
