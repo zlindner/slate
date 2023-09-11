@@ -6,7 +6,7 @@ use std::sync::Arc;
 use tokio::net::TcpListener;
 
 pub struct LoginServer {
-    pub addr: &'static str,
+    pub addr: String,
     pub db: Pool<MySql>,
     pub config: Arc<Config>,
 }
@@ -14,8 +14,8 @@ pub struct LoginServer {
 impl LoginServer {
     /// Starts the login server
     pub async fn start(self) -> Result<()> {
-        let listener = TcpListener::bind(self.addr).await?;
-        log::info!("Login server started @ {}", self.addr);
+        let listener = TcpListener::bind(&self.addr).await?;
+        log::info!("Login server started @ {}", &self.addr);
 
         let mut session_id = 0;
 

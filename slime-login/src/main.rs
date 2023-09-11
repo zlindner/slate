@@ -9,8 +9,9 @@ use std::{env, str::FromStr, sync::Arc};
 
 mod config;
 mod model;
+mod packet;
 mod packet_handler;
-mod queries;
+mod query;
 mod server;
 
 #[tokio::main]
@@ -27,7 +28,7 @@ async fn main() -> Result<(), anyhow::Error> {
         .await?;
 
     let server = LoginServer {
-        addr: "0.0.0.0:8484",
+        addr: env::var("LOGIN_ADDR")?,
         db: pool,
         config: Arc::new(Config::load()),
     };

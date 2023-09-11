@@ -1,14 +1,13 @@
 use crate::{
     model::{Account, LoginState},
-    queries,
+    query,
     server::LoginSession,
 };
-use anyhow::Result;
 use slime_net::Packet;
 
 /// Login server: login packet (0x01)
 /// Called when the client clicks login after entering name and password
-pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> Result<()> {
+pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::Result<()> {
     if session.data.login_attempts >= 5 {
         session
             .stream
@@ -21,8 +20,7 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> Result<()
     session.data.login_attempts += 1;
 
     let name = packet.read_string();
-
-    let account = sqlx::query_as::<_, Account>("SELECT * FROM accounts WHERE account.name = ?")
+    let account = sqlx::query_as::<_, Account>("SELECT * FROM accounts WHERE name = ?")
         .bind(name)
         .fetch_optional(&session.db)
         .await?;
@@ -55,10 +53,9 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> Result<()
     session.data.account_id = account.id;
     session.data.pin = account.pin.clone();
     session.data.pic = account.pic.clone();
-    session.data.accepted_tos = account.accepted_tos;
 
     // Update the account's login state to LoggedIn
-    queries::update_login_state(session, LoginState::LoggedIn).await?;
+    query::update_login_state(session, LoginState::LoggedIn).await?;
 
     session
         .stream
@@ -91,6 +88,7 @@ fn validate_login(
 
     // If the account hasn't accepted tos send the accept tos prompt
     if account.accepted_tos == false {
+        // Set account id so we can fetch the account in the TOS handler
         session.data.account_id = account.id;
         return Some(LoginError::PromptTOS);
     }

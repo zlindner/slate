@@ -3,27 +3,27 @@ use std::fs;
 
 #[derive(Debug, Deserialize)]
 pub struct World {
-    id: u32,
-    name: String,
-    channels: u32,
-    flag: u32,
-    event_message: String,
-    recommended_message: String,
-    exp_rate: u32,
-    meso_rate: u32,
-    drop_rate: u32,
-    boss_drop_rate: u32,
-    quest_rate: u32,
-    fishing_rate: u32,
-    travel_rate: u32,
-    max_players: u32,
+    pub id: i32,
+    pub name: String,
+    pub channels: i32,
+    pub flag: i32,
+    pub event_message: String,
+    pub recommended_message: String,
+    pub exp_rate: i32,
+    pub meso_rate: i32,
+    pub drop_rate: i32,
+    pub boss_drop_rate: i32,
+    pub quest_rate: i32,
+    pub fishing_rate: i32,
+    pub travel_rate: i32,
+    pub max_players: i32,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
     pub enable_pin: bool,
     pub enable_pic: bool,
-    worlds: Vec<World>,
+    pub worlds: Vec<World>,
 }
 
 impl Config {

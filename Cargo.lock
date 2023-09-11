@@ -1377,6 +1377,7 @@ dependencies = [
  "dotenvy",
  "env_logger",
  "log",
+ "once_cell",
  "rust-argon2",
  "serde",
  "slime-net",
