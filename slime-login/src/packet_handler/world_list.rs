@@ -58,7 +58,7 @@ fn recommended_world(worlds: &Vec<config::World>) -> Packet {
     packet.write_byte(worlds.len() as u8);
 
     for world in worlds.iter() {
-        packet.write_int(world.id as i32);
+        packet.write_int(world.id);
         packet.write_string(&world.recommended_message);
     }
 

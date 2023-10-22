@@ -32,8 +32,7 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
             "Client tried to packet edit in character creation (account id {})",
             session.data.account_id
         );
-        session.stream.close().await?;
-        return Ok(());
+        return session.stream.close().await;
     }
 
     // Get number of characters the account currently has in the world
@@ -46,6 +45,7 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
             .get("count");
 
     if num_characters >= 3 {
+        log::debug!("Player already has 3 characters in the selected world");
         return Ok(());
     }
 

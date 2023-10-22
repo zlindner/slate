@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::fs;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 pub struct World {
     pub id: i32,
     pub name: String,
@@ -19,7 +19,7 @@ pub struct World {
     pub max_players: i32,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 pub struct Config {
     pub enable_pin: bool,
     pub enable_pic: bool,

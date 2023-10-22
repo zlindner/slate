@@ -15,12 +15,10 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
     let world_config = match session.config.worlds.get(world_id as usize) {
         Some(config) => config,
         None => {
-            session
+            return session
                 .stream
                 .write_packet(world_status::world_status(WorldStatus::Full))
-                .await?;
-
-            return Ok(());
+                .await;
         }
     };
 
@@ -32,12 +30,10 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
     let channel_id = packet.read_byte() as i32;
 
     if world.connected_players >= world_config.max_players || channel_id >= world_config.channels {
-        session
+        return session
             .stream
             .write_packet(world_status::world_status(WorldStatus::Full))
-            .await?;
-
-        return Ok(());
+            .await;
     }
 
     session.data.world_id = world_id;

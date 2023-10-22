@@ -9,12 +9,10 @@ use slime_net::Packet;
 /// Called when the client clicks login after entering name and password
 pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::Result<()> {
     if session.data.login_attempts >= 5 {
-        session
+        return session
             .stream
             .write_packet(login_failed(LoginError::TooManyAttempts))
-            .await?;
-
-        return Ok(());
+            .await;
     }
 
     session.data.login_attempts += 1;
@@ -28,12 +26,10 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
     let account = match account {
         Some(account) => account,
         None => {
-            session
+            return session
                 .stream
                 .write_packet(login_failed(LoginError::AccountNotFound))
-                .await?;
-
-            return Ok(());
+                .await;
         }
     };
 
@@ -41,8 +37,7 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
 
     // If a validation error occurred, write a failure packet with the reason
     if let Some(error) = validate_login(session, &account, password) {
-        session.stream.write_packet(login_failed(error)).await?;
-        return Ok(());
+        return session.stream.write_packet(login_failed(error)).await;
     };
 
     packet.skip(6);
@@ -59,7 +54,7 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
 
     session
         .stream
-        .write_packet(login_succeeded(&session, &account))
+        .write_packet(login_succeeded(session, &account))
         .await?;
 
     Ok(())
@@ -87,7 +82,7 @@ fn validate_login(
     }
 
     // If the account hasn't accepted tos send the accept tos prompt
-    if account.accepted_tos == false {
+    if !account.accepted_tos {
         // Set account id so we can fetch the account in the TOS handler
         session.data.account_id = account.id;
         return Some(LoginError::PromptTOS);

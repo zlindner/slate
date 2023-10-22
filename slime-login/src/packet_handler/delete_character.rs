@@ -8,18 +8,16 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
 
     if session.config.enable_pic {
         if session.data.pic_attempts >= 6 {
-            session.stream.close().await?;
-            return Ok(());
+            return session.stream.close().await;
         }
 
         session.data.pic_attempts += 1;
 
         if session.data.pic.is_empty() || session.data.pic != pic {
-            session
+            return session
                 .stream
-                .write_packet(super::select_character_pic::invalid_pic());
-
-            return Ok(());
+                .write_packet(super::select_character_pic::invalid_pic())
+                .await;
         }
     }
 
@@ -32,12 +30,10 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
     let character = match character {
         Some(character) => character,
         None => {
-            session
+            return session
                 .stream
                 .write_packet(delete_character(character_id, Reason::Unknown))
-                .await?;
-
-            return Ok(());
+                .await;
         }
     };
 

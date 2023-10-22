@@ -47,9 +47,9 @@ fn world_server_addr(session_id: i32) -> Packet {
 
     // Get the world server ip and convert each "." delimited section to a u8
     let ip = std::env::var("WORLD_IP").unwrap_or("0.0.0.0".to_string());
-    let ip = ip.split(".").collect::<Vec<&str>>();
+    let ip = ip.split('.').collect::<Vec<&str>>();
     let ip_bytes = [
-        ip.get(0).unwrap().parse::<u8>().unwrap(),
+        ip.first().unwrap().parse::<u8>().unwrap(),
         ip.get(1).unwrap().parse::<u8>().unwrap(),
         ip.get(2).unwrap().parse::<u8>().unwrap(),
         ip.get(3).unwrap().parse::<u8>().unwrap(),

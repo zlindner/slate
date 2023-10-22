@@ -23,7 +23,7 @@ pub fn write_character_equipment(packet: &mut Packet, character: &Character) {
     // TODO write item @ pos -111 (weapon?)
     packet.write_int(0);
 
-    for i in 0..3 {
+    for _ in 0..3 {
         // TODO write pet item id's
         packet.write_int(0);
     }
@@ -72,7 +72,7 @@ pub fn write_character_stats(packet: &mut Packet, character: &Character) {
     // and get the value for the correct index
     let sp: i16 = character
         .sp
-        .split(",")
+        .split(',')
         .collect::<Vec<_>>()
         .get(sp_index as usize)
         .unwrap()

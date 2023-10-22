@@ -32,7 +32,7 @@ impl LoginServer {
 
             let session = LoginSession {
                 id: session_id,
-                stream: stream,
+                stream,
                 db: self.db.clone(),
                 data: LoginSessionData::default(),
                 config: self.config.clone(),

@@ -5,15 +5,13 @@ use slime_net::Packet;
 /// TODO
 pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::Result<()> {
     if packet.read_byte() == 0 {
-        session.stream.close().await?;
-        return Ok(());
+        return session.stream.close().await;
     }
 
     let pin = packet.read_string();
 
     if pin.is_empty() {
-        session.stream.close().await?;
-        return Ok(());
+        return session.stream.close().await;
     }
 
     // Set account's pin column

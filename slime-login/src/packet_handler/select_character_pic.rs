@@ -5,16 +5,14 @@ use slime_net::Packet;
 /// TODO
 pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::Result<()> {
     if session.data.pic_attempts >= 6 {
-        session.stream.close().await?;
-        return Ok(());
+        return session.stream.close().await;
     }
 
     session.data.pic_attempts += 1;
     let pic = packet.read_string();
 
     if session.data.pic.is_empty() || session.data.pic != pic {
-        session.stream.write_packet(invalid_pic()).await?;
-        return Ok(());
+        return session.stream.write_packet(invalid_pic()).await;
     }
 
     let character_id = packet.read_int();

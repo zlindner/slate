@@ -15,56 +15,39 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
         _ => "".to_string(),
     };
 
-    if (a, b) == (1, 1) {
-        if session.data.pin.is_empty() {
-            session
-                .stream
-                .write_packet(pin_operation(PinOperation::Register))
-                .await?;
-
-            return Ok(());
+    let operation = match (a, b) {
+        (1, 1) => {
+            if session.data.pin.is_empty() {
+                PinOperation::Register
+            } else {
+                PinOperation::Request
+            }
         }
-
-        session
-            .stream
-            .write_packet(pin_operation(PinOperation::Request))
-            .await?;
-
-        return Ok(());
-    }
-
-    if (a, b) == (1, 0) || (a, b) == (2, 0) {
-        if session.data.pin_attempts >= 6 {
-            session.stream.close().await?;
-            return Ok(());
-        }
-
-        session.data.pin_attempts += 1;
-
-        if !session.data.pin.is_empty() && session.data.pin == pin {
-            session.data.pin_attempts = 0;
-
-            if a == 1 {
-                session
-                    .stream
-                    .write_packet(pin_operation(PinOperation::Accepted))
-                    .await?;
-
-                return Ok(());
+        (1, 0) | (2, 0) => {
+            if session.data.pin_attempts >= 6 {
+                return session.stream.close().await;
             }
 
-            session
-                .stream
-                .write_packet(pin_operation(PinOperation::Register))
-                .await?;
+            session.data.pin_attempts += 1;
 
-            return Ok(());
+            if !session.data.pin.is_empty() && session.data.pin == pin {
+                session.data.pin_attempts = 0;
+
+                if a == 1 {
+                    PinOperation::Accepted
+                } else {
+                    PinOperation::Register
+                }
+            } else {
+                PinOperation::Invalid
+            }
         }
-    }
+        _ => PinOperation::Invalid,
+    };
 
     session
         .stream
-        .write_packet(pin_operation(PinOperation::Invalid))
+        .write_packet(pin_operation(operation))
         .await?;
 
     Ok(())

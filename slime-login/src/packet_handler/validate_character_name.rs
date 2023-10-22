@@ -17,14 +17,12 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
             .await?;
 
     if character.is_some() {
-        session.stream.write_packet(valid_name(name, false)).await?;
-        return Ok(());
+        return session.stream.write_packet(valid_name(name, false)).await;
     }
 
     // Name has to be alphanumeric between 3 and 12 characters long
     if !name.chars().all(char::is_alphanumeric) || name.len() < 3 || name.len() > 12 {
-        session.stream.write_packet(valid_name(name, false)).await?;
-        return Ok(());
+        return session.stream.write_packet(valid_name(name, false)).await;
     }
 
     session.stream.write_packet(valid_name(name, true)).await?;
