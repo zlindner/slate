@@ -1,5 +1,5 @@
 CREATE TABLE `characters` (
-    `id` int unsigned NOT NULL AUTO_INCREMENT,
+    `id` int NOT NULL AUTO_INCREMENT,
     `account_id` int NOT NULL,
     `world_id` int NOT NULL,
     `name` varchar(13) NOT NULL,

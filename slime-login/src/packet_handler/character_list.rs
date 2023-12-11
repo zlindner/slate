@@ -22,7 +22,7 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
         }
     };
 
-    let world = sqlx::query_as::<_, World>("SELECT * FROM worlds WHERE world.id = ?")
+    let world = sqlx::query_as::<_, World>("SELECT * FROM worlds WHERE id = ?")
         .bind(world_id)
         .fetch_one(&session.db)
         .await?;
@@ -41,7 +41,7 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
 
     // Get all of the characters for the session's account id in the selected world
     let characters = sqlx::query_as::<_, Character>(
-        "SELECT * FROM characters WHERE account_id = ?, world_id = ?",
+        "SELECT * FROM characters WHERE account_id = ? AND world_id = ?",
     )
     .bind(session.data.account_id)
     .bind(world_id)

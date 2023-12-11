@@ -36,13 +36,14 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
     }
 
     // Get number of characters the account currently has in the world
-    let num_characters: i32 =
-        sqlx::query("SELECT COUNT(*) as count FROM characters WHERE account_id = ?, world_id = ?")
-            .bind(session.data.account_id)
-            .bind(session.data.world_id)
-            .fetch_one(&session.db)
-            .await?
-            .get("count");
+    let num_characters: i32 = sqlx::query(
+        "SELECT COUNT(*) as count FROM characters WHERE account_id = ? AND world_id = ?",
+    )
+    .bind(session.data.account_id)
+    .bind(session.data.world_id)
+    .fetch_one(&session.db)
+    .await?
+    .get("count");
 
     if num_characters >= 3 {
         log::debug!("Player already has 3 characters in the selected world");
