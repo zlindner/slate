@@ -59,8 +59,8 @@ impl MapleAES {
             return false;
         }
 
-        ((header[0] ^ self.recv_iv[2]) & 0xFF) == ((self.version >> 8) as u8 & 0xFF)
-            && (((header[1] ^ self.recv_iv[3]) & 0xFF) == (self.version & 0xFF) as u8)
+        (header[0] ^ self.recv_iv[2]) == (self.version >> 8) as u8
+            && ((header[1] ^ self.recv_iv[3]) == (self.version & 0xFF) as u8)
     }
 
     /// Generates a packet header with the given length
@@ -72,10 +72,10 @@ impl MapleAES {
         let xored_iv = iiv ^ mlength;
 
         [
-            (iiv >> 8) as u8 & 0xFF,
-            iiv as u8 & 0xFF,
-            (xored_iv >> 8) as u8 & 0xFF,
-            xored_iv as u8 & 0xFF,
+            (iiv >> 8) as u8,
+            iiv as u8,
+            (xored_iv >> 8) as u8,
+            xored_iv as u8,
         ]
     }
 
@@ -93,7 +93,7 @@ impl MapleAES {
 
         while remaining > 0 {
             let mut iv = iv.repeat(4);
-            let mut iv = GenericArray::from_mut_slice(&mut iv);
+            let iv = GenericArray::from_mut_slice(&mut iv);
 
             if remaining < block_length {
                 block_length = remaining;
@@ -101,7 +101,7 @@ impl MapleAES {
 
             for i in start..(start + block_length) {
                 if (i - start) % iv.len() == 0 {
-                    self.cipher.encrypt_block(&mut iv);
+                    self.cipher.encrypt_block(iv);
                 }
 
                 data[i] ^= iv[(i - start) % iv.len()];
@@ -120,16 +120,12 @@ impl MapleAES {
         let mut new_iv = super::DEFAULT_IV;
         let shift_bytes = super::SHIFT_BYTES;
 
-        for i in 0..4 {
+        (0..4).for_each(|i| {
             let byte = iv[i];
-            new_iv[0] =
-                new_iv[0].wrapping_add(shift_bytes[(new_iv[1] & 0xFF) as usize].wrapping_sub(byte));
-            new_iv[1] =
-                new_iv[1].wrapping_sub(new_iv[2] ^ shift_bytes[(byte & 0xFF) as usize] & 0xFF);
-            new_iv[2] = new_iv[2] ^ (shift_bytes[(new_iv[3] & 0xFF) as usize].wrapping_add(byte));
-            new_iv[3] = new_iv[3].wrapping_add(
-                (shift_bytes[(byte & 0xFF) as usize] & 0xFF).wrapping_sub(new_iv[0] & 0xFF),
-            );
+            new_iv[0] = new_iv[0].wrapping_add(shift_bytes[new_iv[1] as usize].wrapping_sub(byte));
+            new_iv[1] = new_iv[1].wrapping_sub(new_iv[2] ^ shift_bytes[byte as usize]);
+            new_iv[2] ^= shift_bytes[new_iv[3] as usize].wrapping_add(byte);
+            new_iv[3] = new_iv[3].wrapping_add(shift_bytes[byte as usize].wrapping_sub(new_iv[0]));
 
             let mut mask = 0usize;
             mask |= (new_iv[0] as usize) & 0xFF;
@@ -138,10 +134,10 @@ impl MapleAES {
             mask |= ((new_iv[3] as usize) << 24) & 0xFF000000;
             mask = (mask >> 0x1D) | (mask << 3);
 
-            for j in 0..4 {
+            (0..4).for_each(|j| {
                 new_iv[j] = ((mask >> (8 * j)) & 0xFF) as u8;
-            }
-        }
+            });
+        });
 
         new_iv
     }
@@ -285,9 +281,7 @@ mod tests {
             return false;
         }
 
-        ((header[0] ^ client_aes.recv_iv[2]) & 0xFF)
-            == ((0xFFFF - client_aes.version >> 8) as u8 & 0xFF)
-            && (((header[1] ^ client_aes.recv_iv[3]) & 0xFF)
-                == (0xFFFF - client_aes.version & 0xFF) as u8)
+        (header[0] ^ client_aes.recv_iv[2]) == ((0xFFFF - client_aes.version) >> 8) as u8
+            && ((header[1] ^ client_aes.recv_iv[3]) == ((0xFFFF - client_aes.version) & 0xFF) as u8)
     }
 }
