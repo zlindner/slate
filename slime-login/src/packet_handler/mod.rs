@@ -33,7 +33,7 @@ pub async fn handle_packet(mut packet: Packet, session: &mut LoginSession) -> an
         0x17 => delete_character::handle(packet, session).await?,
         0x1D => register_pic::handle(packet, session).await?,
         0x1E => select_character_pic::handle(packet, session).await?,
-        _ => log::debug!("Unhandled packet: {:02X?}", op_code),
+        _ => log::info!("Unhandled packet: [{:02X?}]", op_code),
     };
 
     Ok(())

@@ -16,6 +16,7 @@ quest_rate = 5
 fishing_rate = 10
 travel_rate = 10
 max_players = 1000
+base_port = 10000
 
 [[worlds]]
 id = 1
@@ -32,3 +33,4 @@ quest_rate = 5
 fishing_rate = 10
 travel_rate = 10
 max_players = 1000
+base_port = 11000

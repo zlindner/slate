@@ -34,36 +34,38 @@ pub async fn connect_to_world_server(session: &mut LoginSession) -> anyhow::Resu
 
     session
         .stream
-        .write_packet(world_server_addr(session.id))
+        .write_packet(world_server_addr(session))
         .await?;
 
     Ok(())
 }
 
 /// Packet containing the world server addr and client's session id
-fn world_server_addr(session_id: i32) -> Packet {
+fn world_server_addr(session: &LoginSession) -> Packet {
     let mut packet = Packet::new(0x0C);
     packet.write_short(0);
 
     // Get the world server ip and convert each "." delimited section to a u8
     let ip = std::env::var("WORLD_IP").unwrap_or("0.0.0.0".to_string());
     let ip = ip.split('.').collect::<Vec<&str>>();
-    let ip_bytes = [
+    packet.write_bytes(&[
         ip.first().unwrap().parse::<u8>().unwrap(),
         ip.get(1).unwrap().parse::<u8>().unwrap(),
         ip.get(2).unwrap().parse::<u8>().unwrap(),
         ip.get(3).unwrap().parse::<u8>().unwrap(),
-    ];
+    ]);
 
-    packet.write_bytes(&ip_bytes);
-    // FIXME correct port for selected channel
-    // TODO this should probably be in config/env?
-    // TODO can we handle all channels on a single port?
-    packet.write_short(10000);
+    let world = session
+        .config
+        .worlds
+        .get(session.data.world_id as usize)
+        .unwrap();
+
+    packet.write_short((world.base_port + session.data.channel_id) as i16);
 
     // NOTE: this is technically supposed to be the character id, but we need
     // some way to tell the world server the client's session id.
-    packet.write_int(session_id);
+    packet.write_int(session.id);
     packet.write_bytes(&[0, 0, 0, 0, 0]);
     packet
 }

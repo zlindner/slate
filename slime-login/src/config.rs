@@ -17,6 +17,7 @@ pub struct World {
     pub fishing_rate: i32,
     pub travel_rate: i32,
     pub max_players: i32,
+    pub base_port: i32,
 }
 
 #[derive(Debug, Deserialize, Default)]

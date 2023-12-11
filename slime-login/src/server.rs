@@ -47,11 +47,11 @@ impl LoginServer {
 
     /// Handles a new login session
     async fn handle_session(mut session: LoginSession) {
-        log::info!("Created login session {}", session.id);
+        log::info!("Created login session [id: {}]", session.id);
 
         // Send unencrypted handshake to client -- sets up encryption IVs
         if let Err(e) = session.stream.write_handshake().await {
-            log::error!("Handshake error: {}", e);
+            log::error!("Handshake error: {} [id: {}]", e, session.id);
             return;
         }
 
@@ -61,7 +61,7 @@ impl LoginServer {
             let packet = match session.stream.read_packet().await {
                 Some(Ok(packet)) => packet,
                 Some(Err(e)) => {
-                    log::error!("Error reading packet: {}", e);
+                    log::error!("Error reading packet: {} [id: {}]", e, session.id);
                     break;
                 }
                 // Client disconnected/sent EOF
@@ -69,11 +69,11 @@ impl LoginServer {
             };
 
             if let Err(e) = packet_handler::handle_packet(packet, &mut session).await {
-                log::error!("Error handling packet: {}", e);
+                log::error!("Error handling packet: {} [id: {}]", e, session.id);
             }
         }
 
-        log::info!("Login session {} ended", session.id);
+        log::info!("Login session ended [id: {}]", session.id);
     }
 }
 

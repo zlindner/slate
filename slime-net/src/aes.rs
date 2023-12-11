@@ -3,7 +3,10 @@ use aes::{
     cipher::{generic_array::GenericArray, BlockEncrypt, KeyInit},
     Aes256,
 };
+use anyhow::{anyhow, Result};
+use bytes::{BufMut, BytesMut};
 use rand::random;
+use tokio_util::codec::{Decoder, Encoder};
 
 /// Custom AES Maplestory encryption implementation
 pub struct MapleAES {
@@ -114,7 +117,7 @@ impl MapleAES {
 
     /// Generates a new initialization vector
     fn get_new_iv(&self, iv: [u8; 4]) -> [u8; 4] {
-        let mut new_iv = random::<[u8; 4]>();
+        let mut new_iv = super::DEFAULT_IV;
         let shift_bytes = super::SHIFT_BYTES;
 
         for i in 0..4 {
@@ -141,6 +144,57 @@ impl MapleAES {
         }
 
         new_iv
+    }
+}
+
+impl Decoder for MapleAES {
+    type Item = Packet;
+    type Error = anyhow::Error;
+
+    fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Packet>> {
+        // header (4) + op code (2)
+        if buf.len() < 6 {
+            return Ok(None);
+        }
+
+        // TODO do we need to split, why not just pass in entire packet?
+        let header = buf.split_to(4);
+
+        if !self.is_valid_header(&header) {
+            return Err(anyhow!("Invalid packet header {:02X?}", header));
+        }
+
+        let len = self.get_packet_len(&header);
+
+        if len as usize > buf.len() {
+            log::warn!(
+                "Packet length {} is greater than buf length {}",
+                len,
+                buf.len()
+            );
+        }
+
+        let mut body = buf.split_to(len as usize);
+        self.decrypt(&mut body);
+        Ok(Some(Packet::wrap(body)))
+    }
+}
+
+impl Encoder<Packet> for MapleAES {
+    type Error = anyhow::Error;
+
+    fn encode(&mut self, mut packet: Packet, buf: &mut BytesMut) -> Result<()> {
+        if packet.use_encryption {
+            let header = self.generate_header(packet.len());
+            self.encrypt(&mut packet.bytes);
+            buf.reserve(packet.len() + header.len());
+            buf.put(header.as_slice());
+        } else {
+            buf.reserve(packet.len());
+        }
+
+        buf.put(packet.bytes);
+        Ok(())
     }
 }
 

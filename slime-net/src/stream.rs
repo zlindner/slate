@@ -1,4 +1,5 @@
-use super::{MapleCodec, Packet};
+use super::Packet;
+use crate::MapleAES;
 use anyhow::Result;
 use futures::{SinkExt, StreamExt};
 use tokio::net::TcpStream;
@@ -6,14 +7,14 @@ use tokio_util::codec::Framed;
 
 /// A tokio TCP stream wrapped with custom maple encryption.
 pub struct MapleStream {
-    framed: Framed<TcpStream, MapleCodec>,
+    framed: Framed<TcpStream, MapleAES>,
 }
 
 impl MapleStream {
     /// Creates a new MapleStream from the given TcpStream.
     pub fn new(stream: TcpStream) -> Self {
         Self {
-            framed: Framed::new(stream, MapleCodec::new()),
+            framed: Framed::new(stream, MapleAES::new(83)),
         }
     }
 
@@ -30,7 +31,7 @@ impl MapleStream {
 
     /// Writes a handshake packet to the TcpStream to setup encryption.
     pub async fn write_handshake(&mut self) -> Result<()> {
-        let mut handshake = self.framed.codec().aes.get_handshake();
+        let mut handshake = self.framed.codec().get_handshake();
         handshake.use_encryption = false;
         self.write_packet(handshake).await?;
         Ok(())
