@@ -3,5 +3,6 @@ members = [
     "slime-login",
     "slime-net",
     "slime-nx",
+    "slime-tools",
     "slime-world",
 ]

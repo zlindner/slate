@@ -35,7 +35,7 @@ pub struct Account {
     pub state: LoginState,
     pub banned: bool,
     pub accepted_tos: bool,
-    pub last_login: DateTime<Utc>,
+    pub last_login: Option<DateTime<Utc>>,
     pub gender: i32,
 }
 

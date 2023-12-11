@@ -72,7 +72,7 @@ fn validate_login(
     }
 
     // Check if account is already logged in
-    if !matches!(account.state, LoginState::LoggedIn) {
+    if !matches!(account.state, LoginState::LoggedOut) {
         return Some(LoginError::AlreadyLoggedIn);
     }
 
