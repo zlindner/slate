@@ -1,4 +1,8 @@
-use crate::{config::Config, model::LoginSessionData, packet_handler};
+use crate::{
+    config::Config,
+    model::{LoginSessionData, LoginState},
+    packet_handler, query,
+};
 use anyhow::Result;
 use slime_net::MapleStream;
 use sqlx::{MySql, Pool};
@@ -74,6 +78,12 @@ impl LoginServer {
         }
 
         log::info!("Login session ended [id: {}]", session.id);
+
+        if session.data.account_id != -1 {
+            query::update_login_state(&session, LoginState::LoggedOut)
+                .await
+                .unwrap();
+        }
     }
 }
 
