@@ -1,8 +1,13 @@
 use super::character_list::write_character;
-use crate::{model::Character, server::LoginSession};
+use crate::{
+    model::{Character, Equipment},
+    query,
+    server::LoginSession,
+};
 use once_cell::sync::Lazy;
 use slime_net::Packet;
-use sqlx::Row;
+use slime_nx::{EquipmentType, NxEquipment};
+use sqlx::{MySql, QueryBuilder, Row};
 use std::collections::HashSet;
 
 /// Login server: create character packet (0x16)
@@ -60,75 +65,42 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
         }
     };
 
-    // Create the new character
-    let character = sqlx::query_as::<_, Character>(
-        "INSERT INTO characters (account_id, world_id, name, job, skin_colour, gender, hair, face, map, sp, slots)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    sqlx::query(
+        "INSERT INTO characters (account_id, world_id, name, job, skin_colour, gender, hair, face, map)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(session.data.account_id)
     .bind(session.data.world_id)
-    .bind(name)
+    .bind(&name)
     .bind(job_id)
     .bind(skin_colour)
     .bind(gender as i32)
     .bind(hair + hair_colour)
     .bind(face)
     .bind(map)
-    .bind(vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-    .bind(vec![24, 24, 24, 24, 96])
-    .fetch_one(&session.db)
+    .execute(&session.db)
     .await?;
 
+    let character =
+        sqlx::query_as::<_, Character>("SELECT * FROM characters WHERE name = ? AND world_id = ?")
+            .bind(&name)
+            .bind(session.data.world_id)
+            .fetch_one(&session.db)
+            .await?;
+
+    // Create the starter equips
+    create_equip(top, EquipmentType::Top, character.id, session).await?;
+    create_equip(bottom, EquipmentType::Bottom, character.id, session).await?;
+    create_equip(shoes, EquipmentType::Shoes, character.id, session).await?;
+    create_equip(weapon, EquipmentType::Weapon, character.id, session).await?;
+
+    // Get the created equips
+    let equips = sqlx::query_as::<_, Equipment>("SELECT * FROM equipment WHERE character_id = ?")
+        .bind(character.id)
+        .fetch_all(&session.db)
+        .await?;
+
     /*
-    // Create starter equips
-    let top_equip = client
-        .db
-        .equip()
-        .create(
-            top,
-            character::id::equals(character.id),
-            5,
-            nx::get_equip_data(top, EquipCategory::Top),
-        )
-        .exec()
-        .await?;
-
-    let bottom_equip = client
-        .db
-        .equip()
-        .create(
-            bottom,
-            character::id::equals(character.id),
-            6,
-            nx::get_equip_data(bottom, EquipCategory::Bottom),
-        )
-        .exec()
-        .await?;
-
-    let shoe_equip = client
-        .db
-        .equip()
-        .create(
-            shoes,
-            character::id::equals(character.id),
-            7,
-            nx::get_equip_data(shoes, EquipCategory::Shoes),
-        )
-        .exec()
-        .await?;
-
-    let weapon_equip = client
-        .db
-        .equip()
-        .create(
-            weapon,
-            character::id::equals(character.id),
-            11,
-            nx::get_equip_data(weapon, EquipCategory::Weapon),
-        )
-        .exec()
-        .await?;
-
     // Create default keymap
     let keymap_creates = (0..40).map(|i| {
         client.db.keymap().create(
@@ -182,6 +154,46 @@ pub fn create_character(
     packet.write_byte(0);
     write_character(&mut packet, &character, false);
     packet
+}
+
+async fn create_equip(
+    item_id: i32,
+    equip_type: EquipmentType,
+    character_id: i32,
+    session: &mut LoginSession,
+) -> anyhow::Result<()> {
+    let mut query_builder =
+        QueryBuilder::<MySql>::new("INSERT INTO equipment (item_id, character_id, position");
+
+    // Load the equip data from nx file
+    let nx_equipment = NxEquipment::load(item_id, &equip_type).unwrap();
+
+    if nx_equipment.w_atk.is_some() {
+        query_builder.push(", w_atk");
+    }
+
+    if nx_equipment.w_atk.is_some() {
+        query_builder.push(", upgrade_slots");
+    }
+
+    query_builder.push(") VALUES (");
+
+    let mut separated = query_builder.separated(", ");
+    separated.push_bind(item_id);
+    separated.push_bind(character_id);
+    separated.push_bind(equip_type.get_position());
+
+    if nx_equipment.w_atk.is_some() {
+        separated.push_bind(nx_equipment.w_atk);
+    }
+
+    if nx_equipment.w_atk.is_some() {
+        separated.push_bind(nx_equipment.upgrade_slots);
+    }
+
+    separated.push_unseparated(")");
+    query_builder.build().execute(&session.db).await?;
+    Ok(())
 }
 
 static STARTER_WEAPONS: Lazy<HashSet<i32>> = Lazy::new(|| {

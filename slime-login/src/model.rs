@@ -13,15 +13,10 @@ pub struct LoginSessionData {
     pub world_id: i32,
     pub channel_id: i32,
     pub map_id: i32,
-    #[sqlx(default)]
     pub login_attempts: i32,
-    #[sqlx(default)]
     pub pin: String,
-    #[sqlx(default)]
     pub pin_attempts: i32,
-    #[sqlx(default)]
     pub pic: String,
-    #[sqlx(default)]
     pub pic_attempts: i32,
 }
 
@@ -104,7 +99,7 @@ pub struct Character {
     pub hair: i32,
     pub face: i32,
     pub ap: i32,
-    pub sp: String, // TODO need to parse this
+    pub sp: String,
     pub map: i32,
     pub spawn_point: i32,
     pub gm: i32,
@@ -117,7 +112,6 @@ pub struct Character {
     pub job_rank_move: i32,
     pub guild: Option<i32>,
     pub guild_rank: Option<i32>,
-    pub slots: Json<Vec<i32>>,
     pub equip_slots: i32,
     pub use_slots: i32,
     pub setup_slots: i32,
@@ -129,4 +123,36 @@ pub struct Character {
     // keymaps: Vec<Keymap>,
     // cooldowns: Vec<Cooldown>,
     // quests: Vec<Quest>
+}
+
+#[derive(FromRow)]
+pub struct Equipment {
+    pub id: i32,
+    pub item_id: i32,
+    pub character_id: i32,
+    pub position: i32,
+    pub amount: i32,
+    pub upgrade_slots: i32,
+    pub level: i32,
+    pub item_level: i32,
+    pub exp: i32,
+    pub str: i32,
+    pub dex: i32,
+    pub int: i32,
+    pub luk: i32,
+    pub hp: i32,
+    pub mp: i32,
+    pub w_atk: i32,
+    pub m_atk: i32,
+    pub w_def: i32,
+    pub m_def: i32,
+    pub acc: i32,
+    pub avoid: i32,
+    pub hands: i32,
+    pub speed: i32,
+    pub jump: i32,
+    pub locked: i32,
+    pub vicious: i32,
+    pub owner: String,
+    pub flag: i32,
 }

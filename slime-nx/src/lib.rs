@@ -1,14 +1,40 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
+use std::{collections::HashMap, path::Path};
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+use once_cell::sync::Lazy;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+pub(crate) mod equipment;
+pub use self::equipment::EquipmentType;
+pub use self::equipment::NxEquipment;
+
+const NX_FILES: [&str; 13] = [
+    "Base",
+    "Character",
+    "Effect",
+    "Etc",
+    "Item",
+    "Map",
+    "Morph",
+    "Npc",
+    "Quest",
+    "Reactor",
+    "String",
+    "TamingMob",
+    "UI",
+];
+
+pub static DATA: Lazy<HashMap<&str, nx::File>> = Lazy::new(|| {
+    let mut map = HashMap::new();
+
+    for nx_file in NX_FILES {
+        // FIXME this path is problematic, depends on where the binary is located
+        let filename = format!("slime-nx/nx/{}.nx", nx_file);
+        let path = Path::new(&filename);
+
+        // FIXME get rid of this unsafe, may want to move off of nx crate
+        let file = unsafe { nx::File::open(path).unwrap() };
+
+        map.insert(nx_file, file);
     }
-}
+
+    map
+});

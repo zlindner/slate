@@ -1,5 +1,6 @@
-use crate::{model::Character, server::LoginSession};
+use crate::server::LoginSession;
 use slime_net::Packet;
+use sqlx::Row;
 
 /// Login server: validate character name packet (0x15)
 /// TODO
@@ -9,14 +10,15 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
     // TODO add blocked names list (rot13?)
 
     // Check if the name is already taken is current world
-    let character =
-        sqlx::query_as::<_, Character>("SELECT * FROM characters WHERE name = ?, world_id = ?")
+    let num_characters: i32 =
+        sqlx::query("SELECT COUNT(*) as count FROM characters WHERE name = ? AND world_id = ?")
             .bind(name.clone())
             .bind(session.data.world_id)
-            .fetch_optional(&session.db)
-            .await?;
+            .fetch_one(&session.db)
+            .await?
+            .get("count");
 
-    if character.is_some() {
+    if num_characters >= 1 {
         return session.stream.write_packet(valid_name(name, false)).await;
     }
 

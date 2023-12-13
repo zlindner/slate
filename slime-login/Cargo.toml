@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 slime-net = { path = "../slime-net" }
+slime-nx = { path = "../slime-nx" }
 
 anyhow = "1.0.72"
 dotenvy = "0.15.7"
