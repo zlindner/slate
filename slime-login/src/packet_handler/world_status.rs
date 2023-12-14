@@ -1,4 +1,5 @@
-use crate::{model::World, server::LoginSession};
+use crate::server::LoginSession;
+use slime_data::sql;
 use slime_net::Packet;
 
 /// Login server: world status (0x06)
@@ -10,7 +11,7 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
     let response = match session.config.worlds.get(world_id as usize) {
         None => world_status(WorldStatus::Full),
         Some(world_config) => {
-            let world = sqlx::query_as::<_, World>("SELECT * FROM worlds WHERE id = ?")
+            let world = sqlx::query_as::<_, sql::World>("SELECT * FROM worlds WHERE id = ?")
                 .bind(world_id)
                 .fetch_one(&session.db)
                 .await?;

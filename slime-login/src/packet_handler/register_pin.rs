@@ -1,4 +1,5 @@
-use crate::{model::LoginState, query, server::LoginSession};
+use crate::server::LoginSession;
+use slime_data::sql::{self, account::LoginState};
 use slime_net::Packet;
 
 /// Login server: register pin packet (0x0A)
@@ -22,9 +23,11 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
         .await?;
 
     session.data.pin = pin;
-    query::update_login_state(session, LoginState::LoggedOut).await?;
-    session.stream.write_packet(pin_registered()).await?;
 
+    sql::Account::update_login_state(session.data.account_id, LoginState::LoggedOut, &session.db)
+        .await?;
+
+    session.stream.write_packet(pin_registered()).await?;
     Ok(())
 }
 

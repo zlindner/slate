@@ -1,0 +1,11 @@
+[package]
+name = "slime-data"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.72"
+log = "0.4.20"
+nx = "0.3.0"
+once_cell = "1.19.0"
+sqlx = { version = "0.7.1", features = ["runtime-tokio", "tls-native-tls", "mysql", "chrono"] }

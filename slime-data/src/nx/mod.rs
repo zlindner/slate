@@ -1,10 +1,9 @@
+use once_cell::sync::Lazy;
 use std::{collections::HashMap, path::Path};
 
-use once_cell::sync::Lazy;
+pub mod equipment;
 
-pub(crate) mod equipment;
-pub use self::equipment::EquipmentType;
-pub use self::equipment::NxEquipment;
+pub use crate::nx::equipment::Equipment;
 
 const NX_FILES: [&str; 13] = [
     "Base",
@@ -22,16 +21,16 @@ const NX_FILES: [&str; 13] = [
     "UI",
 ];
 
-pub static DATA: Lazy<HashMap<&str, nx::File>> = Lazy::new(|| {
+pub static DATA: Lazy<HashMap<&str, ::nx::File>> = Lazy::new(|| {
     let mut map = HashMap::new();
 
     for nx_file in NX_FILES {
         // FIXME this path is problematic, depends on where the binary is located
-        let filename = format!("slime-nx/nx/{}.nx", nx_file);
+        let filename = format!("slime-data/nx/{}.nx", nx_file);
         let path = Path::new(&filename);
 
         // FIXME get rid of this unsafe, may want to move off of nx crate
-        let file = unsafe { nx::File::open(path).unwrap() };
+        let file = unsafe { ::nx::File::open(path).unwrap() };
 
         map.insert(nx_file, file);
     }

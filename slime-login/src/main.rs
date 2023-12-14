@@ -1,7 +1,7 @@
 use config::Config;
 use dotenvy::dotenv;
-use model::LoginState;
 use server::LoginServer;
+use slime_data::sql::account::LoginState;
 use sqlx::{
     mysql::{MySqlConnectOptions, MySqlPoolOptions},
     ConnectOptions, MySql, Pool,
@@ -9,10 +9,8 @@ use sqlx::{
 use std::{env, str::FromStr, sync::Arc, time::Instant};
 
 mod config;
-mod model;
 mod packet;
 mod packet_handler;
-mod query;
 mod server;
 
 #[tokio::main]
@@ -21,7 +19,7 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
     let db_url = env::var("DATABASE_URL")?;
-    let options = MySqlConnectOptions::from_str(&db_url)?;
+    let options = MySqlConnectOptions::from_str(&db_url)?.disable_statement_logging();
     let pool = MySqlPoolOptions::new()
         .min_connections(5)
         .max_connections(100)

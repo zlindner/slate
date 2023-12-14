@@ -1,9 +1,6 @@
-use crate::{
-    config::Config,
-    model::{LoginSessionData, LoginState},
-    packet_handler, query,
-};
+use crate::{config::Config, packet_handler};
 use anyhow::Result;
+use slime_data::sql::{self, account::LoginState};
 use slime_net::MapleStream;
 use sqlx::{MySql, Pool};
 use std::sync::Arc;
@@ -38,7 +35,7 @@ impl LoginServer {
                 id: session_id,
                 stream,
                 db: self.db.clone(),
-                data: LoginSessionData::default(),
+                data: sql::LoginSession::default(),
                 config: self.config.clone(),
             };
 
@@ -80,9 +77,13 @@ impl LoginServer {
         log::info!("Login session ended [id: {}]", session.id);
 
         if session.data.account_id != -1 {
-            query::update_login_state(&session, LoginState::LoggedOut)
-                .await
-                .unwrap();
+            sql::Account::update_login_state(
+                session.data.account_id,
+                LoginState::LoggedOut,
+                &session.db,
+            )
+            .await
+            .unwrap();
         }
     }
 }
@@ -91,6 +92,6 @@ pub struct LoginSession {
     pub id: i32,
     pub stream: MapleStream,
     pub db: Pool<MySql>,
-    pub data: LoginSessionData,
+    pub data: sql::LoginSession,
     pub config: Arc<Config>,
 }

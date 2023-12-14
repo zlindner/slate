@@ -1,9 +1,6 @@
 use super::world_status::{self, WorldStatus};
-use crate::{
-    model::{Character, World},
-    packet,
-    server::LoginSession,
-};
+use crate::{packet, server::LoginSession};
+use slime_data::{maple, sql};
 use slime_net::Packet;
 
 /// Login server: character list packet (0x05)
@@ -22,13 +19,10 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
         }
     };
 
-    let world = sqlx::query_as::<_, World>("SELECT * FROM worlds WHERE id = ?")
-        .bind(world_id)
-        .fetch_one(&session.db)
-        .await?;
-
+    let world = sql::World::load(world_id, &session.db).await?;
     let channel_id = packet.read_byte() as i32;
 
+    // Check if the selected world is already full or if the channel is invalid
     if world.connected_players >= world_config.max_players || channel_id >= world_config.channels {
         return session
             .stream
@@ -39,20 +33,27 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
     session.data.world_id = world_id;
     session.data.channel_id = channel_id;
 
-    // Get all of the characters for the session's account id in the selected world
-    let characters = sqlx::query_as::<_, Character>(
-        "SELECT * FROM characters WHERE account_id = ? AND world_id = ?",
-    )
-    .bind(session.data.account_id)
-    .bind(world_id)
-    .fetch_all(&session.db)
-    .await?;
+    // Load the current account's characters in the selected world
+    let sql_characters =
+        sql::Character::load_all(session.data.account_id, world_id, &session.db).await?;
 
-    // TODO needs to also fetch all character equips?
+    let mut maple_characters = Vec::with_capacity(sql_characters.len());
+
+    for sql_character in sql_characters.into_iter() {
+        // Load the equipment for each character
+        let equipment = sql::Equipment::load_all(sql_character.id, &session.db).await?;
+
+        // Build the maple character
+        maple_characters.push(maple::Character {
+            data: sql_character,
+            equipment,
+            items: Vec::new(), // items aren't needed for character list
+        });
+    }
 
     session
         .stream
-        .write_packet(character_list(characters, session))
+        .write_packet(character_list(maple_characters, session))
         .await?;
 
     Ok(())
@@ -60,7 +61,7 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
 
 /// Character list packet, contains stat, style, and equipment data for each
 /// character in the selected world
-fn character_list(characters: Vec<Character>, session: &LoginSession) -> Packet {
+fn character_list(characters: Vec<maple::Character>, session: &LoginSession) -> Packet {
     let mut packet = Packet::new(0x0B);
     packet.write_byte(0); // status
     packet.write_byte(characters.len() as u8);
@@ -83,7 +84,7 @@ fn character_list(characters: Vec<Character>, session: &LoginSession) -> Packet 
 }
 
 /// Writes a character's stat, style, and equipment data to a packet
-pub fn write_character(packet: &mut Packet, character: &Character, view_all: bool) {
+pub fn write_character(packet: &mut Packet, character: &maple::Character, view_all: bool) {
     packet::write_character_stats(packet, character);
     packet::write_character_style(packet, character);
     packet::write_character_equipment(packet, character);
@@ -92,17 +93,17 @@ pub fn write_character(packet: &mut Packet, character: &Character, view_all: boo
         packet.write_byte(0);
     }
 
-    let job_niche = (character.job / 100) % 10;
+    let job_niche = (character.data.job / 100) % 10;
 
-    if character.gm > 1 || job_niche == 8 || job_niche == 9 {
+    if character.data.gm > 1 || job_niche == 8 || job_niche == 9 {
         packet.write_byte(0);
         return;
     }
 
     // world rank enabled, following 4 ints aren't sent if disabled
     packet.write_byte(1);
-    packet.write_int(character.rank);
-    packet.write_int(character.rank_move);
-    packet.write_int(character.job_rank);
-    packet.write_int(character.job_rank_move);
+    packet.write_int(character.data.rank);
+    packet.write_int(character.data.rank_move);
+    packet.write_int(character.data.job_rank);
+    packet.write_int(character.data.job_rank_move);
 }

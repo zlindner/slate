@@ -1,13 +1,13 @@
 use super::character_list::write_character;
-use crate::{
-    model::{Character, Equipment},
-    query,
-    server::LoginSession,
-};
+use crate::server::LoginSession;
 use once_cell::sync::Lazy;
+use slime_data::{
+    maple,
+    nx::{self, equipment::EquipmentType},
+    sql::{self, item::InventoryType},
+};
 use slime_net::Packet;
-use slime_nx::{EquipmentType, NxEquipment};
-use sqlx::{MySql, QueryBuilder, Row};
+use sqlx::{MySql, QueryBuilder};
 use std::collections::HashSet;
 
 /// Login server: create character packet (0x16)
@@ -41,21 +41,16 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
     }
 
     // Get number of characters the account currently has in the world
-    let num_characters: i32 = sqlx::query(
-        "SELECT COUNT(*) as count FROM characters WHERE account_id = ? AND world_id = ?",
-    )
-    .bind(session.data.account_id)
-    .bind(session.data.world_id)
-    .fetch_one(&session.db)
-    .await?
-    .get("count");
+    let num_characters =
+        sql::Character::get_count(session.data.account_id, session.data.world_id, &session.db)
+            .await?;
 
     if num_characters >= 3 {
         log::debug!("Player already has 3 characters in the selected world");
         return Ok(());
     }
 
-    let (starter_item, job_id, map) = match job {
+    let (starter_item_id, job_id, map) = match job {
         0 => (4161047, 1000, 130030000), // Knight of Cygnus (noblesse guide, noblesse, noblesse starting map)
         1 => (4161001, 0, 10000),        // Beginner (beginner's guide, explorer, mushroom town)
         2 => (4161048, 2000, 914000000), // Aran (legend's guide, legend, aran tutorial start)
@@ -65,7 +60,8 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
         }
     };
 
-    sqlx::query(
+    // Create the character and get it's id
+    let character_id = sqlx::query(
         "INSERT INTO characters (account_id, world_id, name, job, skin_colour, gender, hair, face, map)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
@@ -79,119 +75,93 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
     .bind(face)
     .bind(map)
     .execute(&session.db)
+    .await?
+    .last_insert_id();
+
+    // Create starter equips
+    let starter_equips = [
+        (top, EquipmentType::Top),
+        (bottom, EquipmentType::Bottom),
+        (shoes, EquipmentType::Shoes),
+        (weapon, EquipmentType::Weapon),
+    ];
+    create_equips(starter_equips, character_id as i32, session).await?;
+
+    create_default_keymaps(session).await?;
+
+    // Create starter item
+    sqlx::query(
+        "INSERT INTO items (item_id, character_id, inventory_type, position, amount)
+        VALUES (?, ?, ?, ?, ?)",
+    )
+    .bind(starter_item_id)
+    .bind(character_id)
+    .bind(InventoryType::Etc)
+    .bind(0)
+    .bind(1)
+    .execute(&session.db)
     .await?;
 
-    let character =
-        sqlx::query_as::<_, Character>("SELECT * FROM characters WHERE name = ? AND world_id = ?")
-            .bind(&name)
-            .bind(session.data.world_id)
-            .fetch_one(&session.db)
-            .await?;
-
-    // Create the starter equips
-    create_equip(top, EquipmentType::Top, character.id, session).await?;
-    create_equip(bottom, EquipmentType::Bottom, character.id, session).await?;
-    create_equip(shoes, EquipmentType::Shoes, character.id, session).await?;
-    create_equip(weapon, EquipmentType::Weapon, character.id, session).await?;
-
-    // Get the created equips
-    let equips = sqlx::query_as::<_, Equipment>("SELECT * FROM equipment WHERE character_id = ?")
-        .bind(character.id)
-        .fetch_all(&session.db)
-        .await?;
-
-    /*
-    // Create default keymap
-    let keymap_creates = (0..40).map(|i| {
-        client.db.keymap().create(
-            character::id::equals(character.id),
-            DEFAULT_KEYS[i],
-            DEFAULT_TYPES[i],
-            DEFAULT_ACTIONS[i],
-            vec![],
-        )
-    });
-
-    let keymaps: Vec<keymap::Data> = client.db._batch(keymap_creates).await?;
-
-    // Add starter item to etc inventory
-    let item = client
-        .db
-        .item()
-        .create(
-            starter_item,
-            character::id::equals(character.id),
-            InventoryType::Etc,
-            0,
-            1,
-            vec![],
-        )
-        .exec()
-        .await?;
-        */
+    let character = maple::Character::load(&name, session.data.world_id, &session.db).await?;
 
     session
         .stream
-        .write_packet(create_character(
-            character,
-            /*vec![top_equip, bottom_equip, shoe_equip, weapon_equip],
-            item,
-            keymaps,*/
-        ))
+        .write_packet(create_character(character))
         .await?;
 
     Ok(())
 }
 
 ///
-pub fn create_character(
-    character: Character,
-    /*equips: Vec<Equip>,
-    item: Item,
-    keymaps: Vec<Keymap>,*/
-) -> Packet {
+pub fn create_character(character: maple::Character) -> Packet {
     let mut packet = Packet::new(0x0E);
     packet.write_byte(0);
     write_character(&mut packet, &character, false);
     packet
 }
 
-async fn create_equip(
-    item_id: i32,
-    equip_type: EquipmentType,
+async fn create_equips(
+    equips: [(i32, EquipmentType); 4],
     character_id: i32,
     session: &mut LoginSession,
 ) -> anyhow::Result<()> {
+    let mut query_builder = QueryBuilder::<MySql>::new(
+        "INSERT INTO equipment (item_id, character_id, position, w_atk, upgrade_slots) ",
+    );
+
+    query_builder.push_values(equips, |mut builder, (id, equip_type)| {
+        let nx_equip = nx::Equipment::load(id, &equip_type).unwrap();
+
+        builder
+            .push_bind(id)
+            .push_bind(character_id)
+            .push_bind(equip_type.get_position())
+            .push_bind(nx_equip.w_atk.unwrap_or(0))
+            .push_bind(nx_equip.upgrade_slots.unwrap_or(0));
+    });
+
+    query_builder.build().execute(&session.db).await?;
+    Ok(())
+}
+
+async fn create_default_keymaps(session: &mut LoginSession) -> anyhow::Result<()> {
+    let keymaps = DEFAULT_KEYS
+        .iter()
+        .zip(DEFAULT_TYPES.iter())
+        .zip(DEFAULT_ACTIONS.iter())
+        .map(|((x, y), z)| (x, y, z));
+
     let mut query_builder =
-        QueryBuilder::<MySql>::new("INSERT INTO equipment (item_id, character_id, position");
+        QueryBuilder::<MySql>::new("INSERT INTO keymaps (character_id, key, type_, action) ");
 
-    // Load the equip data from nx file
-    let nx_equipment = NxEquipment::load(item_id, &equip_type).unwrap();
+    query_builder.push_values(keymaps, |mut builder, (key, type_, action)| {
+        builder
+            .push_bind(session.data.character_id)
+            .push_bind(key)
+            .push_bind(type_)
+            .push_bind(action);
+    });
 
-    if nx_equipment.w_atk.is_some() {
-        query_builder.push(", w_atk");
-    }
-
-    if nx_equipment.w_atk.is_some() {
-        query_builder.push(", upgrade_slots");
-    }
-
-    query_builder.push(") VALUES (");
-
-    let mut separated = query_builder.separated(", ");
-    separated.push_bind(item_id);
-    separated.push_bind(character_id);
-    separated.push_bind(equip_type.get_position());
-
-    if nx_equipment.w_atk.is_some() {
-        separated.push_bind(nx_equipment.w_atk);
-    }
-
-    if nx_equipment.w_atk.is_some() {
-        separated.push_bind(nx_equipment.upgrade_slots);
-    }
-
-    separated.push_unseparated(")");
     query_builder.build().execute(&session.db).await?;
     Ok(())
 }

@@ -1,4 +1,5 @@
-use crate::{model::LoginState, query, server::LoginSession};
+use crate::server::LoginSession;
+use slime_data::sql::{self, account::LoginState};
 use slime_net::Packet;
 
 /// Login server: select character packet (0x13)
@@ -30,7 +31,12 @@ pub async fn connect_to_world_server(session: &mut LoginSession) -> anyhow::Resu
     .execute(&session.db)
     .await?;
 
-    query::update_login_state(session, LoginState::Transitioning).await?;
+    sql::Account::update_login_state(
+        session.data.account_id,
+        LoginState::Transitioning,
+        &session.db,
+    )
+    .await?;
 
     session
         .stream

@@ -1,4 +1,5 @@
-use crate::{model::Character, server::LoginSession};
+use crate::server::LoginSession;
+use slime_data::sql;
 use slime_net::Packet;
 
 /// Login server: delete character packet (0x17)
@@ -22,7 +23,7 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
     }
 
     let character_id = packet.read_int();
-    let character = sqlx::query_as::<_, Character>("SELECT * FROM characters WHERE id = ?")
+    let character = sqlx::query_as::<_, sql::Character>("SELECT * FROM characters WHERE id = ?")
         .bind(character_id)
         .fetch_optional(&session.db)
         .await?;

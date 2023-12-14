@@ -1484,6 +1484,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "slime-data"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "log",
+ "nx",
+ "once_cell",
+ "sqlx",
+]
+
+[[package]]
 name = "slime-login"
 version = "0.1.0"
 dependencies = [
@@ -1494,8 +1505,8 @@ dependencies = [
  "once_cell",
  "rust-argon2",
  "serde",
+ "slime-data",
  "slime-net",
- "slime-nx",
  "sqlx",
  "tokio",
  "toml",
@@ -1513,15 +1524,6 @@ dependencies = [
  "rand",
  "tokio",
  "tokio-util",
-]
-
-[[package]]
-name = "slime-nx"
-version = "0.1.0"
-dependencies = [
- "log",
- "nx",
- "once_cell",
 ]
 
 [[package]]

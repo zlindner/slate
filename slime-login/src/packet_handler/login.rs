@@ -1,8 +1,5 @@
-use crate::{
-    model::{Account, LoginState},
-    query,
-    server::LoginSession,
-};
+use crate::server::LoginSession;
+use slime_data::sql::{self, account::LoginState};
 use slime_net::Packet;
 
 /// Login server: login packet (0x01)
@@ -18,10 +15,7 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
     session.data.login_attempts += 1;
 
     let name = packet.read_string();
-    let account = sqlx::query_as::<_, Account>("SELECT * FROM accounts WHERE name = ?")
-        .bind(name)
-        .fetch_optional(&session.db)
-        .await?;
+    let account = sql::Account::load_optional_by_name(name, &session.db).await?;
 
     let account = match account {
         Some(account) => account,
@@ -50,7 +44,8 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
     session.data.pic = account.pic.clone();
 
     // Update the account's login state to LoggedIn
-    query::update_login_state(session, LoginState::LoggedIn).await?;
+    sql::Account::update_login_state(session.data.account_id, LoginState::LoggedIn, &session.db)
+        .await?;
 
     session
         .stream
@@ -63,7 +58,7 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
 /// Validates the login attempt
 fn validate_login(
     session: &mut LoginSession,
-    account: &Account,
+    account: &sql::Account,
     password: String,
 ) -> Option<LoginError> {
     // Validate the bytes of the entered password against the hash stored in db
@@ -110,7 +105,7 @@ fn login_failed(error: LoginError) -> Packet {
 }
 
 /// Login success packet
-pub fn login_succeeded(session: &LoginSession, account: &Account) -> Packet {
+pub fn login_succeeded(session: &LoginSession, account: &sql::Account) -> Packet {
     let mut packet = Packet::new(0x00);
     packet.write_int(0);
     packet.write_short(0);

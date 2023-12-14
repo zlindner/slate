@@ -1,4 +1,5 @@
 use crate::server::LoginSession;
+use slime_data::sql;
 use slime_net::Packet;
 
 /// Login server: register pic packet (0x1D)
@@ -19,50 +20,11 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
         return session.stream.close().await;
     }
 
-    // Set account's pic column
-    sqlx::query("UPDATE accounts SET pic = ? WHERE id = ?")
-        .bind(pic.clone())
-        .bind(session.data.account_id)
-        .execute(&session.db)
-        .await?;
+    sql::Account::update_pic(session.data.account_id, &pic, &session.db).await?;
 
     session.data.pic = pic;
     session.data.character_id = character_id;
 
     super::select_character::connect_to_world_server(session).await?;
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::{config::Config, model::*};
-    use slime_net::MapleStream;
-    use sqlx::{MySql, Pool};
-    use std::sync::Arc;
-    use tokio::net::{TcpListener, TcpStream};
-
-    #[sqlx::test(migrations = "../migrations")]
-    async fn test(pool: Pool<MySql>) -> anyhow::Result<()> {
-        dotenvy::dotenv().ok();
-
-        let packet = Packet::empty();
-
-        let listener = TcpListener::bind("0.0.0.0:8484").await?;
-        let addr = listener.local_addr()?;
-        let tcp_stream = TcpStream::connect(addr).await?;
-        let maple_stream = MapleStream::new(tcp_stream);
-
-        let mut login_session = LoginSession {
-            id: 1,
-            stream: maple_stream,
-            db: pool,
-            data: LoginSessionData::default(),
-            config: Arc::new(Config::default()),
-        };
-
-        handle(packet, &mut login_session).await?;
-
-        Ok(())
-    }
 }

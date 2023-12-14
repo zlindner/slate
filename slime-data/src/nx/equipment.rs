@@ -1,13 +1,13 @@
-use crate::DATA;
+use crate::nx::DATA;
 use nx::GenericNode;
 
 #[derive(Default)]
-pub struct NxEquipment {
+pub struct Equipment {
     pub w_atk: Option<i32>,
     pub upgrade_slots: Option<i32>,
 }
 
-impl NxEquipment {
+impl Equipment {
     /// Loads equip data from Character.nx for the given equip id and category
     /// Returns (key, value) pairs
     // FIXME this panics for handaxe?
@@ -26,7 +26,7 @@ impl NxEquipment {
         let info = equip.get("info");
         log::debug!("Loading equip data from {}", id);
 
-        let mut nx_equip = NxEquipment::default();
+        let mut nx_equip = Self::default();
 
         // Weapon attack
         let w_atk = info.get("incPAD");

@@ -1,9 +1,0 @@
-[package]
-name = "slime-nx"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-log = "0.4.20"
-nx = "0.3.0"
-once_cell = "1.19.0"

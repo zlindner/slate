@@ -1,8 +1,5 @@
-use crate::{
-    model::{Account, LoginState},
-    query,
-    server::LoginSession,
-};
+use crate::server::LoginSession;
+use slime_data::sql::{self, account::LoginState};
 use slime_net::Packet;
 
 /// Login server: accept tos packet (0x07)
@@ -15,10 +12,7 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
         return Ok(());
     }
 
-    let account = sqlx::query_as::<_, Account>("SELECT * FROM accounts WHERE id = ?")
-        .bind(session.data.account_id)
-        .fetch_optional(&session.db)
-        .await?;
+    let account = sql::Account::load_optional_by_id(session.data.account_id, &session.db).await?;
 
     let account = match account {
         Some(account) => account,
@@ -33,17 +27,13 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
         return Ok(());
     }
 
-    // Set account's accepted_tos column to true
-    sqlx::query("UPDATE accounts SET accepted_tos = ? WHERE id = ?")
-        .bind(true)
-        .bind(session.data.account_id)
-        .execute(&session.db)
-        .await?;
-
     session.data.account_id = account.id;
     session.data.pin = account.pin.clone();
     session.data.pic = account.pic.clone();
-    query::update_login_state(&session, LoginState::LoggedIn).await?;
+
+    sql::Account::update_tos(session.data.account_id, true, &session.db).await?;
+    sql::Account::update_login_state(session.data.account_id, LoginState::LoggedIn, &session.db)
+        .await?;
 
     session
         .stream
