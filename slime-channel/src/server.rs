@@ -1,25 +1,23 @@
 use crate::packet_handler;
-use slime_data::{
-    sql::{self, account::LoginState},
-    Config,
-};
+use slime_data::sql;
 use slime_net::MapleStream;
 use sqlx::{MySql, Pool};
-use std::{sync::Arc, time::Instant};
+use std::time::Instant;
 use tokio::net::TcpListener;
 
-pub struct LoginServer {
-    pub addr: String,
+pub struct ChannelServer {
+    pub ip: String,
+    pub base_port: String,
     pub db: Pool<MySql>,
-    pub config: Arc<Config>,
 }
 
-impl LoginServer {
-    /// Starts the login server
+// TODO currently doesn't handle shutdown, so world will stay online even when channel is shutdown
+impl ChannelServer {
     pub async fn start(self) -> anyhow::Result<()> {
-        let listener = TcpListener::bind(&self.addr).await?;
-        log::info!("Login server started @ {}", &self.addr);
-        self.execute_startup_tasks().await?;
+        let (channel, addr) = self.get_available_channel().await?;
+        let listener = TcpListener::bind(&addr).await?;
+        log::info!("{} {} started @ {}", channel.world_name, channel.id, &addr);
+        self.execute_startup_tasks(&channel).await?;
 
         let mut session_id = 0;
 
@@ -34,12 +32,10 @@ impl LoginServer {
 
             session_id += 1;
 
-            let session = LoginSession {
+            let session = ChannelSession {
                 id: session_id,
                 stream,
                 db: self.db.clone(),
-                data: sql::LoginSession::default(),
-                config: self.config.clone(),
             };
 
             // Spawn a task for handling the new login session
@@ -49,17 +45,35 @@ impl LoginServer {
         }
     }
 
-    /// Execute startup tasks
-    async fn execute_startup_tasks(&self) -> anyhow::Result<()> {
+    /// Gets the first available address to listen on
+    async fn get_available_channel(&self) -> anyhow::Result<(sql::Channel, String)> {
+        let channel =
+            sqlx::query_as::<_, sql::Channel>("SELECT * FROM channels WHERE is_online = false")
+                .fetch_one(&self.db)
+                .await?;
+
+        // TODO handle no channel being available
+
+        let base_port: i32 = self
+            .base_port
+            .parse()
+            .expect("Base port should be a valid integer");
+
+        // ex. 10000 + ((1 - 1) * 1000) + (1 - 1) = 10000 (world 1, channel 1)
+        // ex. 10000 + ((2 - 1) * 1000) + (2 - 1) = 11001 (world 2, channel 2)
+        let port = base_port + ((channel.world_id - 1) * 1000) + (channel.id - 1);
+        let addr = format!("{}:{}", self.ip, port);
+        Ok((channel, addr))
+    }
+
+    /// Executes startup tasks
+    async fn execute_startup_tasks(&self, channel: &sql::Channel) -> anyhow::Result<()> {
         let start = Instant::now();
         log::info!("Executing startup tasks...");
 
-        sqlx::query("UPDATE accounts SET state = ?")
-            .bind(LoginState::LoggedOut)
-            .execute(&self.db)
-            .await?;
-
-        sqlx::query("DELETE FROM login_sessions")
+        sqlx::query("UPDATE channels SET is_online = 1 WHERE id = ? AND world_id = ?")
+            .bind(channel.id)
+            .bind(channel.world_id)
             .execute(&self.db)
             .await?;
 
@@ -67,9 +81,9 @@ impl LoginServer {
         Ok(())
     }
 
-    /// Handles a new login session
-    async fn handle_session(mut session: LoginSession) {
-        log::info!("Created login session [id: {}]", session.id);
+    /// Handles a new channel session
+    async fn handle_session(mut session: ChannelSession) {
+        log::info!("Created channel session [id: {}]", session.id);
 
         // Send unencrypted handshake to client -- sets up encryption IVs
         if let Err(e) = session.stream.write_handshake().await {
@@ -95,24 +109,12 @@ impl LoginServer {
             }
         }
 
-        log::info!("Login session ended [id: {}]", session.id);
-
-        if session.data.account_id != -1 {
-            sql::Account::update_login_state(
-                session.data.account_id,
-                LoginState::LoggedOut,
-                &session.db,
-            )
-            .await
-            .unwrap();
-        }
+        log::info!("Channel session ended [id: {}]", session.id);
     }
 }
 
-pub struct LoginSession {
+pub struct ChannelSession {
     pub id: i32,
     pub stream: MapleStream,
     pub db: Pool<MySql>,
-    pub data: sql::LoginSession,
-    pub config: Arc<Config>,
 }

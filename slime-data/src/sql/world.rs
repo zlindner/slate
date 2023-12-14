@@ -8,8 +8,8 @@ pub struct World {
 }
 
 impl World {
-    /// Loads a sql::World from the database
-    pub async fn load(id: i32, db: &Db) -> anyhow::Result<World> {
+    /// Loads a world from the database
+    pub async fn load(id: i32, db: &Db) -> anyhow::Result<Self> {
         let world = sqlx::query_as::<_, Self>("SELECT * FROM worlds WHERE id = ?")
             .bind(id)
             .fetch_one(db)

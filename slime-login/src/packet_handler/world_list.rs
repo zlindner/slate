@@ -1,4 +1,5 @@
-use crate::{config, server::LoginSession};
+use crate::server::LoginSession;
+use slime_data::config;
 use slime_net::Packet;
 
 /// Login server: world list (0x0B)

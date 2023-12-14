@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+slime-data = { path = "../slime-data" }
+
 anyhow = "1.0.72"
 clap = { version = "4.4.11", features = ["derive"] }
 dotenvy = "0.15.7"

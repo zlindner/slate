@@ -1,13 +1,11 @@
 use dotenvy::dotenv;
-use server::LoginServer;
-use slime_data::Config;
+use server::ChannelServer;
 use sqlx::{
     mysql::{MySqlConnectOptions, MySqlPoolOptions},
     ConnectOptions,
 };
-use std::{env, str::FromStr, sync::Arc};
+use std::{env, str::FromStr};
 
-mod packet;
 mod packet_handler;
 mod server;
 
@@ -24,10 +22,10 @@ async fn main() -> anyhow::Result<()> {
         .connect_with(options)
         .await?;
 
-    let server = LoginServer {
-        addr: env::var("LOGIN_ADDR")?,
+    let server = ChannelServer {
+        ip: env::var("CHANNEL_IP")?,
+        base_port: env::var("CHANNEL_BASE_PORT")?,
         db: pool,
-        config: Arc::new(Config::load()),
     };
     server.start().await?;
 
