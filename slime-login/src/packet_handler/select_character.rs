@@ -19,7 +19,7 @@ pub async fn connect_to_world_server(session: &mut LoginSession) -> anyhow::Resu
     // TODO we can check mac_addr/hwid from host_addr if we want to prevent multi-logging
 
     sqlx::query(
-        "INSERT INTO sessions (id, account_id, character_id, world_id, channel_id, map_id) 
+        "INSERT INTO login_sessions (id, account_id, character_id, world_id, channel_id, map_id) 
         VALUES (?, ?, ?, ?, ?, ?)",
     )
     .bind(session.id)

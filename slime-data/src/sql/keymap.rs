@@ -5,8 +5,8 @@ use sqlx::FromRow;
 pub struct Keymap {
     pub id: i32,
     pub character_id: i32,
-    pub key: i32,
-    pub type_: i32,
+    pub key_id: i32,
+    pub key_type: i32,
     pub action: i32,
 }
 

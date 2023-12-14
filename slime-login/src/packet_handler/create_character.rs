@@ -152,7 +152,7 @@ async fn create_default_keymaps(session: &mut LoginSession) -> anyhow::Result<()
         .map(|((x, y), z)| (x, y, z));
 
     let mut query_builder =
-        QueryBuilder::<MySql>::new("INSERT INTO keymaps (character_id, key, type_, action) ");
+        QueryBuilder::<MySql>::new("INSERT INTO keymaps (character_id, key_id, key_type, action) ");
 
     query_builder.push_values(keymaps, |mut builder, (key, type_, action)| {
         builder
