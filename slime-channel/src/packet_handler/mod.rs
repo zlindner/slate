@@ -1,4 +1,4 @@
-use crate::server::ChannelSession;
+use crate::session::ChannelSession;
 use slime_net::Packet;
 
 /// Gets a packet handler for the given op code

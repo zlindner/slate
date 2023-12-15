@@ -8,6 +8,8 @@ use std::{env, str::FromStr};
 
 mod packet_handler;
 mod server;
+mod session;
+mod shutdown;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -22,12 +24,6 @@ async fn main() -> anyhow::Result<()> {
         .connect_with(options)
         .await?;
 
-    let server = ChannelServer {
-        ip: env::var("CHANNEL_IP")?,
-        base_port: env::var("CHANNEL_BASE_PORT")?,
-        db: pool,
-    };
-    server.start().await?;
-
+    ChannelServer::start(pool).await?;
     Ok(())
 }

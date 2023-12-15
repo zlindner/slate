@@ -21,6 +21,7 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
 
     let world = sql::World::load(world_id, &session.db).await?;
     let channel_id = packet.read_byte() as i32;
+    log::debug!("CHANNEL_ID {}", channel_id);
 
     // Check if the selected world is already full or if the channel is invalid
     if world.connected_players >= world_config.max_players || channel_id >= world_config.channels {

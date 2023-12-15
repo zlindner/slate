@@ -78,7 +78,7 @@ impl Character {
     /// Get the number of characters an account has in the selected world
     pub async fn get_count(account_id: i32, world_id: i32, db: &Db) -> anyhow::Result<i32> {
         let num_characters: i32 = sqlx::query(
-            "SELECT COUNT(*) as count FROM characters WHERE account_id = ? AND world_id = ?",
+            "SELECT COUNT(*) AS count FROM characters WHERE account_id = ? AND world_id = ?",
         )
         .bind(account_id)
         .bind(world_id)

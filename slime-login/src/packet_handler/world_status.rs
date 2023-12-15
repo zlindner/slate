@@ -1,6 +1,6 @@
 use crate::server::LoginSession;
-use slime_data::sql;
 use slime_net::Packet;
+use sqlx::Row;
 
 /// Login server: world status (0x06)
 /// Displays the selected world's status/capacity for each channel
@@ -11,15 +11,18 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
     let response = match session.config.worlds.get(world_id as usize) {
         None => world_status(WorldStatus::Full),
         Some(world_config) => {
-            let world = sqlx::query_as::<_, sql::World>("SELECT * FROM worlds WHERE id = ?")
-                .bind(world_id)
-                .fetch_one(&session.db)
-                .await?;
+            let players: i32 = sqlx::query(
+                "SELECT CAST(SUM(connected_players) AS UNSIGNED) AS sum FROM channels WHERE world_id = 1",
+            )
+            .bind(world_id)
+            .fetch_one(&session.db)
+            .await?
+            .get("sum");
 
             // TODO add max_players_channel? we can do world_config.channels * max_players_channel instead
-            let status = if world.connected_players >= world_config.max_players {
+            let status = if players >= world_config.max_players {
                 WorldStatus::Full
-            } else if world.connected_players >= ((world_config.max_players as f32) * 0.8) as i32 {
+            } else if players >= ((world_config.max_players as f32) * 0.8) as i32 {
                 WorldStatus::HighlyPopulated
             } else {
                 WorldStatus::Normal

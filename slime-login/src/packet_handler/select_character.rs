@@ -52,7 +52,7 @@ fn world_server_addr(session: &LoginSession) -> Packet {
     packet.write_short(0);
 
     // Get the world server ip and convert each "." delimited section to a u8
-    let ip = std::env::var("WORLD_IP").unwrap_or("0.0.0.0".to_string());
+    let ip = std::env::var("CHANNEL_IP").unwrap();
     let ip = ip.split('.').collect::<Vec<&str>>();
     packet.write_bytes(&[
         ip.first().unwrap().parse::<u8>().unwrap(),
@@ -61,13 +61,19 @@ fn world_server_addr(session: &LoginSession) -> Packet {
         ip.get(3).unwrap().parse::<u8>().unwrap(),
     ]);
 
+    let base_port: i32 = std::env::var("CHANNEL_BASE_PORT")
+        .unwrap()
+        .parse()
+        .expect("Channel base port should be a valid integer");
+
     let world = session
         .config
         .worlds
         .get(session.data.world_id as usize)
         .unwrap();
 
-    packet.write_short((world.base_port + session.data.channel_id) as i16);
+    let port = base_port + ((world.id - 1) * 1000) + (session.data.channel_id - 1);
+    packet.write_short(port as i16);
 
     // NOTE: this is technically supposed to be the character id, but we need
     // some way to tell the world server the client's session id.

@@ -1484,6 +1484,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "slime-channel"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "dotenvy",
+ "env_logger",
+ "log",
+ "slime-data",
+ "slime-net",
+ "sqlx",
+ "tokio",
+]
+
+[[package]]
 name = "slime-data"
 version = "0.1.0"
 dependencies = [
@@ -1538,20 +1552,6 @@ dependencies = [
  "rand",
  "rust-argon2",
  "slime-data",
- "sqlx",
- "tokio",
-]
-
-[[package]]
-name = "slime-world"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "dotenvy",
- "env_logger",
- "log",
- "slime-data",
- "slime-net",
  "sqlx",
  "tokio",
 ]

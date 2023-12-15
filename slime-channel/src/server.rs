@@ -1,23 +1,76 @@
-use crate::packet_handler;
+use crate::{session::ChannelSession, shutdown::Shutdown};
 use slime_data::sql;
 use slime_net::MapleStream;
 use sqlx::{MySql, Pool};
-use std::time::Instant;
-use tokio::net::TcpListener;
+use std::{env, time::Instant};
+use tokio::{
+    net::TcpListener,
+    sync::{broadcast, mpsc},
+};
 
 pub struct ChannelServer {
-    pub ip: String,
-    pub base_port: String,
+    pub data: sql::Channel,
+    pub addr: String,
     pub db: Pool<MySql>,
+
+    /// Broadcasts a shutdown signal to all active connections
+    notify_shutdown: broadcast::Sender<()>,
+
+    /// Used as part of the graceful shutdown process to wait for client
+    /// connections to complete processing
+    shutdown_complete_tx: mpsc::Sender<()>,
 }
 
-// TODO currently doesn't handle shutdown, so world will stay online even when channel is shutdown
 impl ChannelServer {
-    pub async fn start(self) -> anyhow::Result<()> {
-        let (channel, addr) = self.get_available_channel().await?;
-        let listener = TcpListener::bind(&addr).await?;
-        log::info!("{} {} started @ {}", channel.world_name, channel.id, &addr);
-        self.execute_startup_tasks(&channel).await?;
+    /// Starts the channel server
+    pub async fn start(db: Pool<MySql>) -> anyhow::Result<()> {
+        let (channel, addr) = Self::get_available_channel(&db).await?;
+        let (notify_shutdown, _) = broadcast::channel::<()>(1);
+        let (shutdown_complete_tx, mut shutdown_complete_rx) = mpsc::channel::<()>(1);
+
+        let mut server = ChannelServer {
+            data: channel,
+            addr,
+            db,
+            notify_shutdown,
+            shutdown_complete_tx,
+        };
+
+        server.execute_startup_tasks().await?;
+
+        tokio::select! {
+            _ = server.listen() => {},
+            _ = tokio::signal::ctrl_c() => {}
+        }
+
+        server.execute_shutdown_tasks().await?;
+
+        let ChannelServer {
+            shutdown_complete_tx,
+            notify_shutdown,
+            ..
+        } = server;
+
+        // When `notify_shutdown` is dropped, all tasks which have `subscribe`d will
+        // receive the shutdown signal and can exit
+        drop(notify_shutdown);
+
+        // Drop final `Sender` so the `Receiver` below can complete
+        drop(shutdown_complete_tx);
+
+        // Wait for all active connections to finish processing
+        let _ = shutdown_complete_rx.recv().await;
+        Ok(())
+    }
+
+    async fn listen(&mut self) -> anyhow::Result<()> {
+        let listener = TcpListener::bind(&self.addr).await?;
+        log::info!(
+            "{} {} started @ {}",
+            self.data.world_name,
+            self.data.id,
+            &self.addr
+        );
 
         let mut session_id = 0;
 
@@ -36,44 +89,25 @@ impl ChannelServer {
                 id: session_id,
                 stream,
                 db: self.db.clone(),
+                shutdown: Shutdown::new(self.notify_shutdown.subscribe()),
+                _shutdown_complete: self.shutdown_complete_tx.clone(),
             };
 
             // Spawn a task for handling the new login session
             tokio::spawn(async move {
-                Self::handle_session(session).await;
+                session.handle().await;
             });
         }
     }
 
-    /// Gets the first available address to listen on
-    async fn get_available_channel(&self) -> anyhow::Result<(sql::Channel, String)> {
-        let channel =
-            sqlx::query_as::<_, sql::Channel>("SELECT * FROM channels WHERE is_online = false")
-                .fetch_one(&self.db)
-                .await?;
-
-        // TODO handle no channel being available
-
-        let base_port: i32 = self
-            .base_port
-            .parse()
-            .expect("Base port should be a valid integer");
-
-        // ex. 10000 + ((1 - 1) * 1000) + (1 - 1) = 10000 (world 1, channel 1)
-        // ex. 10000 + ((2 - 1) * 1000) + (2 - 1) = 11001 (world 2, channel 2)
-        let port = base_port + ((channel.world_id - 1) * 1000) + (channel.id - 1);
-        let addr = format!("{}:{}", self.ip, port);
-        Ok((channel, addr))
-    }
-
     /// Executes startup tasks
-    async fn execute_startup_tasks(&self, channel: &sql::Channel) -> anyhow::Result<()> {
+    async fn execute_startup_tasks(&self) -> anyhow::Result<()> {
         let start = Instant::now();
         log::info!("Executing startup tasks...");
 
         sqlx::query("UPDATE channels SET is_online = 1 WHERE id = ? AND world_id = ?")
-            .bind(channel.id)
-            .bind(channel.world_id)
+            .bind(self.data.id)
+            .bind(self.data.world_id)
             .execute(&self.db)
             .await?;
 
@@ -81,40 +115,37 @@ impl ChannelServer {
         Ok(())
     }
 
-    /// Handles a new channel session
-    async fn handle_session(mut session: ChannelSession) {
-        log::info!("Created channel session [id: {}]", session.id);
+    /// Executes shutdown tasks
+    async fn execute_shutdown_tasks(&self) -> anyhow::Result<()> {
+        let start = Instant::now();
+        log::info!("Executing shutdown tasks...");
 
-        // Send unencrypted handshake to client -- sets up encryption IVs
-        if let Err(e) = session.stream.write_handshake().await {
-            log::error!("Handshake error: {} [id: {}]", e, session.id);
-            return;
-        }
+        sqlx::query("UPDATE channels SET is_online = 0 WHERE id = ? AND world_id = ?")
+            .bind(self.data.id)
+            .bind(self.data.world_id)
+            .execute(&self.db)
+            .await?;
 
-        // Keep reading packets from the client in a loop until they disconnect
-        // or an error occurs
-        loop {
-            let packet = match session.stream.read_packet().await {
-                Some(Ok(packet)) => packet,
-                Some(Err(e)) => {
-                    log::error!("Error reading packet: {} [id: {}]", e, session.id);
-                    break;
-                }
-                // Client disconnected/sent EOF
-                None => break,
-            };
-
-            if let Err(e) = packet_handler::handle_packet(packet, &mut session).await {
-                log::error!("Error handling packet: {} [id: {}]", e, session.id);
-            }
-        }
-
-        log::info!("Channel session ended [id: {}]", session.id);
+        log::info!("Finished shutdown tasks in {:?}", start.elapsed());
+        Ok(())
     }
-}
 
-pub struct ChannelSession {
-    pub id: i32,
-    pub stream: MapleStream,
-    pub db: Pool<MySql>,
+    /// Gets the first available address to listen on
+    async fn get_available_channel(db: &Pool<MySql>) -> anyhow::Result<(sql::Channel, String)> {
+        let channel =
+            sqlx::query_as::<_, sql::Channel>("SELECT * FROM channels WHERE is_online = false")
+                .fetch_one(db)
+                .await?;
+
+        // TODO handle no channel being available
+
+        let ip = env::var("CHANNEL_IP")?;
+        let base_port: i32 = env::var("CHANNEL_BASE_PORT")?.parse()?;
+
+        // ex. 10000 + ((1 - 1) * 1000) + (1 - 1) = 10000 (world 1, channel 1)
+        // ex. 10000 + ((2 - 1) * 1000) + (2 - 1) = 11001 (world 2, channel 2)
+        let port = base_port + ((channel.world_id - 1) * 1000) + (channel.id - 1);
+        let addr = format!("{}:{}", ip, port);
+        Ok((channel, addr))
+    }
 }
