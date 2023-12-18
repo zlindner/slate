@@ -1532,6 +1532,7 @@ dependencies = [
  "log",
  "nx",
  "once_cell",
+ "rand",
  "serde",
  "slime-net",
  "sqlx",

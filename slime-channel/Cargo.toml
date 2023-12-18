@@ -8,11 +8,11 @@ slime-data = { path = "../slime-data" }
 slime-net = { path = "../slime-net" }
 
 anyhow = "1.0.72"
+crossbeam-channel = "0.5.9"
+dashmap = "5.5.3"
 dotenvy = "0.15.7"
 env_logger = "0.10.0"
 log = "0.4.20"
+rand = "0.8.5"
 sqlx = { version = "0.7.1", features = ["runtime-tokio", "tls-native-tls", "mysql"] }
 tokio = { version = "1.29.1", features = ["full"] }
-dashmap = "5.5.3"
-crossbeam-channel = "0.5.9"
-rand = "0.8.5"

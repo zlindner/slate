@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::session::ChannelSession;
 use rand::random;
 use slime_data::{
@@ -8,6 +6,7 @@ use slime_data::{
 };
 use slime_net::Packet;
 use sqlx::types::chrono::{Local, Utc};
+use std::collections::HashMap;
 
 /// Channel server: connect packet (0x14)
 /// Called when the client transitions from login to channel server
@@ -23,6 +22,8 @@ pub async fn handle(mut packet: Packet, session: &mut ChannelSession) -> anyhow:
         }
     };
 
+    // TODO we can delete the login session row here
+
     // TODO should load account and verify state is transitioning
 
     let character = maple::Character::load(login_session.character_id, &session.db).await?;
@@ -37,6 +38,7 @@ pub async fn handle(mut packet: Packet, session: &mut ChannelSession) -> anyhow:
         .write_packet(character_keymap(&character))
         .await?;
 
+    // TODO
     /*
     // Get the map as immutable (read-lock)
     {

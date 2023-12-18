@@ -91,6 +91,8 @@ impl ChannelServer {
                 id: session_id,
                 stream,
                 db: self.db.clone(),
+                world_id: self.data.world_id,
+                channel_id: self.data.id,
                 shutdown: Shutdown::new(self.notify_shutdown.subscribe()),
                 _shutdown_complete: self.shutdown_complete_tx.clone(),
                 maps: maps.clone(),

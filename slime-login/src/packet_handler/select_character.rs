@@ -1,8 +1,7 @@
-use std::env;
-
 use crate::server::LoginSession;
 use slime_data::sql::{self, account::LoginState};
 use slime_net::Packet;
+use std::env;
 
 /// Login server: select character packet (0x13)
 /// Called when the client selects a character and doesn't have a PIC
@@ -21,14 +20,14 @@ pub async fn connect_to_channel_server(session: &mut LoginSession) -> anyhow::Re
     // TODO we can check mac_addr/hwid from host_addr if we want to prevent multi-logging
 
     sqlx::query(
-        "INSERT INTO login_sessions (id, character_id, world_id, channel_id, map_id) 
+        "INSERT INTO login_sessions (id, account_id, character_id, world_id, channel_id) 
         VALUES (?, ?, ?, ?, ?)",
     )
     .bind(session.id)
+    .bind(session.data.account_id)
     .bind(session.data.character_id)
     .bind(session.data.world_id)
     .bind(session.data.channel_id)
-    .bind(session.data.map_id)
     .execute(&session.db)
     .await?;
 
@@ -43,6 +42,14 @@ pub async fn connect_to_channel_server(session: &mut LoginSession) -> anyhow::Re
         .stream
         .write_packet(channel_server_addr(session))
         .await?;
+
+    sqlx::query(
+        "UPDATE channels SET connected_players = connected_players + 1 WHERE world_id = ? AND id = ?"
+    )
+    .bind(session.data.world_id)
+    .bind(session.data.channel_id)
+    .execute(&session.db)
+    .await?;
 
     Ok(())
 }

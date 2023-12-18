@@ -49,7 +49,7 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
         return Ok(());
     }
 
-    let (starter_item_id, job_id, map) = match job {
+    let (starter_item_id, job_id, map_id) = match job {
         0 => (4161047, 1000, 130030000), // Knight of Cygnus (noblesse guide, noblesse, noblesse starting map)
         1 => (4161001, 0, 10000),        // Beginner (beginner's guide, explorer, mushroom town)
         2 => (4161048, 2000, 914000000), // Aran (legend's guide, legend, aran tutorial start)
@@ -58,8 +58,6 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
             return Ok(());
         }
     };
-
-    session.data.map_id = map;
 
     // Create the character and get it's id
     let character_id = sqlx::query(
@@ -74,7 +72,7 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
     .bind(gender as i32)
     .bind(hair + hair_colour)
     .bind(face)
-    .bind(session.data.map_id)
+    .bind(map_id)
     .execute(&session.db)
     .await?
     .last_insert_id() as i32;

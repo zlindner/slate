@@ -2,8 +2,10 @@ use once_cell::sync::Lazy;
 use std::{collections::HashMap, path::Path};
 
 pub mod equipment;
+pub mod map;
 
-pub use crate::nx::equipment::Equipment;
+pub use self::equipment::Equipment;
+pub use self::map::Map;
 
 const NX_FILES: [&str; 13] = [
     "Base",

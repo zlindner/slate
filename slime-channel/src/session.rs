@@ -12,6 +12,9 @@ pub struct ChannelSession {
     pub stream: MapleStream,
     pub db: Pool<MySql>,
 
+    pub world_id: i32,
+    pub channel_id: i32,
+
     // Graceful shutdown handlers
     pub shutdown: Shutdown,
     pub _shutdown_complete: mpsc::Sender<()>,
@@ -78,5 +81,26 @@ impl ChannelSession {
         }
 
         log::info!("Channel session ended [id: {}]", self.id);
+
+        if let Err(e) = self.on_disconnect().await {
+            log::error!(
+                "Error executing disconnection tasks: {} [id: {}]",
+                e,
+                self.id
+            );
+        }
+    }
+
+    /// Execute disconnection tasks
+    async fn on_disconnect(&self) -> anyhow::Result<()> {
+        sqlx::query(
+            "UPDATE channels SET connected_players = connected_players - 1 WHERE world_id = ? AND id = ?"
+        )
+        .bind(self.world_id)
+        .bind(self.channel_id)
+        .execute(&self.db)
+        .await?;
+
+        Ok(())
     }
 }

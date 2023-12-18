@@ -3,12 +3,12 @@ use sqlx::FromRow;
 
 #[derive(FromRow)]
 pub struct LoginSession {
+    // TODO this is always -1 on login server side, kinda weird?
+    pub id: i32,
+    pub account_id: i32,
     pub character_id: i32,
     pub world_id: i32,
     pub channel_id: i32,
-    pub map_id: i32,
-    #[sqlx(default)]
-    pub account_id: i32,
     #[sqlx(default)]
     pub login_attempts: i32,
     #[sqlx(default)]
@@ -37,11 +37,11 @@ impl LoginSession {
 impl Default for LoginSession {
     fn default() -> Self {
         Self {
+            id: -1,
+            account_id: -1,
             character_id: -1,
             world_id: -1,
             channel_id: -1,
-            map_id: -1,
-            account_id: -1,
             login_attempts: 0,
             pin: String::new(),
             pin_attempts: 0,
