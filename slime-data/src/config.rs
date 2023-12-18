@@ -3,7 +3,6 @@ use std::fs;
 
 #[derive(Debug, Deserialize, Default)]
 pub struct World {
-    pub id: i32,
     pub name: String,
     pub channels: i32,
     pub flag: i32,

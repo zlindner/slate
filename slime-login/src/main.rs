@@ -7,7 +7,6 @@ use sqlx::{
 };
 use std::{env, str::FromStr, sync::Arc};
 
-mod packet;
 mod packet_handler;
 mod server;
 

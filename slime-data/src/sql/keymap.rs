@@ -12,7 +12,7 @@ pub struct Keymap {
 
 impl Keymap {
     /// Loads the keymaps for a character
-    pub async fn load(character_id: i32, db: &Db) -> anyhow::Result<Vec<Self>> {
+    pub async fn load_all(character_id: i32, db: &Db) -> anyhow::Result<Vec<Self>> {
         let keymaps = sqlx::query_as::<_, Keymap>("SELECT * FROM keymaps WHERE character_id = ?")
             .bind(character_id)
             .fetch_all(db)

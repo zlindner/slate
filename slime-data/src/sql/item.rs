@@ -26,7 +26,7 @@ impl Item {
     }
 }
 
-#[derive(Decode, Encode)]
+#[derive(Decode, Encode, Clone, Copy)]
 pub enum InventoryType {
     Equip,
     Use,

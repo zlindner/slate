@@ -37,7 +37,7 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
 
     session
         .stream
-        .write_packet(super::login::login_succeeded(&session, &account))
+        .write_packet(super::login::login_succeeded(session, &account))
         .await?;
 
     Ok(())

@@ -1,8 +1,9 @@
 use crate::{session::ChannelSession, shutdown::Shutdown};
+use dashmap::DashMap;
 use slime_data::sql;
 use slime_net::MapleStream;
 use sqlx::{MySql, Pool};
-use std::{env, time::Instant};
+use std::{env, sync::Arc, time::Instant};
 use tokio::{
     net::TcpListener,
     sync::{broadcast, mpsc},
@@ -68,11 +69,12 @@ impl ChannelServer {
         log::info!(
             "{} {} started @ {}",
             self.data.world_name,
-            self.data.id,
+            self.data.id + 1,
             &self.addr
         );
 
         let mut session_id = 0;
+        let maps = Arc::new(DashMap::new());
 
         loop {
             let stream = match listener.accept().await {
@@ -91,6 +93,8 @@ impl ChannelServer {
                 db: self.db.clone(),
                 shutdown: Shutdown::new(self.notify_shutdown.subscribe()),
                 _shutdown_complete: self.shutdown_complete_tx.clone(),
+                maps: maps.clone(),
+                broadcast_rx: None,
             };
 
             // Spawn a task for handling the new login session
@@ -142,9 +146,9 @@ impl ChannelServer {
         let ip = env::var("CHANNEL_IP")?;
         let base_port: i32 = env::var("CHANNEL_BASE_PORT")?.parse()?;
 
-        // ex. 10000 + ((1 - 1) * 1000) + (1 - 1) = 10000 (world 1, channel 1)
-        // ex. 10000 + ((2 - 1) * 1000) + (2 - 1) = 11001 (world 2, channel 2)
-        let port = base_port + ((channel.world_id - 1) * 1000) + (channel.id - 1);
+        // ex. 10000 + (0 * 1000) + 0 = 10000 (world 1, channel 1)
+        // ex. 10000 + (1  * 1000) + 1 = 11001 (world 2, channel 2)
+        let port = base_port + (channel.world_id * 1000) + (channel.id);
         let addr = format!("{}:{}", ip, port);
         Ok((channel, addr))
     }

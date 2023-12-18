@@ -1,3 +1,5 @@
+use std::env;
+
 use crate::server::LoginSession;
 use slime_data::sql::{self, account::LoginState};
 use slime_net::Packet;
@@ -10,20 +12,19 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
     let host_addr = packet.read_string();
 
     session.data.character_id = character_id;
-    connect_to_world_server(session).await?;
+    connect_to_channel_server(session).await?;
     Ok(())
 }
 
 ///
-pub async fn connect_to_world_server(session: &mut LoginSession) -> anyhow::Result<()> {
+pub async fn connect_to_channel_server(session: &mut LoginSession) -> anyhow::Result<()> {
     // TODO we can check mac_addr/hwid from host_addr if we want to prevent multi-logging
 
     sqlx::query(
-        "INSERT INTO login_sessions (id, account_id, character_id, world_id, channel_id, map_id) 
-        VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO login_sessions (id, character_id, world_id, channel_id, map_id) 
+        VALUES (?, ?, ?, ?, ?)",
     )
     .bind(session.id)
-    .bind(session.data.account_id)
     .bind(session.data.character_id)
     .bind(session.data.world_id)
     .bind(session.data.channel_id)
@@ -40,19 +41,19 @@ pub async fn connect_to_world_server(session: &mut LoginSession) -> anyhow::Resu
 
     session
         .stream
-        .write_packet(world_server_addr(session))
+        .write_packet(channel_server_addr(session))
         .await?;
 
     Ok(())
 }
 
-/// Packet containing the world server addr and client's session id
-fn world_server_addr(session: &LoginSession) -> Packet {
+/// Packet containing the channel server addr and client's session id
+fn channel_server_addr(session: &LoginSession) -> Packet {
     let mut packet = Packet::new(0x0C);
     packet.write_short(0);
 
-    // Get the world server ip and convert each "." delimited section to a u8
-    let ip = std::env::var("CHANNEL_IP").unwrap();
+    // Get the channel server ip and convert each "." delimited section to a u8
+    let ip = env::var("CHANNEL_IP").expect("Channel ip should be defined in .env");
     let ip = ip.split('.').collect::<Vec<&str>>();
     packet.write_bytes(&[
         ip.first().unwrap().parse::<u8>().unwrap(),
@@ -61,18 +62,12 @@ fn world_server_addr(session: &LoginSession) -> Packet {
         ip.get(3).unwrap().parse::<u8>().unwrap(),
     ]);
 
-    let base_port: i32 = std::env::var("CHANNEL_BASE_PORT")
-        .unwrap()
+    let base_port: i32 = env::var("CHANNEL_BASE_PORT")
+        .expect("Channel base port should be defined in .env")
         .parse()
         .expect("Channel base port should be a valid integer");
 
-    let world = session
-        .config
-        .worlds
-        .get(session.data.world_id as usize)
-        .unwrap();
-
-    let port = base_port + ((world.id - 1) * 1000) + (session.data.channel_id - 1);
+    let port = base_port + (session.data.world_id * 1000) + (session.data.channel_id);
     packet.write_short(port as i16);
 
     // NOTE: this is technically supposed to be the character id, but we need

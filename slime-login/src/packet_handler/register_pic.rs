@@ -25,6 +25,6 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
     session.data.pic = pic;
     session.data.character_id = character_id;
 
-    super::select_character::connect_to_world_server(session).await?;
+    super::select_character::connect_to_channel_server(session).await?;
     Ok(())
 }

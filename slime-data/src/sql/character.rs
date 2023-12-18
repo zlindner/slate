@@ -50,14 +50,12 @@ pub struct Character {
 }
 
 impl Character {
-    /// Loads a character by name in the selected world
-    pub async fn load_by_name(name: &String, world_id: i32, db: &Db) -> anyhow::Result<Self> {
-        let character =
-            sqlx::query_as::<_, Self>("SELECT * FROM characters WHERE name = ? AND world_id = ?")
-                .bind(name)
-                .bind(world_id)
-                .fetch_one(db)
-                .await?;
+    /// Loads a character by id
+    pub async fn load(id: i32, db: &Db) -> anyhow::Result<Self> {
+        let character = sqlx::query_as::<_, Self>("SELECT * FROM characters WHERE id = ?")
+            .bind(id)
+            .fetch_one(db)
+            .await?;
 
         Ok(character)
     }

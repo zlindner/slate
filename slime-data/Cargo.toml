@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+slime-net = { path = "../slime-net" }
+
 anyhow = "1.0.72"
 log = "0.4.20"
 nx = "0.3.0"
@@ -11,3 +13,4 @@ once_cell = "1.19.0"
 serde = "1.0.183"
 sqlx = { version = "0.7.1", features = ["runtime-tokio", "tls-native-tls", "mysql", "chrono"] }
 toml = "0.7.6"
+crossbeam-channel = "0.5.9"

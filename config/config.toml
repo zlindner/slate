@@ -2,7 +2,6 @@ enable_pin = false
 enable_pic = true
 
 [[worlds]]
-id = 1
 name = "Scania"
 channels = 10
 flag = 0
@@ -18,7 +17,6 @@ travel_rate = 10
 max_players = 1000
 
 [[worlds]]
-id = 2
 name = "Bera"
 channels = 10
 flag = 0

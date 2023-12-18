@@ -5,8 +5,13 @@ use slime_net::Packet;
 /// Login server: world list (0x0B)
 /// Displays the world list to the user after successful login
 pub async fn handle(_packet: Packet, session: &mut LoginSession) -> anyhow::Result<()> {
-    for world in session.config.worlds.iter() {
-        session.stream.write_packet(world_info(world)).await?;
+    for i in 0..session.config.worlds.len() {
+        let world = session.config.worlds.get(i).unwrap();
+
+        session
+            .stream
+            .write_packet(world_info(i as i32, world))
+            .await?;
     }
 
     session.stream.write_packet(world_list_end()).await?;
@@ -22,9 +27,9 @@ pub async fn handle(_packet: Packet, session: &mut LoginSession) -> anyhow::Resu
 }
 
 /// Packet containing info for each world (name, rates, etc.)
-fn world_info(world: &config::World) -> Packet {
+fn world_info(id: i32, world: &config::World) -> Packet {
     let mut packet = Packet::new(0x0A);
-    packet.write_byte(world.id as u8);
+    packet.write_byte(id as u8);
     packet.write_string(&world.name);
     packet.write_byte(world.flag as u8); // 0: normal, 1: event, 2: new, 3: hot
     packet.write_string(&world.event_message);
@@ -37,7 +42,7 @@ fn world_info(world: &config::World) -> Packet {
         // TODO channel capacity: connected(?) characters / channel_load (100?) * 800
         // TODO make max players per channel configurable
         packet.write_int(100);
-        packet.write_byte(world.id as u8);
+        packet.write_byte(id as u8);
         packet.write_byte(i as u8);
         packet.write_byte(0); // Adult channel flag
     }
@@ -58,8 +63,10 @@ fn recommended_world(worlds: &Vec<config::World>) -> Packet {
     let mut packet = Packet::new(0x1B);
     packet.write_byte(worlds.len() as u8);
 
-    for world in worlds.iter() {
-        packet.write_int(world.id);
+    for i in 0..worlds.len() {
+        let world = worlds.get(i).unwrap();
+
+        packet.write_int(i as i32);
         packet.write_string(&world.recommended_message);
     }
 

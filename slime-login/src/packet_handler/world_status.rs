@@ -11,13 +11,16 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
     let response = match session.config.worlds.get(world_id as usize) {
         None => world_status(WorldStatus::Full),
         Some(world_config) => {
-            let players: i32 = sqlx::query(
+            let players: u64 = sqlx::query(
                 "SELECT CAST(SUM(connected_players) AS UNSIGNED) AS sum FROM channels WHERE world_id = 1",
             )
             .bind(world_id)
             .fetch_one(&session.db)
             .await?
             .get("sum");
+
+            // FIXME
+            let players: i32 = players.try_into().unwrap();
 
             // TODO add max_players_channel? we can do world_config.channels * max_players_channel instead
             let status = if players >= world_config.max_players {

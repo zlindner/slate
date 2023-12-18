@@ -85,9 +85,11 @@ async fn init_channels(config: &Config, db: &Db) -> anyhow::Result<()> {
 
     let mut channels = Vec::new();
 
-    for world in config.worlds.iter() {
-        for i in 1..=world.channels {
-            channels.push((i, world.name.clone(), world.id));
+    for i in 0..config.worlds.len() {
+        let world = config.worlds.get(i).unwrap();
+
+        for j in 0..world.channels {
+            channels.push((j, world.name.clone(), i as i32));
         }
     }
 

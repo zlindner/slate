@@ -2,7 +2,6 @@ use super::character_list::write_character;
 use crate::server::LoginSession;
 use once_cell::sync::Lazy;
 use slime_data::{
-    maple,
     nx::{self, equipment::EquipmentType},
     sql::{self, item::InventoryType},
 };
@@ -60,6 +59,8 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
         }
     };
 
+    session.data.map_id = map;
+
     // Create the character and get it's id
     let character_id = sqlx::query(
         "INSERT INTO characters (account_id, world_id, name, job, skin_colour, gender, hair, face, map)
@@ -73,10 +74,10 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
     .bind(gender as i32)
     .bind(hair + hair_colour)
     .bind(face)
-    .bind(map)
+    .bind(session.data.map_id)
     .execute(&session.db)
     .await?
-    .last_insert_id();
+    .last_insert_id() as i32;
 
     // Create starter equips
     let starter_equips = [
@@ -85,7 +86,7 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
         (shoes, EquipmentType::Shoes),
         (weapon, EquipmentType::Weapon),
     ];
-    create_equips(starter_equips, character_id as i32, session).await?;
+    create_equips(starter_equips, character_id, session).await?;
 
     create_default_keymaps(session).await?;
 
@@ -102,21 +103,22 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
     .execute(&session.db)
     .await?;
 
-    let character = maple::Character::load(&name, session.data.world_id, &session.db).await?;
+    let character = sql::Character::load(character_id, &session.db).await?;
+    let equipment = sql::Equipment::load_all(character_id, &session.db).await?;
 
     session
         .stream
-        .write_packet(create_character(character))
+        .write_packet(create_character(&character, &equipment))
         .await?;
 
     Ok(())
 }
 
 ///
-pub fn create_character(character: maple::Character) -> Packet {
+pub fn create_character(character: &sql::Character, equipment: &[sql::Equipment]) -> Packet {
     let mut packet = Packet::new(0x0E);
     packet.write_byte(0);
-    write_character(&mut packet, &character, false);
+    write_character(&mut packet, character, equipment, false);
     packet
 }
 

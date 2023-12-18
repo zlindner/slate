@@ -1,6 +1,5 @@
+use crate::Db;
 use sqlx::FromRow;
-
-use crate::{nx::equipment, Db};
 
 #[derive(FromRow)]
 pub struct Equipment {
