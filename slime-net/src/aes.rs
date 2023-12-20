@@ -4,7 +4,7 @@ use aes::{
     Aes256,
 };
 use anyhow::{anyhow, Result};
-use bytes::{BufMut, BytesMut};
+use bytes::{Buf, BufMut, BytesMut};
 use rand::random;
 use tokio_util::codec::{Decoder, Encoder};
 
@@ -148,29 +148,32 @@ impl Decoder for MapleAES {
     type Error = anyhow::Error;
 
     fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Packet>> {
-        // header (4) + op code (2)
+        // Sanity check to ensure we have at least the packet header and op-code
         if buf.len() < 6 {
             return Ok(None);
         }
 
-        // TODO do we need to split, why not just pass in entire packet?
-        let header = buf.split_to(4);
+        // Header is first 4 bytes
+        let header = &buf[0..4];
 
-        if !self.is_valid_header(&header) {
+        if !self.is_valid_header(header) {
             return Err(anyhow!("Invalid packet header {:02X?}", header));
         }
 
-        let len = self.get_packet_len(&header);
+        let len = self.get_packet_len(header) as usize;
 
-        if len as usize > buf.len() {
-            log::warn!(
-                "Packet length {} is greater than buf length {}",
-                len,
-                buf.len()
-            );
+        // Check if the buf contains the full packet, if not keep reading until we have
+        if len + 4 > buf.len() {
+            return Ok(None);
         }
 
-        let mut body = buf.split_to(len as usize);
+        // Remove the header
+        buf.advance(4);
+
+        // Get the packet body, decrypt and wrap in a `Packet`
+        // Note: buf may contain bytes from another packet, so we use `split_to` to ensure we
+        // only return a single packet at a time
+        let mut body = buf.split_to(len);
         self.decrypt(&mut body);
         Ok(Some(Packet::wrap(body)))
     }
