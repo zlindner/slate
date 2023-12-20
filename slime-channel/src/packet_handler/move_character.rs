@@ -9,13 +9,8 @@ pub async fn handle(mut packet: Packet, session: &mut ChannelSession) -> anyhow:
     let packet_copy = packet.clone();
     let num_commands = packet.read_byte();
 
-    // TODO we can probably do this where we calculate the movement first, then get a lock on the map
-    // and update/broadcast
-    let mut map = session.state.get_map_mut(session.map_id.unwrap());
-    let character = map
-        .characters
-        .get_mut(&session.character_id.unwrap())
-        .unwrap();
+    let mut new_pos: Option<(i32, i32)> = None;
+    let mut new_stance: Option<u8> = None;
 
     for _ in 0..num_commands {
         let command = packet.read_byte();
@@ -25,24 +20,24 @@ pub async fn handle(mut packet: Packet, session: &mut ChannelSession) -> anyhow:
             0 | 5 | 17 => {
                 let x = packet.read_short();
                 let y = packet.read_short();
-                character.pos = (x.into(), y.into());
+                new_pos = Some((x.into(), y.into()));
                 packet.skip(6);
                 let stance = packet.read_byte();
-                character.stance = stance;
+                new_stance = Some(stance);
                 packet.skip(2);
             }
             // Relative movement -- server only cares about stance
             1 | 2 | 6 | 12 | 13 | 16 | 18 | 19 | 20 | 22 => {
                 packet.skip(4);
                 let stance = packet.read_byte();
-                character.stance = stance;
+                new_stance = Some(stance);
                 packet.skip(2);
             }
             // Teleport movement -- server only cares about stance
             3 | 4 | 7 | 8 | 9 | 11 => {
                 packet.skip(8);
                 let stance = packet.read_byte();
-                character.stance = stance;
+                new_stance = Some(stance);
             }
             14 => {
                 packet.skip(9);
@@ -54,7 +49,7 @@ pub async fn handle(mut packet: Packet, session: &mut ChannelSession) -> anyhow:
             15 => {
                 packet.skip(12);
                 let stance = packet.read_byte();
-                character.stance = stance;
+                new_stance = Some(stance);
                 packet.skip(2);
             }
             21 => {
@@ -66,16 +61,36 @@ pub async fn handle(mut packet: Packet, session: &mut ChannelSession) -> anyhow:
         }
     }
 
-    // Broadcast to all other players that we moved
-    // TODO we should build a vec in the above loop and only broadcast movement packets that matter
-    // on the client (ex. don't need to send absolute movement)
-    let broadcast = maple::map::Broadcast {
-        packet: move_player(session.character_id.unwrap(), packet_copy),
-        sender_id: character.data.id,
-        sender_pos: character.pos,
-        send_to_sender: false,
-    };
-    map.broadcast_tx.send(broadcast)?;
+    // Character hasn't moved -- do nothing
+    if new_pos.is_none() && new_stance.is_none() {
+        return Ok(());
+    }
+
+    // Get the map as read-only
+    {
+        let map = session.state.get_map(session.map_id.unwrap());
+        let character = map.characters.get(&session.character_id.unwrap()).unwrap();
+
+        let broadcast = maple::map::Broadcast {
+            packet: move_player(session.character_id.unwrap(), packet_copy),
+            sender_id: character.data.id,
+            sender_pos: character.pos,
+            send_to_sender: false,
+        };
+        map.broadcast_tx.send(broadcast)?;
+    }
+
+    // Get the map as read-write
+    {
+        let mut map = session.state.get_map_mut(session.map_id.unwrap());
+        let character = map
+            .characters
+            .get_mut(&session.character_id.unwrap())
+            .unwrap();
+
+        character.pos = new_pos.unwrap_or(character.pos);
+        character.stance = new_stance.unwrap_or(character.stance);
+    }
 
     Ok(())
 }

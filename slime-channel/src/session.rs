@@ -74,8 +74,6 @@ impl ChannelSession {
                         continue;
                     }
 
-                    log::debug!("Received broadcast: {}", broadcast.packet);
-
                     // We can optionally do some checks to see if we are in range to receive the broadcast
 
                     if let Err(e) = self.stream.write_packet(broadcast.packet).await {
