@@ -40,6 +40,7 @@ impl LoginServer {
                 db: self.db.clone(),
                 data: sql::LoginSession::default(),
                 config: self.config.clone(),
+                transitioning: false,
             };
 
             // Spawn a task for handling the new login session
@@ -97,7 +98,8 @@ impl LoginServer {
 
         log::info!("Login session ended [id: {}]", session.id);
 
-        if session.data.account_id != -1 {
+        // If we aren't transitioning to the channel server, set the account's state to `LoggedOut`
+        if !session.transitioning {
             sql::Account::update_login_state(
                 session.data.account_id,
                 LoginState::LoggedOut,
@@ -115,4 +117,7 @@ pub struct LoginSession {
     pub db: Pool<MySql>,
     pub data: sql::LoginSession,
     pub config: Arc<Config>,
+
+    // Indicates we are transitioning to the channel server
+    pub transitioning: bool,
 }

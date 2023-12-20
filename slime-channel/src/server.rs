@@ -1,5 +1,4 @@
-use crate::{session::ChannelSession, shutdown::Shutdown};
-use dashmap::DashMap;
+use crate::{session::ChannelSession, shutdown::Shutdown, state::State};
 use slime_data::sql;
 use slime_net::MapleStream;
 use sqlx::{MySql, Pool};
@@ -74,7 +73,7 @@ impl ChannelServer {
         );
 
         let mut session_id = 0;
-        let maps = Arc::new(DashMap::new());
+        let state = Arc::new(State::new());
 
         loop {
             let stream = match listener.accept().await {
@@ -93,9 +92,11 @@ impl ChannelServer {
                 db: self.db.clone(),
                 world_id: self.data.world_id,
                 channel_id: self.data.id,
+                account_id: None,
+                character_id: None,
                 shutdown: Shutdown::new(self.notify_shutdown.subscribe()),
                 _shutdown_complete: self.shutdown_complete_tx.clone(),
-                maps: maps.clone(),
+                state: state.clone(),
                 broadcast_rx: None,
             };
 
@@ -111,7 +112,7 @@ impl ChannelServer {
         let start = Instant::now();
         log::info!("Executing startup tasks...");
 
-        sqlx::query("UPDATE channels SET is_online = 1 WHERE id = ? AND world_id = ?")
+        sqlx::query("UPDATE channels SET is_online = 1, connected_players = 0 WHERE id = ? AND world_id = ?")
             .bind(self.data.id)
             .bind(self.data.world_id)
             .execute(&self.db)

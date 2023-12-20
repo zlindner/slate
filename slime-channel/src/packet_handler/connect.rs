@@ -1,8 +1,8 @@
 use crate::session::ChannelSession;
 use rand::random;
 use slime_data::{
-    maple, packet,
-    sql::{self, item::InventoryType, quest::QuestStatus},
+    maple, nx, packet,
+    sql::{self, account::LoginState, item::InventoryType, quest::QuestStatus},
 };
 use slime_net::Packet;
 use sqlx::types::chrono::{Local, Utc};
@@ -12,21 +12,46 @@ use std::collections::HashMap;
 /// Called when the client transitions from login to channel server
 pub async fn handle(mut packet: Packet, session: &mut ChannelSession) -> anyhow::Result<()> {
     let session_id = packet.read_int();
-    let maybe_login_session = sql::LoginSession::load_optional(session_id, &session.db).await?;
 
-    let login_session = match maybe_login_session {
+    let login_session = match sql::LoginSession::load_optional(session_id, &session.db).await? {
         Some(login_session) => login_session,
         None => {
-            let response = connect_error(ConnectError::Unknown);
-            return session.stream.write_packet(response).await;
+            return session
+                .stream
+                .write_packet(connect_error(ConnectError::Unknown))
+                .await;
         }
     };
 
-    // TODO we can delete the login session row here
+    // Delete the login session from db
+    login_session.delete(&session.db).await?;
 
-    // TODO should load account and verify state is transitioning
+    let account =
+        match sql::Account::load_optional_by_id(login_session.account_id, &session.db).await? {
+            Some(account) => account,
+            None => {
+                return session
+                    .stream
+                    .write_packet(connect_error(ConnectError::Unknown))
+                    .await;
+            }
+        };
+
+    session.account_id = Some(account.id);
+
+    // Ensure that account has the `Transitioning` state
+    if !matches!(account.state, LoginState::Transitioning) {
+        return session
+            .stream
+            .write_packet(connect_error(ConnectError::Unknown))
+            .await;
+    }
+
+    // Set the account's state to `LoggedIn`
+    sql::Account::update_login_state(account.id, LoginState::LoggedIn, &session.db).await?;
 
     let character = maple::Character::load(login_session.character_id, &session.db).await?;
+    session.character_id = Some(character.data.id);
 
     session
         .stream
@@ -38,31 +63,47 @@ pub async fn handle(mut packet: Packet, session: &mut ChannelSession) -> anyhow:
         .write_packet(character_keymap(&character))
         .await?;
 
-    // TODO
-    /*
-    // Get the map as immutable (read-lock)
+    // Get the map as read-only
     {
-        let map = session.maps.get(&character.data.map).unwrap();
+        let map = session.state.get_map(character.data.map);
 
         // Broadcast to all other players that we entered the map
         let broadcast = maple::map::Broadcast {
             packet: spawn_character(&character, true),
             sender_id: character.data.id,
-            sender_position: character.pos,
+            sender_pos: character.pos,
             send_to_sender: false,
         };
         map.broadcast_tx.send(broadcast)?;
 
-        // Subscribe to the current maps broadcast channel
-        session.broadcast_rx = Some(map.broadcast_rx.clone());
+        // Send the map's characters
+        for other_character in map.characters.values() {
+            log::debug!("Sending character: {}", other_character.data.id);
+
+            session
+                .stream
+                .write_packet(spawn_character(other_character, false))
+                .await?;
+        }
+
+        // Send the map's npcs
+        for npc in map.data.npcs.values() {
+            session.stream.write_packet(spawn_npc(npc)).await?;
+            session
+                .stream
+                .write_packet(spawn_npc_request_controller(npc))
+                .await?;
+        }
+
+        // Subscribe to the current map's broadcast channel
+        session.broadcast_rx = Some(map.broadcast_tx.subscribe());
     }
 
-    // Get the map as mutable (write-lock)
+    // Get the map as read-write
     {
-        let mut map = session.maps.get_mut(&character.data.map).unwrap();
+        let mut map = session.state.get_map_mut(character.data.map);
         map.characters.insert(character.data.id, character);
     }
-    */
 
     Ok(())
 }
@@ -387,7 +428,6 @@ fn character_keymap(character: &maple::Character) -> Packet {
 ///
 fn spawn_character(character: &maple::Character, entering: bool) -> Packet {
     let mut packet = Packet::new(0xA0);
-
     packet.write_int(character.data.id);
     packet.write_byte(character.data.level as u8);
     packet.write_string(&character.data.name);
@@ -516,9 +556,8 @@ fn write_buffs(packet: &mut Packet) {
     packet.write_short(0);
 }
 
-/*
 ///
-fn spawn_npc(npc: &nx::Life) -> Packet {
+fn spawn_npc(npc: &nx::map::Life) -> Packet {
     let mut packet = Packet::new(0x101);
     packet.write_int(npc.object_id);
     packet.write_int(npc.id);
@@ -533,7 +572,7 @@ fn spawn_npc(npc: &nx::Life) -> Packet {
 }
 
 ///
-fn spawn_npc_request_controller(npc: &nx::Life) -> Packet {
+fn spawn_npc_request_controller(npc: &nx::map::Life) -> Packet {
     let mut packet = Packet::new(0x103);
     packet.write_byte(1);
     packet.write_int(npc.object_id);
@@ -547,4 +586,3 @@ fn spawn_npc_request_controller(npc: &nx::Life) -> Packet {
     packet.write_byte(1);
     packet
 }
- */

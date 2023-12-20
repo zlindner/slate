@@ -67,7 +67,7 @@ impl Account {
 
     /// Updates an account's TOS
     pub async fn update_tos(account_id: i32, tos: bool, db: &Db) -> anyhow::Result<()> {
-        sqlx::query("UPDATE accounts SET tos = ? WHERE id = ?")
+        sqlx::query("UPDATE accounts SET accepted_tos = ? WHERE id = ?")
             .bind(tos)
             .bind(account_id)
             .execute(db)

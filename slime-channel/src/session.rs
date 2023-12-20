@@ -1,11 +1,12 @@
-use crate::{packet_handler, shutdown::Shutdown};
-use crossbeam_channel::Receiver;
-use dashmap::DashMap;
-use slime_data::maple;
+use crate::{packet_handler, shutdown::Shutdown, state::State};
+use slime_data::{
+    maple,
+    sql::{self, account::LoginState},
+};
 use slime_net::MapleStream;
 use sqlx::{MySql, Pool};
 use std::sync::Arc;
-use tokio::sync::mpsc;
+use tokio::sync::{broadcast, mpsc};
 
 pub struct ChannelSession {
     pub id: i32,
@@ -14,16 +15,18 @@ pub struct ChannelSession {
 
     pub world_id: i32,
     pub channel_id: i32,
+    pub account_id: Option<i32>,
+    pub character_id: Option<i32>,
 
     // Graceful shutdown handlers
     pub shutdown: Shutdown,
     pub _shutdown_complete: mpsc::Sender<()>,
 
-    // TODO move to State struct
-    pub maps: Arc<DashMap<i32, maple::Map>>,
+    // Shared state
+    pub state: Arc<State>,
 
     // Broadcast receiver for the current map
-    pub broadcast_rx: Option<Receiver<maple::map::Broadcast>>,
+    pub broadcast_rx: Option<broadcast::Receiver<maple::map::Broadcast>>,
 }
 
 impl ChannelSession {
@@ -41,7 +44,7 @@ impl ChannelSession {
         // an error occurs, or the server is shutting down
         while !self.shutdown.is_shutdown() {
             tokio::select! {
-                res = self.stream.read_packet() => {
+                res = { self.stream.read_packet() } => {
                     let packet = match res {
                         Some(Ok(packet)) => packet,
                         Some(Err(e)) => {
@@ -56,7 +59,7 @@ impl ChannelSession {
                         log::error!("Error handling packet: {} [id: {}]", e, self.id);
                     }
                 },
-                broadcast = async { self.broadcast_rx.as_mut().unwrap().recv() }, if self.broadcast_rx.is_some() => {
+                broadcast = async { self.broadcast_rx.as_mut().unwrap().recv().await }, if self.broadcast_rx.is_some() => {
                     let broadcast = match broadcast {
                         Ok(broadcast) => broadcast,
                         Err(e) => {
@@ -65,12 +68,14 @@ impl ChannelSession {
                         }
                     };
 
-                    /*if !broadcast.send_to_sender && broadcast.sender_id == self.session.character_id {
+                    // Check if we are the sender/if we want to send to sender
+                    if !broadcast.send_to_sender && broadcast.sender_id == self.character_id.unwrap() {
                         continue;
-                    }*/
+                    }
 
-                    // TODO we can do some position check to only receive if we are in range?
-                    // -> how to get our position?
+                    log::debug!("Received broadcast: {}", broadcast.packet);
+
+                    // We can optionally do some checks to see if we are in range to receive the broadcast
 
                     if let Err(e) = self.stream.write_packet(broadcast.packet).await {
                         log::error!("Error writing broadcast packet: {} [id: {}]", e, self.id);
@@ -100,6 +105,15 @@ impl ChannelSession {
         .bind(self.channel_id)
         .execute(&self.db)
         .await?;
+
+        if self.account_id.is_some() {
+            sql::Account::update_login_state(
+                self.account_id.unwrap(),
+                LoginState::LoggedOut,
+                &self.db,
+            )
+            .await?;
+        }
 
         Ok(())
     }

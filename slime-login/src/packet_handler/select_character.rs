@@ -31,6 +31,8 @@ pub async fn connect_to_channel_server(session: &mut LoginSession) -> anyhow::Re
     .execute(&session.db)
     .await?;
 
+    // Indicate we are transition to the login server -- don't update login state when session closes
+    session.transitioning = true;
     sql::Account::update_login_state(
         session.data.account_id,
         LoginState::Transitioning,

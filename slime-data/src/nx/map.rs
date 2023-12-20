@@ -1,4 +1,5 @@
 use crate::nx::DATA;
+use anyhow::anyhow;
 use nx::GenericNode;
 use rand::Rng;
 use std::collections::HashMap;
@@ -19,22 +20,24 @@ pub struct Map {
 }
 
 impl Map {
-    pub fn load(id: i32) -> Option<Self> {
+    pub fn load(id: i32) -> anyhow::Result<Self> {
         let root = DATA.get("Map").unwrap().root().get("Map");
         let area_name = format!("Map{}", id / 100000000);
         let area_data = root.get(&area_name);
 
         if area_data.is_none() {
-            log::debug!("Area {} not found", area_name);
-            return None;
+            return Err(anyhow!("Area data {} not found for map {}", area_name, id));
         }
 
         let map_name = get_map_img_name(id);
         let map_data = area_data.get(&map_name);
 
         if map_data.is_none() {
-            log::debug!("{} not found", map_name);
-            return None;
+            return Err(anyhow!(
+                "Map data {} not found for area {}",
+                map_name,
+                area_name
+            ));
         }
 
         let map_data = map_data.unwrap();
@@ -102,19 +105,19 @@ impl Map {
 
         let life_root = map_data.get("life");
         let (npcs, monsters) = match life_root {
-            Some(life_root) => load_life(life_root),
+            Some(life_root) => Life::load(life_root)?,
             None => (HashMap::new(), HashMap::new()),
         };
 
         let portal_root = map_data.get("portal");
         let portals = match portal_root {
-            Some(portal_root) => load_portals(portal_root),
+            Some(portal_root) => Portal::load(portal_root)?,
             None => HashMap::new(),
         };
 
         let foothold_root = map_data.get("foothold");
         let footholds = match foothold_root {
-            Some(foothold_root) => load_footholds(foothold_root),
+            Some(foothold_root) => Foothold::load(foothold_root)?,
             None => Vec::new(),
         };
 
@@ -123,7 +126,7 @@ impl Map {
         // TODO reactor
         // TODO load map and street name?
 
-        Some(Self {
+        Ok(Self {
             create_mob_interval,
             field_limit,
             mob_rate,
@@ -157,68 +160,70 @@ pub struct Life {
     pub mob_time: i64,
 }
 
+impl Life {
+    // TODO rewrite this -- should ideally have load_npcs and load_monsters
+    pub fn load(root: nx::Node) -> anyhow::Result<(HashMap<i32, Self>, HashMap<i32, Self>)> {
+        let mut npcs = HashMap::new();
+        let mut monsters = HashMap::new();
+
+        for life in root.iter() {
+            let id = life.get("id").string().unwrap_or_default();
+            let type_ = life.get("type").string().unwrap_or_default();
+
+            let life_type = match type_ {
+                "n" | "N" => LifeType::NPC,
+                "m" | "M" => LifeType::Monster,
+                _ => break,
+            };
+
+            let team = life.get("team").integer().unwrap_or(-1);
+            // TODO team stuff
+            let x = life.get("x").integer().unwrap_or(0) as i16;
+            let y = life.get("y").integer().unwrap_or(0) as i16;
+
+            let mut life = Life {
+                id: id.parse().unwrap_or(0),
+                life_type,
+                name: String::new(),
+                position: (x, y),
+                // FIXME this is terrible
+                // Maple requires object ids be i32s (🤢) so pick some random number above
+                // 10000000 to not collide with character ids. Should probably maintain a set per
+                // map that contains used object ids, keep generating until unused.
+                object_id: rand::thread_rng().gen_range(10000000..=i32::MAX),
+                stance: 0,
+                f: life.get("f").integer().unwrap_or(0) as u8,
+                is_hidden: life.get("hide").integer().unwrap_or(0) == 1,
+                fh: life.get("fh").integer().unwrap_or(0) as i16,
+                start_fh: life.get("fh").integer().unwrap_or(0) as i16,
+                cy: life.get("cy").integer().unwrap_or(0) as i16,
+                rx0: life.get("rx0").integer().unwrap_or(0) as i16,
+                rx1: life.get("rx1").integer().unwrap_or(0) as i16,
+                mob_time: life.get("mobTime").integer().unwrap_or(0),
+            };
+
+            match life.life_type {
+                LifeType::NPC => {
+                    // TODO wait wtf is the point of this
+                    let name = load_npc_string(life.id, "name");
+                    life.name = name;
+
+                    npcs.insert(life.object_id, life);
+                }
+                LifeType::Monster => {
+                    // TODO load stats from Mob.nx
+                    monsters.insert(life.object_id, life);
+                }
+            };
+        }
+
+        Ok((npcs, monsters))
+    }
+}
+
 pub enum LifeType {
     NPC,
     Monster,
-}
-
-/// Loads all life (NPCs and monsters)
-fn load_life(life_root: nx::Node) -> (HashMap<i32, Life>, HashMap<i32, Life>) {
-    let mut npcs = HashMap::new();
-    let mut monsters = HashMap::new();
-
-    for life in life_root.iter() {
-        let id = life.get("id").string().unwrap_or_default();
-        let type_ = life.get("type").string().unwrap_or_default();
-
-        let life_type = match type_ {
-            "n" | "N" => LifeType::NPC,
-            "m" | "M" => LifeType::Monster,
-            _ => break,
-        };
-
-        let team = life.get("team").integer().unwrap_or(-1);
-        // TODO team stuff
-        let x = life.get("x").integer().unwrap_or(0) as i16;
-        let y = life.get("y").integer().unwrap_or(0) as i16;
-
-        let mut life = Life {
-            id: id.parse().unwrap_or(0),
-            life_type,
-            name: String::new(),
-            position: (x, y),
-            // FIXME this is terrible
-            // Maple requires object ids be i32s (🤢) so pick some random number above
-            // 10000000 to not collide with character ids. Should probably maintain a set per
-            // map that contains used object ids, keep generating until unused.
-            object_id: rand::thread_rng().gen_range(10000000..=i32::MAX),
-            stance: 0,
-            f: life.get("f").integer().unwrap_or(0) as u8,
-            is_hidden: life.get("hide").integer().unwrap_or(0) == 1,
-            fh: life.get("fh").integer().unwrap_or(0) as i16,
-            start_fh: life.get("fh").integer().unwrap_or(0) as i16,
-            cy: life.get("cy").integer().unwrap_or(0) as i16,
-            rx0: life.get("rx0").integer().unwrap_or(0) as i16,
-            rx1: life.get("rx1").integer().unwrap_or(0) as i16,
-            mob_time: life.get("mobTime").integer().unwrap_or(0),
-        };
-
-        match life.life_type {
-            LifeType::NPC => {
-                // TODO wait wtf is the point of this
-                let name = load_npc_string(life.id, "name");
-                life.name = name;
-
-                npcs.insert(life.object_id, life);
-            }
-            LifeType::Monster => {
-                // TODO load stats from Mob.nx
-                monsters.insert(life.object_id, life);
-            }
-        };
-    }
-
-    (npcs, monsters)
 }
 
 pub struct Portal {
@@ -231,34 +236,35 @@ pub struct Portal {
     pub y: i64,
 }
 
-/// Loads all portals in a given map TODO can this be a vec?
-fn load_portals(portal_root: nx::Node) -> HashMap<i64, Portal> {
-    let mut portals = HashMap::new();
+impl Portal {
+    pub fn load(root: nx::Node) -> anyhow::Result<HashMap<i64, Self>> {
+        let mut portals = HashMap::new();
 
-    for data in portal_root.iter() {
-        let name = data.get("pn").string().unwrap_or_default().to_string();
-        let script = data.get("script").string().unwrap_or_default().to_string();
-        let target = data.get("tn").string().unwrap_or_default().to_string();
-        let target_map_id = data.get("tm").integer().unwrap_or_default();
-        let type_ = data.get("pt").integer().unwrap_or_default();
-        let x = data.get("x").integer().unwrap_or_default();
-        let y = data.get("x").integer().unwrap_or_default();
+        for data in root.iter() {
+            let name = data.get("pn").string().unwrap_or_default().to_string();
+            let script = data.get("script").string().unwrap_or_default().to_string();
+            let target = data.get("tn").string().unwrap_or_default().to_string();
+            let target_map_id = data.get("tm").integer().unwrap_or_default();
+            let type_ = data.get("pt").integer().unwrap_or_default();
+            let x = data.get("x").integer().unwrap_or_default();
+            let y = data.get("x").integer().unwrap_or_default();
 
-        let portal = Portal {
-            name,
-            script,
-            target,
-            target_map_id,
-            type_,
-            x,
-            y,
-        };
+            let portal = Portal {
+                name,
+                script,
+                target,
+                target_map_id,
+                type_,
+                x,
+                y,
+            };
 
-        let id: i64 = data.name().parse().unwrap();
-        portals.insert(id, portal);
+            let id: i64 = data.name().parse().unwrap();
+            portals.insert(id, portal);
+        }
+
+        Ok(portals)
     }
-
-    portals
 }
 
 pub struct Foothold {
@@ -270,35 +276,36 @@ pub struct Foothold {
     pub next: i64,
 }
 
-/// Loads all footholds in a given map
-fn load_footholds(foothold_root: nx::Node) -> Vec<Foothold> {
-    let mut footholds = Vec::new();
+impl Foothold {
+    pub fn load(root: nx::Node) -> anyhow::Result<Vec<Self>> {
+        let mut footholds = Vec::new();
 
-    for category in foothold_root.iter() {
-        for data in category.iter() {
-            let x1 = data.get("x1").integer().unwrap_or_default();
-            let y1 = data.get("y1").integer().unwrap_or_default();
-            let x2 = data.get("x2").integer().unwrap_or_default();
-            let y2 = data.get("y2").integer().unwrap_or_default();
-            let prev = data.get("prev").integer().unwrap_or_default();
-            let next = data.get("next").integer().unwrap_or_default();
+        for category in root.iter() {
+            for data in category.iter() {
+                let x1 = data.get("x1").integer().unwrap_or_default();
+                let y1 = data.get("y1").integer().unwrap_or_default();
+                let x2 = data.get("x2").integer().unwrap_or_default();
+                let y2 = data.get("y2").integer().unwrap_or_default();
+                let prev = data.get("prev").integer().unwrap_or_default();
+                let next = data.get("next").integer().unwrap_or_default();
 
-            let foothold = Foothold {
-                x1,
-                y1,
-                x2,
-                y2,
-                prev,
-                next,
-            };
+                let foothold = Foothold {
+                    x1,
+                    y1,
+                    x2,
+                    y2,
+                    prev,
+                    next,
+                };
 
-            footholds.push(foothold);
+                footholds.push(foothold);
+            }
         }
+
+        // TODO we may want to put footholds in a better data structure for searching...
+
+        Ok(footholds)
     }
-
-    // TODO we may want to put footholds in a better data structure for searching...
-
-    footholds
 }
 
 /// Converts the given map id to the nx .img node name

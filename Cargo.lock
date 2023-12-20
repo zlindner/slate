@@ -381,16 +381,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9cace84e55f07e7301bae1c519df89cdad8cc3cd868413d3fdbdeca9ff3db484"
 
 [[package]]
-name = "crossbeam-channel"
-version = "0.5.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "14c3242926edf34aec4ac3a77108ad4854bffaa2e4ddc1824124ce59231302d5"
-dependencies = [
- "cfg-if",
- "crossbeam-utils",
-]
-
-[[package]]
 name = "crossbeam-queue"
 version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1511,7 +1501,6 @@ name = "slime-channel"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "crossbeam-channel",
  "dashmap",
  "dotenvy",
  "env_logger",
@@ -1528,7 +1517,6 @@ name = "slime-data"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "crossbeam-channel",
  "log",
  "nx",
  "once_cell",
@@ -1536,6 +1524,7 @@ dependencies = [
  "serde",
  "slime-net",
  "sqlx",
+ "tokio",
  "toml",
 ]
 

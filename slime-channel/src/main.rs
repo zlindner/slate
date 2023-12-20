@@ -10,6 +10,7 @@ mod packet_handler;
 mod server;
 mod session;
 mod shutdown;
+mod state;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

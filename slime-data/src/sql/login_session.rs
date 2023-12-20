@@ -23,14 +23,24 @@ pub struct LoginSession {
 
 impl LoginSession {
     /// Loads a login session with the given id if it exists
-    pub async fn load_optional(session_id: i32, db: &Db) -> anyhow::Result<Option<Self>> {
+    pub async fn load_optional(id: i32, db: &Db) -> anyhow::Result<Option<Self>> {
         let session =
             sqlx::query_as::<_, LoginSession>("SELECT * FROM login_sessions WHERE id = ?")
-                .bind(session_id)
+                .bind(id)
                 .fetch_optional(db)
                 .await?;
 
         Ok(session)
+    }
+
+    /// Deletes a login session with the given id
+    pub async fn delete(&self, db: &Db) -> anyhow::Result<()> {
+        sqlx::query("DELETE FROM login_sessions WHERE id = ?")
+            .bind(self.id)
+            .execute(db)
+            .await?;
+
+        Ok(())
     }
 }
 

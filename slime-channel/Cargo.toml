@@ -8,7 +8,6 @@ slime-data = { path = "../slime-data" }
 slime-net = { path = "../slime-net" }
 
 anyhow = "1.0.72"
-crossbeam-channel = "0.5.9"
 dashmap = "5.5.3"
 dotenvy = "0.15.7"
 env_logger = "0.10.0"

@@ -85,8 +85,7 @@ pub async fn handle(mut packet: Packet, session: &mut LoginSession) -> anyhow::R
         (weapon, EquipmentType::Weapon),
     ];
     create_equips(starter_equips, character_id, session).await?;
-
-    create_default_keymaps(session).await?;
+    create_default_keymaps(character_id, session).await?;
 
     // Create starter item
     sqlx::query(
@@ -144,19 +143,22 @@ async fn create_equips(
     Ok(())
 }
 
-async fn create_default_keymaps(session: &mut LoginSession) -> anyhow::Result<()> {
-    let keymaps = DEFAULT_KEYS
-        .iter()
-        .zip(DEFAULT_TYPES.iter())
-        .zip(DEFAULT_ACTIONS.iter())
-        .map(|((x, y), z)| (x, y, z));
+async fn create_default_keymaps(
+    character_id: i32,
+    session: &mut LoginSession,
+) -> anyhow::Result<()> {
+    let mut keymaps = Vec::with_capacity(DEFAULT_KEYS.len());
+
+    for i in 0..40 {
+        keymaps.push((DEFAULT_KEYS[i], DEFAULT_TYPES[i], DEFAULT_ACTIONS[i]));
+    }
 
     let mut query_builder =
         QueryBuilder::<MySql>::new("INSERT INTO keymaps (character_id, key_id, key_type, action) ");
 
     query_builder.push_values(keymaps, |mut builder, (key, type_, action)| {
         builder
-            .push_bind(session.data.character_id)
+            .push_bind(character_id)
             .push_bind(key)
             .push_bind(type_)
             .push_bind(action);
