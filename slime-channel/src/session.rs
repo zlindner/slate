@@ -17,6 +17,7 @@ pub struct ChannelSession {
     pub channel_id: i32,
     pub account_id: Option<i32>,
     pub character_id: Option<i32>,
+    pub map_id: Option<i32>,
 
     // Graceful shutdown handlers
     pub shutdown: Shutdown,

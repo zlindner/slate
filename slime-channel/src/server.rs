@@ -94,6 +94,7 @@ impl ChannelServer {
                 channel_id: self.data.id,
                 account_id: None,
                 character_id: None,
+                map_id: None,
                 shutdown: Shutdown::new(self.notify_shutdown.subscribe()),
                 _shutdown_complete: self.shutdown_complete_tx.clone(),
                 state: state.clone(),

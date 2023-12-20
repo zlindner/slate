@@ -52,6 +52,7 @@ pub async fn handle(mut packet: Packet, session: &mut ChannelSession) -> anyhow:
 
     let character = maple::Character::load(login_session.character_id, &session.db).await?;
     session.character_id = Some(character.data.id);
+    session.map_id = Some(character.data.map);
 
     session
         .stream
