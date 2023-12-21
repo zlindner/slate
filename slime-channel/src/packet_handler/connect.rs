@@ -96,6 +96,13 @@ pub async fn handle(mut packet: Packet, session: &mut ChannelSession) -> anyhow:
                 .await?;
         }
 
+        for portal in map.data.portals.values() {
+            session
+                .stream
+                .write_packet(spawn_portal(map.id, portal))
+                .await?;
+        }
+
         // Subscribe to the current map's broadcast channel
         session.broadcast_rx = Some(map.broadcast_tx.subscribe());
     }
@@ -585,5 +592,15 @@ fn spawn_npc_request_controller(npc: &nx::map::Life) -> Packet {
     packet.write_short(npc.rx0);
     packet.write_short(npc.rx1);
     packet.write_byte(1);
+    packet
+}
+
+// TODO DoorObject.sendSpawnData
+fn spawn_portal(map_id: i32, portal: &nx::map::Portal) -> Packet {
+    let mut packet = Packet::new(0x43);
+    packet.write_int(map_id);
+    packet.write_int(portal.target_map_id as i32);
+    packet.write_short(portal.x as i16);
+    packet.write_short(portal.y as i16);
     packet
 }

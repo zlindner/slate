@@ -226,6 +226,7 @@ pub enum LifeType {
     Monster,
 }
 
+#[derive(Debug)]
 pub struct Portal {
     pub name: String,
     pub script: String,
@@ -258,6 +259,8 @@ impl Portal {
                 x,
                 y,
             };
+
+            log::debug!("Loaded portal: {:?}", portal);
 
             let id: i64 = data.name().parse().unwrap();
             portals.insert(id, portal);
