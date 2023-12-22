@@ -1,8 +1,8 @@
 [workspace]
 members = [
-    "slime-channel",
-    "slime-data",
-    "slime-login",
-    "slime-net",
-    "slime-tools",
+    "slate-channel",
+    "slate-data",
+    "slate-login",
+    "slate-net",
+    "slate-tools",
 ]

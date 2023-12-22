@@ -1497,7 +1497,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "slime-channel"
+name = "slate-channel"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -1506,14 +1506,14 @@ dependencies = [
  "env_logger",
  "log",
  "rand",
- "slime-data",
- "slime-net",
+ "slate-data",
+ "slate-net",
  "sqlx",
  "tokio",
 ]
 
 [[package]]
-name = "slime-data"
+name = "slate-data"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -1522,14 +1522,14 @@ dependencies = [
  "once_cell",
  "rand",
  "serde",
- "slime-net",
+ "slate-net",
  "sqlx",
  "tokio",
  "toml",
 ]
 
 [[package]]
-name = "slime-login"
+name = "slate-login"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -1538,14 +1538,14 @@ dependencies = [
  "log",
  "once_cell",
  "rust-argon2",
- "slime-data",
- "slime-net",
+ "slate-data",
+ "slate-net",
  "sqlx",
  "tokio",
 ]
 
 [[package]]
-name = "slime-net"
+name = "slate-net"
 version = "0.1.0"
 dependencies = [
  "aes",
@@ -1559,7 +1559,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "slime-tools"
+name = "slate-tools"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -1569,7 +1569,7 @@ dependencies = [
  "log",
  "rand",
  "rust-argon2",
- "slime-data",
+ "slate-data",
  "sqlx",
  "tokio",
 ]
