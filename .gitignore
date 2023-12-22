@@ -1,6 +1,5 @@
 /target
-/oxy-core/src/prisma.rs
 .env
 .DS_Store
-/prisma/node_modules
-/oxy-core/nx
+
+/slime-data/nx

@@ -1,9 +1,8 @@
 [workspace]
 members = [
-    "oxy-core",
-    "oxy-login",
-    "oxy-world",
-    "prisma-cli"
+    "slime-channel",
+    "slime-data",
+    "slime-login",
+    "slime-net",
+    "slime-tools",
 ]
-
-resolver = "2"
