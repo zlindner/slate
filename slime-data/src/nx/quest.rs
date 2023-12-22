@@ -89,9 +89,80 @@ impl Quest {
         })
     }
 
+    // Starts the quest
+    pub fn start(&self, character: &maple::Character, npc_id: i32) -> bool {
+        if !self.can_start(character, npc_id) {
+            return false;
+        }
+
+        // First check if we can execute all the quest's start actions
+        for start_action in self.start_actions.iter() {
+            if !start_action.can_execute(character, None) {
+                return false;
+            }
+        }
+
+        // Execute the quest's start actions
+        for start_action in self.start_actions.iter() {
+            start_action.execute(character, None);
+        }
+
+        // TODO TOT mob quest requirement?
+        // TODO get characters current progress for the quest
+        true
+    }
+
+    pub fn complete(
+        &self,
+        character: &maple::Character,
+        npc_id: i32,
+        selection: Option<i16>,
+    ) -> bool {
+        if !self.can_complete(character, npc_id) {
+            return false;
+        }
+
+        // TODO check info progress
+
+        // First check if we can execute all the quest's complete actions
+        for complete_action in self.complete_actions.iter() {
+            if !complete_action.can_execute(character, selection) {
+                return false;
+            }
+        }
+
+        if self.time_limit > 0 {
+            // TODO chr.sendPacket(PacketCreator.removeQuestTimeLimit(id));
+        }
+
+        // Create completed quest status
+        // QuestStatus newStatus = new QuestStatus(this, QuestStatus.Status.COMPLETED, npc);
+        // newStatus.setForfeited(chr.getQuest(this).getForfeited());
+        // newStatus.setCompleted(chr.getQuest(this).getCompleted());
+        // newStatus.setCompletionTime(System.currentTimeMillis());
+        // chr.updateQuestStatus(newStatus);
+
+        // Cosmis completes quest before running actions... is this right?
+        /*
+
+
+        chr.sendPacket(PacketCreator.showSpecialEffect(9)); // Quest completion
+        chr.getMap().broadcastMessage(chr, PacketCreator.showForeignEffect(chr.getId(), 9), false); //use 9 instead of 12 for both
+        return true;
+         */
+
+        // Execute the quest's complete actions
+        for complete_action in self.complete_actions.iter() {
+            complete_action.execute(character, selection);
+        }
+
+        true
+    }
+
     /// Checks if a character can start the current quest
-    pub fn can_start(&self, character: &maple::Character, npc_id: i32) -> bool {
+    fn can_start(&self, character: &maple::Character, npc_id: i32) -> bool {
         // TODO check character quest status
+        // TODO check if npc is nearby
 
         for req in self.start_requirements.iter() {
             if !req.has_requirement(character, npc_id) {
@@ -104,37 +175,16 @@ impl Quest {
         true
     }
 
-    // Starts the quest
-    pub fn start(&self, character: &maple::Character, npc_id: i32) -> bool {
-        if !self.can_start(character, npc_id) {
-            return false;
-        }
+    // Checks if a character can complete the current quest
+    fn can_complete(&self, character: &maple::Character, npc_id: i32) -> bool {
+        // TODO verify character's quest status is started
+        // TODO check if npc is nearby
 
-        // Check all the start actions
-        for start_action in self.start_actions.iter() {
-            if !start_action.can_execute(character) {
-                return false;
-            }
-        }
-
-        // Execute the start actions
-        for start_action in self.start_actions.iter() {
-            start_action.execute(character);
-        }
-
-        // TODO TOT mob quest requirement?
-        // TODO get characters current progress for the quest
-        true
-    }
-
-    pub fn complete(&self, character: &maple::Character, npc_id: i32) -> bool {
         for complete_req in self.complete_requirements.iter() {
             if !complete_req.has_requirement(character, npc_id) {
                 return false;
             }
         }
-
-        // TODO check info progress
 
         true
     }
