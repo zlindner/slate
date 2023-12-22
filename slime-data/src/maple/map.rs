@@ -37,6 +37,5 @@ impl Map {
 pub struct Broadcast {
     pub packet: Packet,
     pub sender_id: i32,
-    pub sender_pos: (i32, i32),
     pub send_to_sender: bool,
 }

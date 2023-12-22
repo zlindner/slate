@@ -44,13 +44,13 @@ impl QuestActionType {
         quest_actions
     }
 
-    pub fn execute(&self, character: &maple::Character) {
+    pub fn execute(&self, character: &maple::Character, selection: Option<i16>) {
         use QuestActionType::*;
 
         match self {
             Exp(action) => action.execute(character),
             Meso(action) => action.execute(character),
-            Item(action) => action.execute(character),
+            Item(action) => action.execute(character, selection),
             Skill(action) => action.execute(character),
             NextQuest(action) => action.execute(character),
             Fame(action) => action.execute(character),
@@ -65,7 +65,7 @@ impl QuestActionType {
         }
     }
 
-    pub fn can_execute(&self, character: &maple::Character) -> bool {
+    pub fn can_execute(&self, character: &maple::Character, selection: Option<i16>) -> bool {
         use QuestActionType::*;
 
         // TODO
@@ -135,8 +135,12 @@ impl ItemAction {
         Self { items }
     }
 
-    pub fn execute(&self, character: &maple::Character) {
-        log::debug!("Executing ItemAction (items = {:?})", self.items);
+    pub fn execute(&self, character: &maple::Character, selection: Option<i16>) {
+        log::debug!(
+            "Executing ItemAction (items = {:?}, selection = {:?})",
+            self.items,
+            selection
+        );
     }
 }
 

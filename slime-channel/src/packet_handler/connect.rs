@@ -72,7 +72,6 @@ pub async fn handle(mut packet: Packet, session: &mut ChannelSession) -> anyhow:
         let broadcast = maple::map::Broadcast {
             packet: spawn_character(&character, true),
             sender_id: character.data.id,
-            sender_pos: character.pos,
             send_to_sender: false,
         };
         map.broadcast_tx.send(broadcast)?;

@@ -87,3 +87,35 @@ pub fn write_character_stats(packet: &mut Packet, character: &sql::Character) {
     packet.write_byte(character.spawn_point as u8);
     packet.write_int(0);
 }
+
+pub enum SpecialEffect {
+    LevelUp = 0,
+    SafetyCharms = 6,
+    EnterPortal = 7,
+    JobChange = 8,
+    QuestComplete = 9,
+    Recovery = 10,
+    Buff = 11,
+    MonsterBookPickup = 14,
+    EquipmentLevelUp = 15,
+    MakerSkillSuccess = 16,
+    BuffWithSound = 17,
+    ExpCard = 19,
+    WheelOfDestiny = 21,
+    SpiritStone = 26,
+}
+
+/// Applies a special effect to the current player (shown to themselves)
+pub fn show_special_effect(effect: SpecialEffect) -> Packet {
+    let mut packet = Packet::new(0xCE);
+    packet.write_byte(effect as u8);
+    packet
+}
+
+/// Applies a special effect to the given character for everyone else in the map
+pub fn show_foreign_effect(character_id: i32, effect: SpecialEffect) -> Packet {
+    let mut packet = Packet::new(0xC6);
+    packet.write_int(character_id);
+    packet.write_byte(effect as u8);
+    packet
+}
