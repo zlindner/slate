@@ -7,7 +7,7 @@ use slate_net::Packet;
 use sqlx::types::chrono::{Local, Utc};
 
 /// Channel server: quest action packet (0x6B)
-/// Called when a quest action is performed (accept, ...)
+/// Called when a quest action is performed (start, complete, forfeit, etc.)
 pub async fn handle(mut packet: Packet, session: &mut ChannelSession) -> anyhow::Result<()> {
     let action = packet.read_byte();
     let quest_id = packet.read_short();
@@ -93,8 +93,7 @@ pub async fn handle(mut packet: Packet, session: &mut ChannelSession) -> anyhow:
         3 => {
             // TODO ensure quest is started
             // TODO if quest time_limit > 0 send remove time limit packet
-
-            // think we just send update_quest, pass NOT_STARTED -- write byte 0
+            session.stream.write_packet(forfeit_quest(quest_id)).await?;
         }
         // Start scripted quest
         4 => {
@@ -152,5 +151,14 @@ fn complete_quest(quest_id: i16) -> Packet {
     let offset: i64 =
         116444736010800000 + (10000000 * i64::from(Local::now().offset().local_minus_utc()));
     packet.write_long(current_time + offset);
+    packet
+}
+
+//
+fn forfeit_quest(quest_id: i16) -> Packet {
+    let mut packet = Packet::new(0x27);
+    packet.write_byte(1);
+    packet.write_short(quest_id);
+    packet.write_byte(0);
     packet
 }

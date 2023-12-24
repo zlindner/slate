@@ -34,7 +34,7 @@ pub static DATA: Lazy<HashMap<&str, ::nx::File>> = Lazy::new(|| {
 
     for nx_file in NX_FILES {
         // FIXME this path is problematic, depends on where the binary is located
-        let filename = format!("slime-data/nx/{}.nx", nx_file);
+        let filename = format!("slate-data/nx/{}.nx", nx_file);
         let path = Path::new(&filename);
 
         // FIXME get rid of this unsafe, may want to move off of nx crate
