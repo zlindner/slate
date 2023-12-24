@@ -12,7 +12,7 @@ pub async fn handle(mut packet: Packet, session: &mut ChannelSession) -> anyhow:
     let action = packet.read_byte();
     let quest_id = packet.read_short();
 
-    let quest = nx::Quest::load(quest_id as i32)?;
+    let quest = nx::Quest::load(quest_id)?;
     let map = session.state.get_map(session.map_id.unwrap());
     let character = map.characters.get(&session.character_id.unwrap()).unwrap();
 

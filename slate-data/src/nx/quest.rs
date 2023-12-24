@@ -20,7 +20,7 @@ pub struct Quest {
 }
 
 impl Quest {
-    pub fn load(id: i32) -> anyhow::Result<Self> {
+    pub fn load(id: i16) -> anyhow::Result<Self> {
         let root = super::DATA.get("Quest").unwrap().root();
 
         // Load quest info
