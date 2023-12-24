@@ -90,11 +90,20 @@ pub async fn handle(mut packet: Packet, session: &mut ChannelSession) -> anyhow:
             }
         }
         // Forfeit quest
-        3 => {}
+        3 => {
+            // TODO ensure quest is started
+            // TODO if quest time_limit > 0 send remove time limit packet
+
+            // think we just send update_quest, pass NOT_STARTED -- write byte 0
+        }
         // Start scripted quest
-        4 => {}
+        4 => {
+            log::debug!("Start scripted quest: {}", quest_id);
+        }
         // Complete scripted quest
-        5 => {}
+        5 => {
+            log::debug!("Complete scripted quest: {}", quest_id);
+        }
         _ => {
             log::error!("Invalid quest action: {}", action);
         }
@@ -145,23 +154,3 @@ fn complete_quest(quest_id: i16) -> Packet {
     packet.write_long(current_time + offset);
     packet
 }
-
-/*
-public static Packet updateQuest(Character chr, QuestStatus qs, boolean infoUpdate) {
-        final OutPacket p = OutPacket.create(SendOpcode.SHOW_STATUS_INFO);
-        p.writeByte(1);
-        if (infoUpdate) {
-            QuestStatus iqs = chr.getQuest(qs.getInfoNumber());
-            p.writeShort(iqs.getQuestID());
-            p.writeByte(1);
-            p.writeString(iqs.getProgressData());
-        } else {
-            p.writeShort(qs.getQuest().getId());
-            p.writeByte(qs.getStatus().getId());
-            p.writeString(qs.getProgressData());
-        }
-        p.skip(5);
-        return p;
-    }
-
-*/

@@ -142,15 +142,6 @@ impl Quest {
         // newStatus.setCompletionTime(System.currentTimeMillis());
         // chr.updateQuestStatus(newStatus);
 
-        // Cosmis completes quest before running actions... is this right?
-        /*
-
-
-        chr.sendPacket(PacketCreator.showSpecialEffect(9)); // Quest completion
-        chr.getMap().broadcastMessage(chr, PacketCreator.showForeignEffect(chr.getId(), 9), false); //use 9 instead of 12 for both
-        return true;
-         */
-
         // Execute the quest's complete actions
         for complete_action in self.complete_actions.iter() {
             complete_action.execute(character, selection);
