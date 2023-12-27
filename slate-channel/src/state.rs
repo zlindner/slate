@@ -1,35 +1,32 @@
-use dashmap::{
-    mapref::one::{Ref, RefMut},
-    DashMap,
-};
-use slate_data::maple;
+use dashmap::DashMap;
+use slate_data::maple::map::MapBroadcast;
+use tokio::sync::broadcast;
 
 pub struct State {
-    maps: DashMap<i32, maple::Map>,
+    map_broadcast: DashMap<
+        i32,
+        (
+            broadcast::Sender<MapBroadcast>,
+            broadcast::Receiver<MapBroadcast>,
+        ),
+    >,
 }
 
 impl State {
     pub fn new() -> Self {
         Self {
-            maps: DashMap::new(),
+            map_broadcast: DashMap::new(),
         }
     }
 
-    pub fn get_map(&self, map_id: i32) -> Ref<'_, i32, maple::Map> {
-        if !self.maps.contains_key(&map_id) {
-            let map = maple::Map::load(map_id).unwrap();
-            self.maps.insert(map_id, map);
+    // TODO we can get rid of the dashmap if we just create channels for every map on init -- not sure how big memory
+    // would take
+    pub fn get_map_broadcast_tx(&self, map_id: i32) -> broadcast::Sender<MapBroadcast> {
+        if !self.map_broadcast.contains_key(&map_id) {
+            // TODO tweak channel size
+            self.map_broadcast.insert(map_id, broadcast::channel(64));
         }
 
-        self.maps.get(&map_id).unwrap()
-    }
-
-    pub fn get_map_mut(&self, map_id: i32) -> RefMut<'_, i32, maple::Map> {
-        if !self.maps.contains_key(&map_id) {
-            let map = maple::Map::load(map_id).unwrap();
-            self.maps.insert(map_id, map);
-        }
-
-        self.maps.get_mut(&map_id).unwrap()
+        self.map_broadcast.get(&map_id).unwrap().0.clone()
     }
 }

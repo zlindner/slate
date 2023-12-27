@@ -93,12 +93,12 @@ impl ChannelServer {
                 world_id: self.data.world_id,
                 channel_id: self.data.id,
                 account_id: None,
-                character_id: None,
-                map_id: None,
+                character: None,
                 shutdown: Shutdown::new(self.notify_shutdown.subscribe()),
                 _shutdown_complete: self.shutdown_complete_tx.clone(),
                 state: state.clone(),
-                broadcast_rx: None,
+                map_broadcast_tx: None,
+                map_broadcast_rx: None,
             };
 
             // Spawn a task for handling the new login session

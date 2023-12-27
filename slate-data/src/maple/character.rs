@@ -1,5 +1,6 @@
 use crate::{sql, Db};
 
+#[derive(Debug, Clone)]
 pub struct Character {
     pub pos: (i32, i32),
     pub stance: u8,

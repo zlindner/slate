@@ -1,12 +1,20 @@
 use crate::session::ChannelSession;
 use rand::random;
 use slate_data::{
-    maple, nx, packet,
+    maple::{
+        self,
+        map::{MapBroadcast, PacketBroadcast},
+    },
+    nx, packet,
     sql::{self, account::LoginState, item::InventoryType, quest::QuestStatus},
 };
 use slate_net::Packet;
 use sqlx::types::chrono::{Local, Utc};
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
+use tokio::{
+    sync::{broadcast, mpsc},
+    time::timeout,
+};
 
 /// Channel server: connect packet (0x14)
 /// Called when the client transitions from login to channel server
@@ -51,8 +59,6 @@ pub async fn handle(mut packet: Packet, session: &mut ChannelSession) -> anyhow:
     sql::Account::update_login_state(account.id, LoginState::LoggedIn, &session.db).await?;
 
     let character = maple::Character::load(login_session.character_id, &session.db).await?;
-    session.character_id = Some(character.data.id);
-    session.map_id = Some(character.data.map);
 
     session
         .stream
@@ -64,53 +70,72 @@ pub async fn handle(mut packet: Packet, session: &mut ChannelSession) -> anyhow:
         .write_packet(character_keymap(&character))
         .await?;
 
-    // Get the map as read-only
-    {
-        let map = session.state.get_map(character.data.map);
+    let map = maple::Map::load(character.data.map).unwrap();
 
-        // Broadcast to all other players that we entered the map
-        let broadcast = maple::map::Broadcast {
-            packet: spawn_character(&character, true),
-            sender_id: character.data.id,
-            send_to_sender: false,
+    let broadcast_tx = session.state.get_map_broadcast_tx(map.id).clone();
+
+    let (tx, mut rx) = mpsc::channel(64);
+    let joined_broadcast = MapBroadcast::Joined(tx);
+
+    // Notify other characters that we joined the map, and get the number of characters we notified
+    // NOTE: it is possible that we send a broadcast to a character who disconnects before responding --
+    // this is handled by adding a timeout to the below rx.recv call
+    let other_characters = broadcast_tx.send(joined_broadcast)? - 1;
+
+    log::debug!("Start receiving {} map characters...", other_characters);
+
+    // Listen for responses from the map's characters
+    // TODO should listen for spawn_character packet, is probably less bytes
+    for i in 0..other_characters {
+        log::debug!("Receiving character {}", i);
+
+        // TODO tweak timeout
+        let character = match timeout(Duration::from_secs(1), rx.recv()).await {
+            Ok(Some(character)) => character,
+            _ => {
+                log::warn!("Didn't receive character {} in time", i);
+                continue;
+            }
         };
-        map.broadcast_tx.send(broadcast)?;
 
-        // Send the map's characters
-        for other_character in map.characters.values() {
-            log::debug!("Sending character: {}", other_character.data.id);
+        log::debug!("Received character {}!", i);
 
-            session
-                .stream
-                .write_packet(spawn_character(other_character, false))
-                .await?;
-        }
-
-        // Send the map's npcs
-        for npc in map.data.npcs.values() {
-            session.stream.write_packet(spawn_npc(npc)).await?;
-            session
-                .stream
-                .write_packet(spawn_npc_request_controller(npc))
-                .await?;
-        }
-
-        for portal in map.data.portals.values() {
-            session
-                .stream
-                .write_packet(spawn_portal(map.id, portal))
-                .await?;
-        }
-
-        // Subscribe to the current map's broadcast channel
-        session.broadcast_rx = Some(map.broadcast_tx.subscribe());
+        session
+            .stream
+            .write_packet(spawn_character(&character, false))
+            .await?;
     }
 
-    // Get the map as read-write
-    {
-        let mut map = session.state.get_map_mut(character.data.map);
-        map.characters.insert(character.data.id, character);
+    // Send the map's npcs
+    for npc in map.data.npcs.values() {
+        session.stream.write_packet(spawn_npc(npc)).await?;
+        session
+            .stream
+            .write_packet(spawn_npc_request_controller(npc))
+            .await?;
     }
+
+    // Send the map's portals
+    for portal in map.data.portals.values() {
+        session
+            .stream
+            .write_packet(spawn_portal(map.id, portal))
+            .await?;
+    }
+
+    let broadcast = MapBroadcast::Packet(PacketBroadcast {
+        packet: spawn_character(&character, true),
+        sender_id: character.data.id,
+        send_to_sender: false,
+    });
+    broadcast_tx.send(broadcast)?;
+
+    // Move the character into the current session
+    session.character = Some(character);
+
+    // Subscribe to the current map's broadcast channel
+    session.map_broadcast_tx = Some(broadcast_tx.clone());
+    session.map_broadcast_rx = Some(broadcast_tx.subscribe());
 
     Ok(())
 }

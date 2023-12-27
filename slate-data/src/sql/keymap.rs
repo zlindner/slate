@@ -1,7 +1,7 @@
 use crate::Db;
 use sqlx::FromRow;
 
-#[derive(FromRow)]
+#[derive(FromRow, Debug, Clone)]
 pub struct Keymap {
     pub id: i32,
     pub character_id: i32,

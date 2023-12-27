@@ -1,5 +1,5 @@
 use crate::session::ChannelSession;
-use slate_data::maple;
+use slate_data::maple::map::{MapBroadcast, PacketBroadcast};
 use slate_net::Packet;
 
 /// Channel server: move character packet (0x29)
@@ -66,30 +66,20 @@ pub async fn handle(mut packet: Packet, session: &mut ChannelSession) -> anyhow:
         return Ok(());
     }
 
-    // Get the map as read-only
-    {
-        let map = session.state.get_map(session.map_id.unwrap());
-        let character = map.characters.get(&session.character_id.unwrap()).unwrap();
+    let character = session.character.as_mut().unwrap();
+    character.pos = new_pos.unwrap_or(character.pos);
+    character.stance = new_stance.unwrap_or(character.stance);
 
-        let broadcast = maple::map::Broadcast {
-            packet: move_player(session.character_id.unwrap(), packet_copy),
-            sender_id: character.data.id,
-            send_to_sender: false,
-        };
-        map.broadcast_tx.send(broadcast)?;
-    }
-
-    // Get the map as read-write
-    {
-        let mut map = session.state.get_map_mut(session.map_id.unwrap());
-        let character = map
-            .characters
-            .get_mut(&session.character_id.unwrap())
-            .unwrap();
-
-        character.pos = new_pos.unwrap_or(character.pos);
-        character.stance = new_stance.unwrap_or(character.stance);
-    }
+    let packet_broadcast = MapBroadcast::Packet(PacketBroadcast {
+        packet: move_player(character.data.id, packet_copy),
+        sender_id: character.data.id,
+        send_to_sender: false,
+    });
+    session
+        .map_broadcast_tx
+        .as_ref()
+        .unwrap()
+        .send(packet_broadcast)?;
 
     Ok(())
 }

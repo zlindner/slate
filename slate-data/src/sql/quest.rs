@@ -1,6 +1,6 @@
 use sqlx::{Decode, Encode, FromRow};
 
-#[derive(FromRow)]
+#[derive(FromRow, Debug, Clone)]
 pub struct Quest {
     pub id: i32,
     pub character_id: i32,
@@ -12,7 +12,7 @@ pub struct Quest {
     pub info: i32,
 }
 
-#[derive(Decode, Encode, Copy, Clone)]
+#[derive(Decode, Encode, Debug, Copy, Clone)]
 pub enum QuestStatus {
     NotStarted,
     Started,

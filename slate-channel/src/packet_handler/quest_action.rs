@@ -1,6 +1,7 @@
 use crate::session::ChannelSession;
 use slate_data::{
-    maple, nx,
+    maple::map::{MapBroadcast, PacketBroadcast},
+    nx,
     packet::{self, SpecialEffect},
 };
 use slate_net::Packet;
@@ -13,8 +14,7 @@ pub async fn handle(mut packet: Packet, session: &mut ChannelSession) -> anyhow:
     let quest_id = packet.read_short();
 
     let quest = nx::Quest::load(quest_id)?;
-    let map = session.state.get_map(session.map_id.unwrap());
-    let character = map.characters.get(&session.character_id.unwrap()).unwrap();
+    let character = session.character.as_ref().unwrap();
 
     match action {
         // Restore lost item
@@ -24,9 +24,6 @@ pub async fn handle(mut packet: Packet, session: &mut ChannelSession) -> anyhow:
             let npc_id = packet.read_int();
 
             if quest.start(character, npc_id) {
-                // We no longer need the map, drop it to release the lock
-                drop(map);
-
                 session
                     .stream
                     .write_packet(update_quest(quest_id, false))
@@ -54,18 +51,19 @@ pub async fn handle(mut packet: Packet, session: &mut ChannelSession) -> anyhow:
 
             if quest.complete(character, npc_id, selection) {
                 // Show the quest completed effect to all other players in the map
-                let broadcast = maple::map::Broadcast {
+                let packet_broadcast = MapBroadcast::Packet(PacketBroadcast {
                     packet: packet::show_foreign_effect(
                         character.data.id,
                         SpecialEffect::QuestComplete,
                     ),
                     sender_id: character.data.id,
                     send_to_sender: false, // TODO could this be true and not have to send show_special_effect?
-                };
-                map.broadcast_tx.send(broadcast)?;
-
-                // We no longer need the map, drop it to release the lock
-                drop(map);
+                });
+                session
+                    .map_broadcast_tx
+                    .as_ref()
+                    .unwrap()
+                    .send(packet_broadcast)?;
 
                 // Show the quest completed effect to the character
                 session
