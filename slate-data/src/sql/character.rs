@@ -4,7 +4,7 @@ use sqlx::{
     FromRow, Row,
 };
 
-#[derive(FromRow)]
+#[derive(FromRow, Debug, Clone)]
 pub struct Character {
     pub id: i32,
     pub account_id: i32,

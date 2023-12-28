@@ -1,7 +1,7 @@
 use crate::Db;
 use sqlx::FromRow;
 
-#[derive(FromRow)]
+#[derive(FromRow, Debug, Clone)]
 pub struct Equipment {
     pub id: i32,
     pub item_id: i32,

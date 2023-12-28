@@ -1,17 +1,17 @@
 use crate::nx;
 use slate_net::Packet;
 use std::collections::HashMap;
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, mpsc};
 
 pub struct Map {
     pub id: i32,
     pub data: nx::Map,
 
-    pub broadcast_tx: broadcast::Sender<Broadcast>,
+    pub broadcast_tx: broadcast::Sender<MapBroadcast>,
 
     // Broadcast receiver isn't used, but we need to store it so it doesn't get
     // dropped and close the channel
-    _broadcast_rx: broadcast::Receiver<Broadcast>,
+    _broadcast_rx: broadcast::Receiver<MapBroadcast>,
 
     pub characters: HashMap<i32, super::Character>,
 }
@@ -34,7 +34,13 @@ impl Map {
 }
 
 #[derive(Debug, Clone)]
-pub struct Broadcast {
+pub enum MapBroadcast {
+    Packet(PacketBroadcast),
+    Joined(mpsc::Sender<super::Character>),
+}
+
+#[derive(Debug, Clone)]
+pub struct PacketBroadcast {
     pub packet: Packet,
     pub sender_id: i32,
     pub send_to_sender: bool,

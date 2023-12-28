@@ -1,6 +1,6 @@
 use crate::{packet_handler, shutdown::Shutdown, state::State};
 use slate_data::{
-    maple,
+    maple::{self, map::MapBroadcast},
     sql::{self, account::LoginState},
 };
 use slate_net::MapleStream;
@@ -16,8 +16,7 @@ pub struct ChannelSession {
     pub world_id: i32,
     pub channel_id: i32,
     pub account_id: Option<i32>,
-    pub character_id: Option<i32>,
-    pub map_id: Option<i32>,
+    pub character: Option<maple::Character>,
 
     // Graceful shutdown handlers
     pub shutdown: Shutdown,
@@ -26,8 +25,9 @@ pub struct ChannelSession {
     // Shared state
     pub state: Arc<State>,
 
-    // Broadcast receiver for the current map
-    pub broadcast_rx: Option<broadcast::Receiver<maple::map::Broadcast>>,
+    // Broadcast sender + receiver for the current map
+    pub map_broadcast_tx: Option<broadcast::Sender<MapBroadcast>>,
+    pub map_broadcast_rx: Option<broadcast::Receiver<MapBroadcast>>,
 }
 
 impl ChannelSession {
@@ -60,25 +60,18 @@ impl ChannelSession {
                         log::error!("Error handling packet: {} [id: {}]", e, self.id);
                     }
                 },
-                broadcast = async { self.broadcast_rx.as_mut().unwrap().recv().await }, if self.broadcast_rx.is_some() => {
-                    let broadcast = match broadcast {
-                        Ok(broadcast) => broadcast,
+                map_broadcast = async {
+                    self.map_broadcast_rx.as_mut().unwrap().recv().await
+                }, if self.map_broadcast_rx.is_some() => {
+                    let map_broadcast = match map_broadcast {
+                        Ok(map_broadcast) => map_broadcast,
                         Err(e) => {
                             log::error!("Error receiving broadcast packet: {} [id: {}]", e, self.id);
                             break;
                         }
                     };
 
-                    // Check if we are the sender/if we want to send to sender
-                    if !broadcast.send_to_sender && broadcast.sender_id == self.character_id.unwrap() {
-                        continue;
-                    }
-
-                    // We can optionally do some checks to see if we are in range to receive the broadcast
-
-                    if let Err(e) = self.stream.write_packet(broadcast.packet).await {
-                        log::error!("Error writing broadcast packet: {} [id: {}]", e, self.id);
-                    }
+                    self.handle_broadcast(map_broadcast).await;
                 }
                 _ = self.shutdown.recv() => break,
             };
@@ -92,6 +85,35 @@ impl ChannelSession {
                 e,
                 self.id
             );
+        }
+    }
+
+    /// Handles a map broadcast
+    async fn handle_broadcast(&mut self, map_broadcast: MapBroadcast) {
+        match map_broadcast {
+            MapBroadcast::Packet(broadcast) => {
+                // Check if we are the sender/if we want to send to sender
+                if !broadcast.send_to_sender
+                    && broadcast.sender_id == self.character.as_ref().unwrap().data.id
+                {
+                    return;
+                }
+
+                // We can optionally do some checks to see if we are in range to receive the broadcast
+
+                if let Err(e) = self.stream.write_packet(broadcast.packet).await {
+                    log::error!("Error writing broadcast packet: {} [id: {}]", e, self.id);
+                }
+            }
+            MapBroadcast::Joined(sender) => {
+                if let Err(e) = sender.send(self.character.as_ref().unwrap().clone()).await {
+                    log::error!(
+                        "Error responding to joined broadcast: {} [id: {}]",
+                        e,
+                        self.id
+                    );
+                }
+            }
         }
     }
 

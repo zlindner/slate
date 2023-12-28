@@ -2,7 +2,7 @@ use sqlx::{Decode, Encode, FromRow};
 
 use crate::Db;
 
-#[derive(FromRow)]
+#[derive(FromRow, Debug, Clone)]
 pub struct Item {
     pub id: i32,
     pub item_id: i32,
@@ -26,7 +26,7 @@ impl Item {
     }
 }
 
-#[derive(Decode, Encode, Clone, Copy)]
+#[derive(Decode, Encode, Clone, Copy, Debug)]
 pub enum InventoryType {
     Equip,
     Use,
