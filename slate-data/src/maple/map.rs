@@ -1,6 +1,5 @@
 use crate::nx;
 use slate_net::Packet;
-use std::collections::HashMap;
 use tokio::sync::{broadcast, mpsc};
 
 pub struct Map {
@@ -12,8 +11,6 @@ pub struct Map {
     // Broadcast receiver isn't used, but we need to store it so it doesn't get
     // dropped and close the channel
     _broadcast_rx: broadcast::Receiver<MapBroadcast>,
-
-    pub characters: HashMap<i32, super::Character>,
 }
 
 impl Map {
@@ -28,8 +25,36 @@ impl Map {
             data,
             broadcast_tx: tx,
             _broadcast_rx: rx,
-            characters: HashMap::new(),
         })
+    }
+
+    /// Gets the closest spawn point to a position in the current map
+    /// TODO looks like spawn points also have the name "sp" need to see if this is always the case
+    pub fn get_closest_spawn_point(&self, pos: (i32, i32)) -> Option<&nx::Portal> {
+        let mut closest = None;
+        let mut closest_distance = std::i32::MAX;
+
+        for (_, portal) in self.data.portals.iter() {
+            // TODO make const -- MAP_NONE
+            // Portal must be a spawn point -- target map id is NONE
+            if portal.target_map_id != 999999999 {
+                continue;
+            }
+
+            // Portal must be type 0 or 1
+            if !(portal.type_ == 0 || portal.type_ == 1) {
+                continue;
+            }
+
+            let distance = (pos.0 - portal.x).pow(2) + (pos.1 - portal.y).pow(2);
+
+            if distance < closest_distance {
+                closest_distance = distance;
+                closest = Some(portal);
+            }
+        }
+
+        closest
     }
 }
 

@@ -1,3 +1,4 @@
+use super::Portal;
 use crate::nx::DATA;
 use anyhow::anyhow;
 use nx::GenericNode;
@@ -12,7 +13,7 @@ pub struct Map {
     pub on_first_user_enter: String,
     pub npcs: HashMap<i32, Life>,
     pub monsters: HashMap<i32, Life>,
-    pub portals: HashMap<i64, Portal>,
+    pub portals: HashMap<i32, Portal>,
     pub return_map_id: i64,
     pub bounds: (i64, i64, i64, i64),
     pub footholds: Vec<Foothold>,
@@ -224,50 +225,6 @@ impl Life {
 pub enum LifeType {
     NPC,
     Monster,
-}
-
-#[derive(Debug)]
-pub struct Portal {
-    pub name: String,
-    pub script: String,
-    pub target: String,
-    pub target_map_id: i64,
-    pub type_: i64,
-    pub x: i64,
-    pub y: i64,
-}
-
-impl Portal {
-    pub fn load(root: nx::Node) -> anyhow::Result<HashMap<i64, Self>> {
-        let mut portals = HashMap::new();
-
-        for data in root.iter() {
-            let name = data.get("pn").string().unwrap_or_default().to_string();
-            let script = data.get("script").string().unwrap_or_default().to_string();
-            let target = data.get("tn").string().unwrap_or_default().to_string();
-            let target_map_id = data.get("tm").integer().unwrap_or_default();
-            let type_ = data.get("pt").integer().unwrap_or_default();
-            let x = data.get("x").integer().unwrap_or_default();
-            let y = data.get("x").integer().unwrap_or_default();
-
-            let portal = Portal {
-                name,
-                script,
-                target,
-                target_map_id,
-                type_,
-                x,
-                y,
-            };
-
-            log::debug!("Loaded portal: {:?}", portal);
-
-            let id: i64 = data.name().parse().unwrap();
-            portals.insert(id, portal);
-        }
-
-        Ok(portals)
-    }
 }
 
 pub struct Foothold {

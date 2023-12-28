@@ -3,12 +3,14 @@ use std::{collections::HashMap, path::Path};
 
 pub mod equipment;
 pub mod map;
+pub mod portal;
 pub mod quest;
 pub mod quest_action;
 pub mod quest_requirement;
 
 pub use self::equipment::Equipment;
 pub use self::map::Map;
+pub use self::portal::Portal;
 pub use self::quest::Quest;
 pub use self::quest_action::QuestActionType;
 pub use self::quest_requirement::QuestRequirementType;

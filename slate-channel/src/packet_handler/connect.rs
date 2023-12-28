@@ -11,10 +11,7 @@ use slate_data::{
 use slate_net::Packet;
 use sqlx::types::chrono::{Local, Utc};
 use std::{collections::HashMap, time::Duration};
-use tokio::{
-    sync::{broadcast, mpsc},
-    time::timeout,
-};
+use tokio::{sync::mpsc, time::timeout};
 
 /// Channel server: connect packet (0x14)
 /// Called when the client transitions from login to channel server
@@ -58,7 +55,36 @@ pub async fn handle(mut packet: Packet, session: &mut ChannelSession) -> anyhow:
     // Set the account's state to `LoggedIn`
     sql::Account::update_login_state(account.id, LoginState::LoggedIn, &session.db).await?;
 
-    let character = maple::Character::load(login_session.character_id, &session.db).await?;
+    let mut character = maple::Character::load(login_session.character_id, &session.db).await?;
+
+    let map = maple::Map::load(character.data.map).unwrap();
+
+    // Load the spawn point portal from the map
+    let spawn_point = match map.data.portals.get(&character.data.spawn_point) {
+        Some(portal) => portal,
+        None => map.data.portals.get(&0).unwrap(),
+    };
+
+    character.data.spawn_point = spawn_point.id;
+    character.pos = (spawn_point.x, spawn_point.y);
+
+    /*let spawn_point = map.get_closest_spawn_point(character.pos);
+
+    if let Some(spawn_point) = spawn_point {
+        character.data.spawn_point = spawn_point.id;
+    }*/
+
+    // When saving char to db -- spawn point
+    // if (map == null || map.getId() == MapId.CRIMSONWOOD_VALLEY_1 || map.getId() == MapId.CRIMSONWOOD_VALLEY_2) {  // reset to first spawnpoint on those maps
+    //     ps.setInt(24, 0);
+    // } else {
+    //     Portal closest = map.findClosestPlayerSpawnpoint(getPosition());
+    //     if (closest != null) {
+    //         ps.setInt(24, closest.getId());
+    //     } else {
+    //         ps.setInt(24, 0);
+    //     }
+    // }
 
     session
         .stream
@@ -69,8 +95,6 @@ pub async fn handle(mut packet: Packet, session: &mut ChannelSession) -> anyhow:
         .stream
         .write_packet(character_keymap(&character))
         .await?;
-
-    let map = maple::Map::load(character.data.map).unwrap();
 
     let broadcast_tx = session.state.get_map_broadcast_tx(map.id).clone();
 
@@ -487,8 +511,7 @@ fn spawn_character(character: &maple::Character, entering: bool) -> Packet {
 
     // Check if character is already present in the map
     if entering {
-        // TODO should be set to portal closest to map spawn point
-        packet.write_position((0, 0 - 42));
+        packet.write_position((character.pos.0, character.pos.1 - 42));
         packet.write_byte(6);
     } else {
         packet.write_position(character.pos);
@@ -620,10 +643,10 @@ fn spawn_npc_request_controller(npc: &nx::map::Life) -> Packet {
 }
 
 // TODO DoorObject.sendSpawnData
-fn spawn_portal(map_id: i32, portal: &nx::map::Portal) -> Packet {
+fn spawn_portal(map_id: i32, portal: &nx::Portal) -> Packet {
     let mut packet = Packet::new(0x43);
     packet.write_int(map_id);
-    packet.write_int(portal.target_map_id as i32);
+    packet.write_int(portal.target_map_id);
     packet.write_short(portal.x as i16);
     packet.write_short(portal.y as i16);
     packet
