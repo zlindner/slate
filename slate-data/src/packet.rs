@@ -119,3 +119,11 @@ pub fn show_foreign_effect(character_id: i32, effect: SpecialEffect) -> Packet {
     packet.write_byte(effect as u8);
     packet
 }
+
+/// Enables actions for a character
+pub fn enable_actions() -> Packet {
+    let mut packet = Packet::new(0x1F);
+    packet.write_byte(1);
+    packet.write_int(0);
+    packet
+}

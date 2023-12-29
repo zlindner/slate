@@ -1,4 +1,5 @@
 use crate::{sql, Db};
+use std::collections::HashSet;
 
 #[derive(Debug, Clone)]
 pub struct Character {
@@ -12,6 +13,8 @@ pub struct Character {
     pub skills: Vec<sql::Skill>,
     pub cooldowns: Vec<sql::Cooldown>,
     pub quests: Vec<sql::Quest>,
+
+    pub blocked_portals: HashSet<String>,
 }
 
 impl Character {
@@ -37,6 +40,7 @@ impl Character {
             skills,
             cooldowns,
             quests,
+            blocked_portals: HashSet::new(),
         })
     }
 }

@@ -1,6 +1,7 @@
 use crate::session::ChannelSession;
 use slate_net::Packet;
 
+mod change_map_special;
 mod connect;
 mod move_character;
 mod quest_action;
@@ -12,6 +13,7 @@ pub async fn handle_packet(mut packet: Packet, session: &mut ChannelSession) -> 
     match op_code {
         0x14 => connect::handle(packet, session).await?,
         0x29 => move_character::handle(packet, session).await?,
+        0x64 => change_map_special::handle(packet, session).await?,
         0x6B => quest_action::handle(packet, session).await?,
         _ => log::info!("Unhandled packet: [{:02X?}]", op_code),
     };
