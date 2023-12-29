@@ -13,7 +13,8 @@ dashmap = "5.5.3"
 dotenvy = "0.15.7"
 env_logger = "0.10.0"
 log = "0.4.20"
-pyo3 = { version = "0.20.0", features = ["auto-initialize"] }
+#pyo3 = { version = "0.20.0", features = ["auto-initialize"] }
+pyo3 = { git = "https://github.com/wyfo/pyo3.git", branch = "coroutine_new", features = ["auto-initialize"] }
 rand = "0.8.5"
 sqlx = { version = "0.7.1", features = ["runtime-tokio", "tls-native-tls", "mysql"] }
 tokio = { version = "1.29.1", features = ["full"] }

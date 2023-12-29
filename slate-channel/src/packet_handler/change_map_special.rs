@@ -34,8 +34,13 @@ pub async fn handle(mut packet: Packet, session: &mut ChannelSession) -> anyhow:
     }
 
     if !portal.script.is_empty() {
-        PortalScriptEngine::execute_script(&portal.script);
+        PortalScriptEngine::execute_script(&portal.script, session).await;
     }
+
+    log::debug!(
+        "Blocked portals: {:?}",
+        session.character.as_ref().unwrap().blocked_portals
+    );
 
     // TODO else if portal target map id is not NONE -- change map to target map id
 
