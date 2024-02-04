@@ -6,3 +6,4 @@ members = [
     "slate-net",
     "slate-tools",
 ]
+resolver = "2"

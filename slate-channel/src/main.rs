@@ -7,6 +7,7 @@ use sqlx::{
 use std::{env, str::FromStr};
 
 mod packet_handler;
+mod script_engine;
 mod server;
 mod session;
 mod shutdown;

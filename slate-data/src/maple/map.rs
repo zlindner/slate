@@ -56,6 +56,19 @@ impl Map {
 
         closest
     }
+
+    /// Gets a portal in the current map by name
+    pub fn get_portal_by_name(&self, name: String) -> Option<&nx::Portal> {
+        let portal = None;
+
+        for (_, portal) in self.data.portals.iter() {
+            if portal.name == name {
+                return Some(portal);
+            }
+        }
+
+        portal
+    }
 }
 
 #[derive(Debug, Clone)]
